@@ -31,34 +31,34 @@ import org.apache.calcite.plan.RelTraitSet; // 导入RelTraitSet类，这是关�
  *
  * <p>Unlike enumerable convention, no code generation is required.
  * 与可枚举约定不同，不需要代码生成。
- * 
+ *
  * 【类作用详解】：
  * InterpretableConvention是Calcite框架中的一个特殊的调用约定（Calling Convention），
  * 它定义了关系表达式如何以解释器方式执行并返回结果。
- * 
+ *
  * 核心概念说明：
  * 1. 调用约定（Convention）：在Calcite中，Convention定义了关系表达式如何生成查询结果的方式。
  *    不同的Convention代表不同的执行策略，比如：
  *    - EnumerableConvention：通过代码生成生成Java字节码来执行查询
  *    - InterpretableConvention：通过解释器解释执行查询，不需要代码生成
  *    - 其他数据源特定的Convention（如JdbcConvention、MongoConvention等）
- * 
+ *
  * 2. 解释器模式 vs 代码生成模式：
  *    - 代码生成模式（EnumerableConvention）：在运行时生成Java代码，编译并执行，性能高但启动慢
  *    - 解释器模式（InterpretableConvention）：直接解释执行关系表达式树，启动快但运行时性能相对较低
- * 
+ *
  * 3. 为什么需要InterpretableConvention：
  *    - 快速原型开发：不需要代码生成，可以立即执行查询
  *    - 调试和测试：更容易追踪执行过程，适合调试
  *    - 动态查询：对于频繁变化的查询，避免重复代码生成的开销
  *    - 某些场景下的性能优势：对于简单查询，解释器可能比代码生成更快
- * 
+ *
  * 4. 实现方式：
  *    - 使用枚举类型实现，确保全局唯一实例（单例模式）
  *    - 实现Convention接口，遵循Calcite的调用约定规范
  *    - 返回EnumerableRel接口类型，表示结果以可枚举形式提供
  *    - 禁止自动转换到其他约定，保持解释器模式的独立性
- * 
+ *
  * 5. 使用场景：
  *    - Calcite的Interpreter模块使用此约定来解释执行关系表达式
  *    - 适合需要快速执行、调试或测试的场景
@@ -99,6 +99,7 @@ public enum InterpretableConvention implements Convention { // 定义一个枚�
     return false; // 返回false，表示InterpretableConvention不能转换到其他约定
     // 这意味着解释器模式的关系表达式不会被自动转换到其他执行模式
     // 保持解释器模式的独立性和可预测性
+  }
 
   @Override public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, // 重写useAbstractConvertersForConversion方法，检查转换时是否使用抽象转换器
       RelTraitSet toTraits) { // 参数toTraits：目标特征集合，表示要转换到的特征组合

@@ -16,41 +16,45 @@
  */
 package org.apache.calcite.profile; // 声明包名，该类属于Apache Calcite项目的profile包，用于数据统计和性能分析
 
-import org.apache.calcite.linq4j.Ord; // 导入Ord类，用于为集合元素提供索引
-import org.apache.calcite.materialize.Lattice; // 导入Lattice类，用于多维数据立方体计算
-import org.apache.calcite.rel.metadata.NullSentinel; // 导入NullSentinel类，用于表示NULL值的特殊标记
-import org.apache.calcite.runtime.FlatLists; // 导入FlatLists类，用于创建扁平化的列表
-import org.apache.calcite.util.ImmutableBitSet; // 导入ImmutableBitSet类，用于表示不可变的位集合
-import org.apache.calcite.util.PartiallyOrderedSet; // 导入PartiallyOrderedSet类，用于表示部分有序集合
-import org.apache.calcite.util.Util; // 导入Util工具类，提供各种实用方法
+import org.apache.calcite.linq4j.Ord;
+import org.apache.calcite.materialize.Lattice;
+import org.apache.calcite.rel.metadata.NullSentinel;
+import org.apache.calcite.runtime.FlatLists;
+import org.apache.calcite.util.ImmutableBitSet;
+import org.apache.calcite.util.PartiallyOrderedSet;
+import org.apache.calcite.util.Util;
 
-import com.google.common.collect.ImmutableSortedSet; // 导入Google Guava的不可变有序集合
-import com.google.common.collect.Iterables; // 导入Google Guava的迭代器工具类
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 
-import org.checkerframework.checker.initialization.qual.UnknownInitialization; // 导入CheckerFramework的初始化检查注解
-import org.checkerframework.checker.nullness.qual.Nullable; // 导入CheckerFramework的可空性注解
-import org.checkerframework.checker.nullness.qual.RequiresNonNull; // 导入CheckerFramework的非空要求注解
+import org.checkerframework.checker.initialization.qual.UnknownInitialization;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.RequiresNonNull;
 
-import java.util.ArrayList; // 导入Java标准库的动态数组列表
-import java.util.BitSet; // 导入Java标准库的位集合
-import java.util.Collection; // 导入Java标准库的集合接口
-import java.util.Collections; // 导入Java标准库的集合工具类
-import java.util.HashMap; // 导入Java标准库的哈希映射表
-import java.util.HashSet; // 导入Java标准库的哈希集合
-import java.util.List; // 导入Java标准库的列表接口
-import java.util.Map; // 导入Java标准库的映射接口
-import java.util.NavigableSet; // 导入Java标准库的可导航集合接口
-import java.util.Set; // 导入Java标准库的集合接口
-import java.util.SortedSet; // 导入Java标准库的有序集合接口
-import java.util.TreeSet; // 导入Java标准库的树集合实现
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableSet;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
-import static java.util.Objects.requireNonNull; // 导入Java Objects类的requireNonNull静态方法
+import static java.util.Objects.requireNonNull;
 
 /**
  * Basic implementation of {@link Profiler}. // 简单分析器的基本实现，用于分析数据表的统计信息，包括唯一键、函数依赖和分布情况
  */
+/**
+ * Basic implementation of {@link Profiler}.
+ */
+public class SimpleProfiler implements Profiler {
 
-  @Override public Profile profile(Iterable<List<Comparable>> rows, // 重写profile方法，分析数据行的统计信息，rows为要分析的数据行集合，columns为列定义，initialGroups为初始分组（本分析器忽略此参数）
+  @Override public Profiler.Profile profile(Iterable<List<Comparable>> rows, // 重写profile方法，分析数据行的统计信息，rows为要分析的数据行集合，columns为列定义，initialGroups为初始分组（本分析器忽略此参数）
       final List<Column> columns, Collection<ImmutableBitSet> initialGroups) { // columns为数据列的定义集合，initialGroups为初始的列分组集合
     Util.discard(initialGroups); // this profiler ignores initial groups // 丢弃initialGroups参数，因为本简单分析器不使用初始分组信息
     return new Run(columns).profile(rows); // 创建一个新的Run实例并调用其profile方法来执行实际的分析工作，返回包含统计信息的Profile对象

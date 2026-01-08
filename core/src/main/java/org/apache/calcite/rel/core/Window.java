@@ -424,7 +424,7 @@ public abstract class Window extends SingleRel implements Hintable { // Window �
         RelDataType type, // 结果类型
         List<RexNode> operands, // 操作数列表
         int ordinal, // 序号
-        boolean distinct) // 是否去重
+        boolean distinct) {// 是否去重
       this(aggFun, type, operands, ordinal, distinct, false); // 调用主构造方法，ignoreNulls 设为 false
     }
 

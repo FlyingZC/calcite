@@ -108,24 +108,24 @@ import static java.util.Objects.requireNonNull;
 /**
  * Utilities for converting {@link org.apache.calcite.rel.RelNode}
  * into JSON format.
- * 
+ *
  * RelJson类是Apache Calcite中用于将关系表达式(RelNode)与JSON格式进行双向转换的核心工具类
  * 它提供了两个主要功能：
  * 1. 将RelNode及其相关对象(如RexNode、RelDataType等)序列化为JSON格式
  * 2. 从JSON格式反序列化重建RelNode及其相关对象
- * 
+ *
  * 这个类在Calcite中主要用于：
  * - 关系表达式的持久化存储
  * - 跨进程传输关系表达式
  * - 调试和可视化关系表达式树
  * - 测试中验证关系表达式的正确性
- * 
+ *
  * 核心设计思想：
  * - 使用反射机制动态创建RelNode实例，通过构造器注入RelInput参数
  * - 支持所有Calcite核心类型的JSON序列化和反序列化
  * - 提供可扩展的输入转换器(InputTranslator)接口
  * - 支持自定义操作符表(SqlOperatorTable)
- * 
+ *
  * 主要成员：
  * - OBJECT_MAPPER: Jackson的ObjectMapper实例，用于JSON处理
  * - constructorMap: 缓存类型名到构造器的映射，提高性能
@@ -193,7 +193,7 @@ public class RelJson {
   /** Creates a RelJson. 创建一个默认配置的RelJson实例
    * 使用默认的translateInput方法作为输入转换器
    * 使用标准SQL操作符表(SqlStdOperatorTable)
-   * 
+   *
    * @return 新的RelJson实例
    */
   public static RelJson create() {
@@ -206,7 +206,7 @@ public class RelJson {
    * @deprecated 请使用 {@link RelJson#create} 方法创建实例，
    * 如果需要jsonBuilder，再调用 {@link #withJsonBuilder} 方法设置
    * 这个构造函数将在2.0版本之前移除
-   * 
+   *
    * @param jsonBuilder JSON构建器，可为null
    */
   @Deprecated // to be removed before 2.0
@@ -217,7 +217,7 @@ public class RelJson {
   /** Returns a RelJson with a given JsonBuilder. 返回一个设置了指定JsonBuilder的新RelJson实例
    * 这是一个流式API方法，支持链式调用
    * 如果传入的jsonBuilder与当前实例相同，则直接返回当前实例
-   * 
+   *
    * @param jsonBuilder 要设置的JSON构建器，不能为null
    * @return 新的RelJson实例(如果jsonBuilder不同)或当前实例
    */
@@ -232,7 +232,7 @@ public class RelJson {
   /** Returns a RelJson with a given InputTranslator. 返回一个设置了指定InputTranslator的新RelJson实例
    * 这是一个流式API方法，支持链式调用
    * InputTranslator用于自定义输入引用到RexNode的转换逻辑
-   * 
+   *
    * @param inputTranslator 要设置的输入转换器
    * @return 新的RelJson实例(如果inputTranslator不同)或当前实例
    */
@@ -246,7 +246,7 @@ public class RelJson {
   /** Returns a RelJson with a given operator table. 返回一个设置了指定操作符表的新RelJson实例
    * 这是一个流式API方法，支持链式调用
    * 操作符表用于查找和获取SQL操作符
-   * 
+   *
    * @param operatorTable 要设置的SQL操作符表
    * @return 新的RelJson实例(如果operatorTable不同)或当前实例
    */
@@ -261,7 +261,7 @@ public class RelJson {
    * operators plus operators in all libraries. 返回一个包含标准操作符和所有库操作符的RelJson实例
    * 使用SqlLibraryOperatorTableFactory创建包含所有SQL库操作符的操作符表
    * 这会包含标准操作符以及特定SQL库(MYSQL, POSTGRES等)的扩展操作符
-   * 
+   *
    * @return 新的RelJson实例，包含完整的操作符表
    */
   public RelJson withLibraryOperatorTable() {
@@ -280,7 +280,7 @@ public class RelJson {
   // 从Map中获取指定键的值，并进行非null检查
   // 这是一个泛型方法，可以返回任何类型的值
   // 如果键不存在或值为null，会抛出NullPointerException
-  // 
+  //
   // @param <T> 返回值的类型
   // @param map 要查询的Map
   // @param key 要查询的键
@@ -294,7 +294,7 @@ public class RelJson {
   // 从Map中获取指定键的枚举值
   // 这是一个泛型方法，可以返回任何枚举类型的值
   // 首先获取字符串值，然后将其转换为枚举值
-  // 
+  //
   // @param <T> 枚举类型
   // @param clazz 枚举类的Class对象
   // @param map 要查询的Map
@@ -311,13 +311,13 @@ public class RelJson {
 
   // 从JSON Map创建RelNode实例
   // 这是反序列化的核心方法，通过类型名查找对应的构造器，然后创建实例
-  // 
+  //
   // 工作流程：
   // 1. 从Map中获取"type"字段，确定要创建的RelNode类型
   // 2. 根据类型名获取对应的构造器(使用缓存提高性能)
   // 3. 通过反射调用构造器，传入Map作为参数
   // 4. 返回创建的RelNode实例
-  // 
+  //
   // @param map 包含RelNode序列化信息的Map，必须包含"type"字段
   // @return 创建的RelNode实例
   // @throws RuntimeException 如果创建失败(实例化异常、类型转换异常等)
@@ -335,14 +335,14 @@ public class RelJson {
 
   // 获取指定类型名的构造器
   // 使用缓存机制提高性能，避免重复通过反射查找构造器
-  // 
+  //
   // 工作流程：
   // 1. 首先从缓存中查找构造器
   // 2. 如果缓存中没有，通过typeNameToClass将类型名转换为Class对象
   // 3. 获取该类的RelInput参数构造器
   // 4. 将构造器放入缓存
   // 5. 返回构造器
-  // 
+  //
   // @param type 类型名，如"LogicalProject"或完整类名
   // @return 对应类的RelInput参数构造器
   // @throws RuntimeException 如果类不存在或没有RelInput参数构造器
@@ -366,16 +366,16 @@ public class RelJson {
    * Converts a type name to a class. E.g. {@code getClass("LogicalProject")}
    * returns {@link org.apache.calcite.rel.logical.LogicalProject}.class.
    * 将类型名转换为Class对象
-   * 
+   *
    * 支持两种格式：
    * 1. 短类型名(如"LogicalProject")：会在PACKAGES列表中的包中查找
    * 2. 完整类名(如"org.apache.calcite.rel.logical.LogicalProject")：直接加载
-   * 
+   *
    * 查找策略：
    * - 如果类型名不包含点号，遍历PACKAGES列表依次尝试加载
    * - 如果所有包都找不到，尝试作为完整类名加载
    * - 如果都失败，抛出异常
-   * 
+   *
    * @param type 类型名，可以是短名或完整类名
    * @return 对应的Class对象
    * @throws RuntimeException 如果找不到对应的类
@@ -400,13 +400,13 @@ public class RelJson {
   /**
    * Inverse of {@link #typeNameToClass}.
    * 将Class对象转换为类型名(与typeNameToClass相反)
-   * 
+   *
    * 转换策略：
    * - 如果类的完整类名以PACKAGES中的某个包开头，返回短类型名
    * - 否则返回完整类名
-   * 
+   *
    * 只返回不包含内部类(无$)的短类型名
-   * 
+   *
    * @param class_ RelNode的Class对象
    * @return 类型名(短名或完整类名)
    */
@@ -426,17 +426,17 @@ public class RelJson {
   /** Default implementation of
    * {@link InputTranslator#translateInput(RelJson, int, Map, RelInput)}.
    * InputTranslator的默认实现，将输入引用转换为RexNode
-   * 
+   *
    * 工作流程：
    * 1. 检查是否为局部引用(包含"type"字段)
    * 2. 如果是局部引用，创建RexLocalRef
    * 3. 否则，遍历所有输入节点，查找对应的字段
    * 4. 创建RexInputRef
-   * 
+   *
    * 字段索引计算：
    * - input参数是全局字段索引
    * - 需要减去前面所有输入节点的字段数，找到当前输入节点中的字段索引
-   * 
+   *
    * @param relJson RelJson实例
    * @param input 输入字段的全局索引
    * @param map 包含输入引用信息的Map
@@ -470,13 +470,13 @@ public class RelJson {
 
   // 将RelCollationImpl转换为JSON格式
   // RelCollation表示排序规则，包含多个字段的排序信息
-  // 
+  //
   // JSON格式：
   // [
   //   {"field": 0, "direction": "ASCENDING", "nulls": "FIRST"},
   //   {"field": 1, "direction": "DESCENDING", "nulls": "LAST"}
   // ]
-  // 
+  //
   // @param node RelCollationImpl对象
   // @return JSON格式的列表，每个元素是一个字段的排序信息
   public Object toJson(RelCollationImpl node) {
@@ -493,9 +493,9 @@ public class RelJson {
 
   // 从JSON格式创建RelCollation对象
   // 这是toJson(RelCollationImpl)的反向操作
-  // 
+  //
   // @param jsonFieldCollations JSON格式的字段排序信息列表
-  * @return RelCollation对象
+  // * @return RelCollation对象
   public RelCollation toCollation(
       List<Map<String, Object>> jsonFieldCollations) {
     final List<RelFieldCollation> fieldCollations = new ArrayList<>();  // 创建字段排序列表
@@ -507,9 +507,9 @@ public class RelJson {
 
   // 从JSON格式创建RelFieldCollation对象
   // RelFieldCollation表示单个字段的排序规则
-  // 
+  //
   // @param map 包含字段排序信息的Map
-  * @return RelFieldCollation对象
+  // * @return RelFieldCollation对象
   public RelFieldCollation toFieldCollation(Map<String, Object> map) {
     final Integer field = get(map, "field");  // 字段索引
     final RelFieldCollation.Direction direction =
@@ -523,9 +523,9 @@ public class RelJson {
 
   // 从JSON格式创建RelDistribution对象
   // RelDistribution表示数据分布方式(如HASH、RANGE、BROADCAST等)
-  // 
-  * @param map 包含分布信息的Map
-  * @return RelDistribution对象
+  //
+  // * @param map 包含分布信息的Map
+  // * @return RelDistribution对象
   public RelDistribution toDistribution(Map<String, Object> map) {
     final RelDistribution.Type type =
         enumVal(RelDistribution.Type.class,
@@ -541,15 +541,15 @@ public class RelJson {
 
   // 将RelDistribution转换为JSON格式
   // 这是toDistribution的反向操作
-  // 
+  //
   // JSON格式：
   // {
   //   "type": "HASH",
   //   "keys": [0, 1]
-  * }
-  // 
-  * @param relDistribution RelDistribution对象
-  * @return JSON格式的Map
+  // * }
+  //
+  // * @param relDistribution RelDistribution对象
+  // * @return JSON格式的Map
   private Object toJson(RelDistribution relDistribution) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     map.put("type", relDistribution.getType().name());  // 分布类型
@@ -561,13 +561,13 @@ public class RelJson {
 
   // 从JSON格式创建RelDataType对象
   // RelDataType表示SQL数据类型，支持多种格式：
-  * 1. List格式：表示结构类型(Record)，包含多个字段
-  * 2. Map格式：表示具体类型，包含类型信息和可空性
-  * 3. String格式：表示简单类型名(如"INTEGER"、"VARCHAR")
-  * 
-  * @param typeFactory 类型工厂，用于创建类型
-  * @param o JSON对象，可以是List、Map或String
-  * @return RelDataType对象
+  // * 1. List格式：表示结构类型(Record)，包含多个字段
+  // * 2. Map格式：表示具体类型，包含类型信息和可空性
+  // * 3. String格式：表示简单类型名(如"INTEGER"、"VARCHAR")
+  // *
+  // * @param typeFactory 类型工厂，用于创建类型
+  // * @param o JSON对象，可以是List、Map或String
+  // * @return RelDataType对象
   public RelDataType toType(RelDataTypeFactory typeFactory, Object o) {
     if (o instanceof List) {  // 结构类型(Record)
       @SuppressWarnings("unchecked")
@@ -594,15 +594,15 @@ public class RelJson {
 
   // 从JSON Map获取RelDataType(基础类型，不含可空性)
   // 处理各种复杂的SQL类型，包括：
-  * - INTERVAL类型：时间间隔类型
-  * - ARRAY类型：数组类型
-  * - MAP类型：键值对类型
-  * - MULTISET类型：多重集类型
-  * - 基本类型：带精度和标度的类型
-  * 
-  * @param typeFactory 类型工厂
-  * @param map 包含类型信息的Map
-  * @return RelDataType对象
+  // * - INTERVAL类型：时间间隔类型
+  // * - ARRAY类型：数组类型
+  // * - MAP类型：键值对类型
+  // * - MULTISET类型：多重集类型
+  // * - 基本类型：带精度和标度的类型
+  // *
+  // * @param typeFactory 类型工厂
+  // * @param map 包含类型信息的Map
+  // * @return RelDataType对象
   private RelDataType getRelDataType(RelDataTypeFactory typeFactory, Map<String, Object> map) {
     final Object fields = map.get("fields");  // 检查是否为嵌套结构
     if (fields != null) {
@@ -664,7 +664,7 @@ public class RelJson {
 
   // 将AggregateCall转换为JSON格式
   // AggregateCall表示聚合函数调用(如SUM、COUNT、AVG等)
-  // 
+  //
   // JSON格式：
   // {
   //   "agg": {"name": "SUM", "kind": "SUM", "syntax": "FUNCTION"},
@@ -672,10 +672,10 @@ public class RelJson {
   //   "distinct": false,
   //   "operands": [0],
   //   "name": "SUM($0)"
-  * }
-  * 
-  * @param node AggregateCall对象
-  * @return JSON格式的Map
+  // * }
+  // *
+  // * @param node AggregateCall对象
+  // * @return JSON格式的Map
   public Object toJson(AggregateCall node) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建结果Map
     final Map<String, @Nullable Object> aggMap = toJson(node.getAggregation());  // 转换聚合函数
@@ -692,17 +692,17 @@ public class RelJson {
 
   // 将任意对象转换为JSON格式(通用方法)
   // 这是一个重载方法，支持多种类型的转换
-  * 
-  * 支持的类型：
-  * - 基本类型：null、Number、String、Boolean(直接返回)
-  * - RexNode相关：RexNode、RexWindow、RexFieldCollation、RexWindowBound
-  * - RelNode相关：AggregateCall、RelCollationImpl、RelDataType、RelDataTypeField、RelDistribution
-  * - 集合类型：List、Set、ImmutableBitSet
-  * - 其他：CorrelationId、Sarg、RangeSet、Range、ByteString、UUID
-  * 
-  * @param value 要转换的对象
-  * @return JSON格式的对象
-  * @throws UnsupportedOperationException 如果类型不支持序列化
+  // *
+  // * 支持的类型：
+  // * - 基本类型：null、Number、String、Boolean(直接返回)
+  // * - RexNode相关：RexNode、RexWindow、RexFieldCollation、RexWindowBound
+  // * - RelNode相关：AggregateCall、RelCollationImpl、RelDataType、RelDataTypeField、RelDistribution
+  // * - 集合类型：List、Set、ImmutableBitSet
+  // * - 其他：CorrelationId、Sarg、RangeSet、Range、ByteString、UUID
+  // *
+  // * @param value 要转换的对象
+  // * @return JSON格式的对象
+  // * @throws UnsupportedOperationException 如果类型不支持序列化
   public @Nullable Object toJson(@Nullable Object value) {
     if (value == null  // 基本类型直接返回
         || value instanceof Number
@@ -762,16 +762,16 @@ public class RelJson {
 
   // 将Sarg(搜索参数)转换为JSON格式
   // Sarg表示一个搜索条件，包含范围集合和空值处理方式
-  * 
-  * JSON格式：
-  * {
-  *   "rangeSet": [["[", 0, 5, "]"], ["[", 10, "-", ")"]],
-  *   "nullAs": "UNKNOWN"
-  * }
-  * 
-  * @param <C> 可比较的类型
-  * @param node Sarg对象
-  * @return JSON格式的Map
+  // *
+  // * JSON格式：
+  // * {
+  // *   "rangeSet": [["[", 0, 5, "]"], ["[", 10, "-", ")"]],
+  // *   "nullAs": "UNKNOWN"
+  // * }
+  // *
+  // * @param <C> 可比较的类型
+  // * @param node Sarg对象
+  // * @return JSON格式的Map
   public <C extends Comparable<C>> Object toJson(Sarg<C> node) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     map.put("rangeSet", toJson(node.rangeSet));  // 范围集合
@@ -780,17 +780,17 @@ public class RelJson {
   }
 
   // 将RangeSet转换为JSON格式
-  * RangeSet表示一组不相交的范围
-  * 
-  * JSON格式：
-  * [
-  *   ["closed", 0, 5],
-  *   ["atLeast", 10]
-  * ]
-  * 
-  * @param <C> 可比较的类型
-  * @param rangeSet RangeSet对象
-  * @return JSON格式的列表，每个元素是一个范围
+  // * RangeSet表示一组不相交的范围
+  // *
+  // * JSON格式：
+  // * [
+  // *   ["closed", 0, 5],
+  // *   ["atLeast", 10]
+  // * ]
+  // *
+  // * @param <C> 可比较的类型
+  // * @param rangeSet RangeSet对象
+  // * @return JSON格式的列表，每个元素是一个范围
   public <C extends Comparable<C>> List<List<String>> toJson(
       RangeSet<C> rangeSet) {
     final List<List<String>> list = new ArrayList<>();  // 创建结果列表
@@ -806,7 +806,7 @@ public class RelJson {
   /** Serializes a {@link Range} that can be deserialized using
    * {@link RelJson#rangeFromJson(List, RelDataType)}.
    * 将Range(范围)转换为JSON格式
-   * 
+   *
    * 支持的范围类型：
   * - all: 所有值
   * - atLeast: 大于等于
@@ -818,7 +818,7 @@ public class RelJson {
   * - closedOpen: 左闭右开
   * - openClosed: 左开右闭
   * - open: 开区间
-  * 
+  *
   * @param <C> 可比较的类型
   * @param range Range对象
   * @return JSON格式的列表
@@ -828,27 +828,27 @@ public class RelJson {
   }
 
   // 将RelDataType转换为JSON格式
-  * RelDataType表示SQL数据类型
-  * 
-  * 结构类型JSON格式：
-  * {
-  *   "fields": [
-  *     {"name": "id", "type": "INTEGER", "nullable": false},
-  *     {"name": "name", "type": "VARCHAR", "nullable": true}
-  *   ],
-  *   "nullable": false
-  * }
-  * 
-  * 简单类型JSON格式：
-  * {
-  *   "type": "INTEGER",
-  *   "nullable": false,
-  *   "precision": 10,
-  *   "scale": 2
-  * }
-  * 
-  * @param node RelDataType对象
-  * @return JSON格式的Map
+ // * RelDataType表示SQL数据类型
+ // *
+ // * 结构类型JSON格式：
+ // * {
+ // *   "fields": [
+ // *     {"name": "id", "type": "INTEGER", "nullable": false},
+ // *     {"name": "name", "type": "VARCHAR", "nullable": true}
+ // *   ],
+ // *   "nullable": false
+ // * }
+ // *
+ // * 简单类型JSON格式：
+ // * {
+ // *   "type": "INTEGER",
+ // *   "nullable": false,
+ // *   "precision": 10,
+ // *   "scale": 2
+ // * }
+ // *
+ // * @param node RelDataType对象
+ // * @return JSON格式的Map
   private Object toJson(RelDataType node) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     if (node.isStruct()) {  // 结构类型(Record)
@@ -884,16 +884,16 @@ public class RelJson {
 
   // 将RelDataTypeField转换为JSON格式
   // RelDataTypeField表示结构类型中的一个字段
-  * 
-  * JSON格式：
-  * {
-  *   "name": "id",
-  *   "type": "INTEGER",
-  *   "nullable": false
-  * }
-  * 
-  * @param node RelDataTypeField对象
-  * @return JSON格式的Map
+  // *
+  // * JSON格式：
+  // * {
+  // *   "name": "id",
+  // *   "type": "INTEGER",
+  // *   "nullable": false
+  // * }
+  // *
+  // * @param node RelDataTypeField对象
+  // * @return JSON格式的Map
   private Object toJson(RelDataTypeField node) {
     Map<String, Object> map = (Map<String, Object>) toJson(node.getType());  // 转换类型
     map.put("name", node.getName());  // 添加字段名
@@ -902,31 +902,31 @@ public class RelJson {
 
   // 将CorrelationId转换为JSON格式
   // CorrelationId表示相关ID，用于关联子查询
-  * 
-  * JSON格式：
-  * "correlationId"
-  * 
-  * @param node CorrelationId对象
-  * @return JSON格式的字符串
+  // *
+  // * JSON格式：
+  // * "correlationId"
+  // *
+  // * @param node CorrelationId对象
+  // * @return JSON格式的字符串
   private static Object toJson(CorrelationId node) {
     return node.getId();
   }
 
   // 将RexNode转换为JSON格式
   // RexNode表示行表达式(Row Expression)，是Calcite中表达式的抽象
-  * 
-  * 支持的RexNode类型：
-  * - DYNAMIC_PARAM: 动态参数
-  * - FIELD_ACCESS: 字段访问
-  * - LITERAL: 字面量
-  * - INPUT_REF: 输入引用
-  * - LOCAL_REF: 局部引用
-  * - CORREL_VARIABLE: 相关变量
-  * - RexCall: 函数调用(包括窗口函数)
-  * 
-  * @param node RexNode对象
-  * @return JSON格式的Map
-  * @throws UnsupportedOperationException 如果RexNode类型不支持
+  // *
+  // * 支持的RexNode类型：
+  // * - DYNAMIC_PARAM: 动态参数
+  // * - FIELD_ACCESS: 字段访问
+  // * - LITERAL: 字面量
+  // * - INPUT_REF: 输入引用
+  // * - LOCAL_REF: 局部引用
+  // * - CORREL_VARIABLE: 相关变量
+  // * - RexCall: 函数调用(包括窗口函数)
+  // *
+  // * @param node RexNode对象
+  // * @return JSON格式的Map
+  // * @throws UnsupportedOperationException 如果RexNode类型不支持
   public Object toJson(RexNode node) {
     final Map<String, @Nullable Object> map;
     switch (node.getKind()) {
@@ -1012,17 +1012,17 @@ public class RelJson {
 
   // 将RexWindow转换为JSON格式
   // RexWindow表示窗口函数的窗口定义
-  * 
-  * JSON格式示例：
-  * {
-  *   "partition": [{"input": 0, "name": "dept"}],
-  *   "order": [{"expr": {"input": 1, "name": "salary"}, "direction": "DESCENDING", "null-direction": "LAST"}],
-  *   "rows-lower": {"type": "UNBOUNDED_PRECEDING"},
-  *   "rows-upper": {"type": "CURRENT_ROW"}
-  * }
-  * 
-  * @param window RexWindow对象
-  * @return JSON格式的Map
+  // *
+  // * JSON格式示例：
+  // * {
+  // *   "partition": [{"input": 0, "name": "dept"}],
+  // *   "order": [{"expr": {"input": 1, "name": "salary"}, "direction": "DESCENDING", "null-direction": "LAST"}],
+  // *   "rows-lower": {"type": "UNBOUNDED_PRECEDING"},
+  // *   "rows-upper": {"type": "CURRENT_ROW"}
+  // * }
+  // *
+  // * @param window RexWindow对象
+  // * @return JSON格式的Map
   private Object toJson(RexWindow window) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     if (!window.partitionKeys.isEmpty()) {  // 如果有分区键
@@ -1053,16 +1053,16 @@ public class RelJson {
 
   // 将RexFieldCollation转换为JSON格式
   // RexFieldCollation表示窗口函数中的字段排序
-  * 
-  * JSON格式：
-  * {
-  *   "expr": {"input": 1, "name": "salary"},
-  *   "direction": "DESCENDING",
-  *   "null-direction": "LAST"
-  * }
-  * 
-  * @param collation RexFieldCollation对象
-  * @return JSON格式的Map
+  // *
+  // * JSON格式：
+  // * {
+  // *   "expr": {"input": 1, "name": "salary"},
+  // *   "direction": "DESCENDING",
+  // *   "null-direction": "LAST"
+  // * }
+  // *
+  // * @param collation RexFieldCollation对象
+  // * @return JSON格式的Map
   private Object toJson(RexFieldCollation collation) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     map.put("expr", toJson(collation.left));  // 排序表达式
@@ -1073,21 +1073,21 @@ public class RelJson {
 
   // 将RexWindowBound转换为JSON格式
   // RexWindowBound表示窗口边界
-  * 
-  * 支持的边界类型：
-  * - CURRENT_ROW: 当前行
-  * - UNBOUNDED_PRECEDING: 无界前行(窗口开始)
-  * - UNBOUNDED_FOLLOWING: 无界后行(窗口结束)
-  * - PRECEDING: 前行N行
-  * - FOLLOWING: 后行N行
-  * 
-  * JSON格式示例：
-  * {"type": "CURRENT_ROW"}
-  * {"type": "UNBOUNDED_PRECEDING"}
-  * {"type": "PRECEDING", "offset": {"literal": 1, "type": {"type": "INTEGER"}}}
-  * 
-  * @param windowBound RexWindowBound对象
-  * @return JSON格式的Map
+  // *
+  // * 支持的边界类型：
+  // * - CURRENT_ROW: 当前行
+  // * - UNBOUNDED_PRECEDING: 无界前行(窗口开始)
+  // * - UNBOUNDED_FOLLOWING: 无界后行(窗口结束)
+  // * - PRECEDING: 前行N行
+  // * - FOLLOWING: 后行N行
+  // *
+  // * JSON格式示例：
+  // * {"type": "CURRENT_ROW"}
+  // * {"type": "UNBOUNDED_PRECEDING"}
+  // * {"type": "PRECEDING", "offset": {"literal": 1, "type": {"type": "INTEGER"}}}
+  // *
+  // * @param windowBound RexWindowBound对象
+  // * @return JSON格式的Map
   private Object toJson(RexWindowBound windowBound) {
     final Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
     if (windowBound.isCurrentRow()) {  // 当前行
@@ -1107,9 +1107,9 @@ public class RelJson {
   /**
    * Translates a JSON expression into a RexNode.
    * 将JSON表达式转换为RexNode(公共方法)
-   * 
+   *
    * 这是一个便捷方法，内部创建RelInputForCluster并调用重载的toRex方法
-   * 
+   *
    * @param cluster 优化集群，包含RexBuilder和类型工厂等
    * @param o JSON对象，可以是Map、List或基本类型
    * @return 转换后的RexNode
@@ -1122,23 +1122,23 @@ public class RelJson {
   @SuppressWarnings({"rawtypes", "unchecked"})
   // 将JSON对象转换为RexNode(核心方法)
   // 这是toRex(RelOptCluster, Object)的实际实现
-  * 
-  * 支持的JSON格式：
-  * 1. null: 返回null
-  * 2. Map: 表示复杂表达式(函数调用、输入引用、字段访问等)
-  * 3. Boolean/Number/String: 转换为对应的字面量
-  * 
-  * Map格式支持的表达式类型：
-  * - "op": 函数调用(包含操作符和参数)
-  * - "input": 输入引用
-  * - "field": 字段访问
-  * - "correl": 相关变量
-  * - "literal": 字面量
-  * - "dynamicParam": 动态参数
-  * 
-  * @param relInput RelInput对象，包含集群和输入信息
-  * @param o JSON对象
-  * @return 转换后的RexNode
+  // *
+  // * 支持的JSON格式：
+  // * 1. null: 返回null
+  // * 2. Map: 表示复杂表达式(函数调用、输入引用、字段访问等)
+  // * 3. Boolean/Number/String: 转换为对应的字面量
+  // *
+  // * Map格式支持的表达式类型：
+  // * - "op": 函数调用(包含操作符和参数)
+  // * - "input": 输入引用
+  // * - "field": 字段访问
+  // * - "correl": 相关变量
+  // * - "literal": 字面量
+  // * - "dynamicParam": 动态参数
+  // *
+  // * @param relInput RelInput对象，包含集群和输入信息
+  // * @param o JSON对象
+  // * @return 转换后的RexNode
   @PolyNull RexNode toRex(RelInput relInput, @PolyNull Object o) {
     final RelOptCluster cluster = relInput.getCluster();  // 获取优化集群
     final RexBuilder rexBuilder = cluster.getRexBuilder();  // 获取Rex构建器
@@ -1305,11 +1305,11 @@ public class RelJson {
    * {@code {rangeSet: [["[", 0, 5, "]"], ["[", 10, "-", ")"]],
    * nullAs: "UNKNOWN"}} represents the range x &ge; 0 and x &le; 5 or
    * x &gt; 10.
-   * 
+   *
    * 示例：
    * {rangeSet: [["closed", 0, 5], ["atLeast", 10]], nullAs: "UNKNOWN"}
    * 表示范围：0 <= x <= 5 或 x >= 10
-   * 
+   *
    * @param <C> 可比较的类型
    * @param map 包含Sarg信息的Map
    * @return Sarg对象
@@ -1324,11 +1324,11 @@ public class RelJson {
   }
 
   // 将JSON对象转换为Sarg(搜索参数，带类型信息)
-  * 
-  * @param <C> 可比较的类型
-  * @param map 包含Sarg信息的Map
-  * @param type 值的数据类型
-  * @return Sarg对象
+  // *
+  // * @param <C> 可比较的类型
+  // * @param map 包含Sarg信息的Map
+  // * @param type 值的数据类型
+  // * @return Sarg对象
   public static <C extends Comparable<C>> Sarg<C> sargFromJson(
       Map<String, Object> map, RelDataType type) {
     final String nullAs = requireNonNull((String) map.get("nullAs"), "nullAs");  // 空值处理方式
@@ -1353,7 +1353,7 @@ public class RelJson {
 
   /** Converts a JSON list to a {@link RangeSet} with supplied value typing.
    * 将JSON列表转换为RangeSet(带类型信息)
-   * 
+   *
   * @param <C> 可比较的类型
   * @param rangeSetsJson JSON格式的范围列表
   * @param type 值的数据类型
@@ -1376,7 +1376,7 @@ public class RelJson {
    *
    * <p>The JSON object is as serialized using {@link RelJson#toJson(Range)},
    * e.g. {@code ["[", ")", 10, "-"]}.
-   * 
+   *
    * 支持的范围类型：
    * - "all": 所有值
    * - "atLeast": 大于等于某个值
@@ -1390,7 +1390,7 @@ public class RelJson {
    * - "open": 开区间
    *
    * @see RangeToJsonConverter
-   * 
+   *
    * @param <C> 可比较的类型
   * @param list JSON格式的范围列表
   * @return Range对象
@@ -1432,9 +1432,9 @@ public class RelJson {
    *
    * <p>The JSON object is as serialized using {@link RelJson#toJson(Range)},
    * e.g. {@code ["[", ")", 10, "-"]}.
-   * 
+   *
   * @see RangeToJsonConverter
-  * 
+  *
   * @param <C> 可比较的类型
   * @param list JSON格式的范围列表
   * @param type 值的数据类型
@@ -1476,11 +1476,11 @@ public class RelJson {
   @Deprecated
   // 从JSON字符串反序列化范围端点值(已废弃)
   // 尝试使用VALUE_CLASSES中的所有类型进行反序列化，直到成功
-  * 
-  * @param <C> 可比较的类型
-  * @param o JSON字符串
-  * @return 反序列化后的值
-  * @throws RuntimeException 如果所有类型都失败
+  // *
+  // * @param <C> 可比较的类型
+  // * @param o JSON字符串
+  // * @return 反序列化后的值
+  // * @throws RuntimeException 如果所有类型都失败
   private static <C extends Comparable<C>> C rangeEndPointFromJson(Object o) {
     Exception e = null;
     for (Class clsType : VALUE_CLASSES) {  // 遍历所有支持的值类型
@@ -1497,12 +1497,12 @@ public class RelJson {
 
   // 从JSON字符串反序列化范围端点值(带类型信息)
   // 根据指定的RelDataType确定值的类型，然后进行反序列化
-  * 
-  * @param <C> 可比较的类型
-  * @param o JSON字符串
-  * @param type 值的数据类型
-  * @return 反序列化后的值
-  * @throws RuntimeException 如果反序列化失败
+  // *
+  // * @param <C> 可比较的类型
+  // * @param o JSON字符串
+  // * @param type 值的数据类型
+  // * @return 反序列化后的值
+  // * @throws RuntimeException 如果反序列化失败
   private static <C extends Comparable<C>> C rangeEndPointFromJson(Object o, RelDataType type) {
     Exception e;
     try {
@@ -1517,19 +1517,19 @@ public class RelJson {
   }
 
   // 根据RelDataType确定范围端点值的Java类型
-  * 
-  * 支持的类型映射：
-  * - DECIMAL -> BigDecimal
-  * - DOUBLE -> Double
-  * - CHAR -> NlsString
-  * - BOOLEAN -> Boolean
-  * - TIMESTAMP -> TimestampString
-  * - DATE -> DateString
-  * - TIME -> TimeString
-  * 
-  * @param type RelDataType对象
-  * @return 对应的Java Class对象
-  * @throws RuntimeException 如果类型不支持
+  // *
+  // * 支持的类型映射：
+  // * - DECIMAL -> BigDecimal
+  // * - DOUBLE -> Double
+  // * - CHAR -> NlsString
+  // * - BOOLEAN -> Boolean
+  // * - TIMESTAMP -> TimestampString
+  // * - DATE -> DateString
+  // * - TIME -> TimeString
+  // *
+  // * @param type RelDataType对象
+  // * @return 对应的Java Class对象
+  // * @throws RuntimeException 如果类型不支持
   private static Class determineRangeEndpointValueClass(RelDataType type) {
     SqlTypeName typeName = RexLiteral.strictTypeName(type);  // 获取严格的SQL类型名
     switch (typeName) {
@@ -1554,10 +1554,10 @@ public class RelJson {
   }
 
   // 将JSON格式的字段排序列表转换为RexFieldCollation列表
-  * 
-  * @param list 结果列表，用于存放转换后的RexFieldCollation
-  * @param relInput RelInput对象
-  * @param order JSON格式的字段排序列表
+  // *
+  // * @param list 结果列表，用于存放转换后的RexFieldCollation
+  // * @param relInput RelInput对象
+  // * @param order JSON格式的字段排序列表
   private void addRexFieldCollationList(List<RexFieldCollation> list,
       RelInput relInput, @Nullable List<Map<String, Object>> order) {
     if (order == null) {  // 如果为null，直接返回
@@ -1580,15 +1580,15 @@ public class RelJson {
   }
 
   // 将JSON格式转换为RexWindowExclusion(窗口排除规则)
-  * 
-  * 支持的排除规则：
-  * - "CURRENT_ROW": 排除当前行
-  * - "GROUP": 排除当前组
-  * - "TIES": 排除相同值的行
-  * - "NO OTHERS": 不排除其他行
-  * 
-  * @param map JSON格式的排除规则
-  * @return RexWindowExclusion对象，如果map为null则返回null
+  // *
+  // * 支持的排除规则：
+  // * - "CURRENT_ROW": 排除当前行
+  // * - "GROUP": 排除当前组
+  // * - "TIES": 排除相同值的行
+  // * - "NO OTHERS": 不排除其他行
+  // *
+  // * @param map JSON格式的排除规则
+  // * @return RexWindowExclusion对象，如果map为null则返回null
   private static @Nullable RexWindowExclusion toRexWindowExclusion(
       @Nullable Map<String, Object> map) {
     if (map == null) {  // 如果为null，返回null
@@ -1610,17 +1610,17 @@ public class RelJson {
     }
   }
   // 将JSON格式转换为RexWindowBound(窗口边界)
-  * 
-  * 支持的边界类型：
-  * - "CURRENT_ROW": 当前行
-  * - "UNBOUNDED_PRECEDING": 无界前行
-  * - "UNBOUNDED_FOLLOWING": 无界后行
-  * - "PRECEDING": 前行N行
-  * - "FOLLOWING": 后行N行
-  * 
-  * @param input RelInput对象
-  * @param map JSON格式的窗口边界
-  * @return RexWindowBound对象，如果map为null则返回null
+  // *
+  // * 支持的边界类型：
+  // * - "CURRENT_ROW": 当前行
+  // * - "UNBOUNDED_PRECEDING": 无界前行
+  // * - "UNBOUNDED_FOLLOWING": 无界后行
+  // * - "PRECEDING": 前行N行
+  // * - "FOLLOWING": 后行N行
+  // *
+  // * @param input RelInput对象
+  // * @param map JSON格式的窗口边界
+  // * @return RexWindowBound对象，如果map为null则返回null
   private @Nullable RexWindowBound toRexWindowBound(RelInput input,
       @Nullable Map<String, Object> map) {
     if (map == null) {  // 如果为null，返回null
@@ -1645,10 +1645,10 @@ public class RelJson {
   }
 
   // 将JSON列表转换为RexNode列表
-  * 
-  * @param relInput RelInput对象
-  * @param operands JSON格式的操作数列表
-  * @return 转换后的RexNode列表
+  // *
+  // * @param relInput RelInput对象
+  // * @param operands JSON格式的操作数列表
+  // * @return 转换后的RexNode列表
   private List<RexNode> toRexList(RelInput relInput, List operands) {
     final List<RexNode> list = new ArrayList<>();  // 创建结果列表
     for (Object operand : operands) {  // 遍历每个操作数
@@ -1658,14 +1658,14 @@ public class RelJson {
   }
 
   // 将JSON格式转换为SqlOperator
-  * 
-  * 查找策略：
-  * 1. 通过名称、类型和语法在操作符表中查找
-  * 2. 如果找不到，尝试通过类名实例化(用户自定义操作符)
-  * 3. 如果都失败，抛出异常
-  * 
-  * @param map 包含操作符信息的Map
-  * @return SqlOperator对象，如果找不到则返回null
+  // *
+  // * 查找策略：
+  // * 1. 通过名称、类型和语法在操作符表中查找
+  // * 2. 如果找不到，尝试通过类名实例化(用户自定义操作符)
+  // * 3. 如果都失败，抛出异常
+  // *
+  // * @param map 包含操作符信息的Map
+  // * @return SqlOperator对象，如果找不到则返回null
   @Nullable SqlOperator toOp(Map<String, ? extends @Nullable Object> map) {
     // in case different operator has the same kind, check with both name and kind.
     // 为了区分不同操作符可能有相同的kind，同时检查name和kind
@@ -1694,24 +1694,24 @@ public class RelJson {
   }
 
   // 将JSON格式转换为SqlAggFunction(聚合函数)
-  * 
-  * @param map 包含聚合函数信息的Map
-  * @return SqlAggFunction对象
+  // *
+  // * @param map 包含聚合函数信息的Map
+  // * @return SqlAggFunction对象
   @Nullable SqlAggFunction toAggregation(Map<String, ? extends @Nullable Object> map) {
     return (SqlAggFunction) toOp(map);  // 聚合函数也是操作符的一种
   }
 
   // 将SqlOperator转换为JSON格式
-  * 
-  * JSON格式：
-  * {
-  *   "name": "+",
-  *   "kind": "PLUS",
-  *   "syntax": "BINARY"
-  * }
-  * 
-  * @param operator SqlOperator对象
-  * @return JSON格式的Map
+  // *
+  // * JSON格式：
+  // * {
+  // *   "name": "+",
+  // *   "kind": "PLUS",
+  // *   "syntax": "BINARY"
+  // * }
+  // *
+  // * @param operator SqlOperator对象
+  // * @return JSON格式的Map
   private Map<String, @Nullable Object> toJson(SqlOperator operator) {
     // User-defined operators are not yet handled. 用户自定义操作符暂未处理
     Map<String, @Nullable Object> map = jsonBuilder().map();  // 创建Map
@@ -1749,7 +1749,7 @@ public class RelJson {
    * <p>Contains only a cluster and an empty list of inputs;
    * most methods throw {@link UnsupportedOperationException}.
    * 只包含集群和空的输入列表，大多数方法抛出UnsupportedOperationException
-   * 
+   *
    * 这个类是一个最小化的RelInput实现，只支持getCluster()和getInputs()方法
    * 用于在反序列化RexNode时提供必要的上下文信息
    */
@@ -1864,7 +1864,7 @@ public class RelJson {
   /**
    * Translates a JSON object that represents an input reference into a RexNode.
    * 输入转换器接口，用于将JSON格式的输入引用转换为RexNode
-   * 
+   *
    * 这是一个函数式接口，允许自定义输入引用的转换逻辑
    * 默认实现是translateInput静态方法
    */
@@ -1887,7 +1887,7 @@ public class RelJson {
   /** Implementation of {@link RangeSets.Handler} that converts a {@link Range}
    * event to a list of strings.
    * RangeToJsonConverter是RangeSets.Handler的实现，将Range事件转换为字符串列表
-   * 
+   *
    * 这个类用于将Range对象序列化为JSON格式的字符串列表
    * 使用单例模式，所有方法都是线程安全的
    *

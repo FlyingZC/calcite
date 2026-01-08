@@ -37,21 +37,21 @@ import static java.util.Objects.requireNonNull; // 静态导入Objects.requireNo
  * A hint predicate that specifies which kind of relational
  * expression the hint can be applied to.
  * 这是一个提示谓词，用于指定提示(hint)可以应用于哪种类型的关系表达式
- * 
+ *
  * 类作用说明：
  * NodeTypeHintPredicate是Calcite框架中用于判断提示(hint)是否应该传播到特定类型关系节点的谓词实现
  * 它实现了HintPredicate接口，提供了基于节点类型的匹配逻辑
- * 
+ *
  * 核心功能：
  * 1. 定义了16种不同的关系节点类型(通过NodeType枚举)
  * 2. 根据节点类型判断提示是否应该应用到该节点
  * 3. 支持提示的传播机制，控制提示在查询计划中的传播范围
- * 
+ *
  * 使用场景：
  * - 在SQL查询优化过程中，用户可以通过提示(hint)来影响优化器的决策
- * - 例如：/*+ INDEX_JOIN(t1, idx1) */ 这样的提示需要应用到特定的Join节点
+ * - 例如：/*+ INDEX_JOIN(t1, idx1)  这样的提示需要应用到特定的Join节点
  * - NodeTypeHintPredicate用于判断该提示是否应该传播到当前的关系节点
- * 
+ *
  * 设计模式：
  * - 使用策略模式：不同的节点类型对应不同的处理策略
  * - 使用枚举类型：NodeType枚举封装了所有支持的节点类型及其对应的Class对象
@@ -62,12 +62,12 @@ public class NodeTypeHintPredicate implements HintPredicate { // 定义NodeTypeH
    * Enumeration of the relational expression types that the hints
    * may be propagated to.
    * 枚举定义了提示可能传播到的关系表达式类型
-   * 
+   *
    * NodeType枚举作用：
    * 定义了Calcite中所有支持提示传播的关系节点类型
    * 每个枚举值对应一种特定的关系节点类型，并关联该节点的Class对象
    * 通过枚举可以方便地进行类型匹配和提示传播控制
-   * 
+   *
    * 枚举值说明：
    * - SET_VAR: 用于整个查询的配置，不传播
    * - JOIN: 连接操作节点
@@ -90,12 +90,12 @@ public class NodeTypeHintPredicate implements HintPredicate { // 定义NodeTypeH
      * This kind of hints would never be propagated.
      * 该提示用于整个查询，类似于查询配置
      * 这种类型的提示永远不会传播
-     * 
+     *
      * SET_VAR说明：
      * - SET_VAR是"SET VARIABLE"的缩写，表示设置变量的提示
      * - 这类提示作用于整个查询，而不是特定的关系节点
      * - 因此它不会传播到任何子节点
-     * - 例如：/*+ SET_VAR('some_config', 'value') */ 这样的提示
+     * - 例如：/*+ SET_VAR('some_config', 'value')  这样的提示
      * - 在apply方法中，SET_VAR类型直接返回false，表示不应用也不传播
      */
     SET_VAR(RelNode.class), // 定义SET_VAR枚举值，关联RelNode.class作为基类，表示该提示用于整个查询配置，不传播
@@ -103,144 +103,144 @@ public class NodeTypeHintPredicate implements HintPredicate { // 定义NodeTypeH
     /**
      * The hint would be propagated to the Join nodes.
      * 该提示会传播到Join节点
-     * 
+     *
      * JOIN说明：
      * - Join节点表示两个或多个表的连接操作
      * - 支持的连接类型：INNER JOIN、LEFT JOIN、RIGHT JOIN、FULL JOIN等
      * - 提示可以影响连接算法的选择(如Hash Join、Merge Join、Nested Loop Join)
-     * - 例如：/*+ HASH_JOIN(t1, t2) */ 提示使用Hash Join算法
+     * - 例如：/*+ HASH_JOIN(t1, t2)  提示使用Hash Join算法
      */
     JOIN(Join.class), // 定义JOIN枚举值，关联Join.class，表示该提示会传播到Join节点
 
     /**
      * The hint would be propagated to the TableScan nodes.
      * 该提示会传播到TableScan节点
-     * 
+     *
      * TABLE_SCAN说明：
      * - TableScan节点表示从表中读取数据
      * - 提示可以影响表的访问方式(如全表扫描、索引扫描)
-     * - 例如：/*+ INDEX(t1, idx1) */ 提示使用索引idx1扫描表t1
+     * - 例如：/*+ INDEX(t1, idx1)  提示使用索引idx1扫描表t1
      */
     TABLE_SCAN(TableScan.class), // 定义TABLE_SCAN枚举值，关联TableScan.class，表示该提示会传播到TableScan节点
 
     /**
      * The hint would be propagated to the Project nodes.
      * 该提示会传播到Project节点
-     * 
+     *
      * PROJECT说明：
      * - Project节点表示投影操作，用于选择、重命名、计算列
      * - 提示可以影响投影的优化策略
-     * - 例如：/*+ PROJECT_MERGE */ 提示合并多个Project操作
+     * - 例如：/*+ PROJECT_MERGE  提示合并多个Project操作
      */
     PROJECT(Project.class), // 定义PROJECT枚举值，关联Project.class，表示该提示会传播到Project节点
 
     /**
      * The hint would be propagated to the Aggregate nodes.
      * 该提示会传播到Aggregate节点
-     * 
+     *
      * AGGREGATE说明：
      * - Aggregate节点表示聚合操作，如SUM、COUNT、AVG等
      * - 提示可以影响聚合算法的选择(如Hash Aggregate、Sort Aggregate)
-     * - 例如：/*+ HASH_AGG */ 提示使用Hash聚合算法
+     * - 例如：/*+ HASH_AGG  提示使用Hash聚合算法
      */
     AGGREGATE(Aggregate.class), // 定义AGGREGATE枚举值，关联Aggregate.class，表示该提示会传播到Aggregate节点
 
     /**
      * The hint would be propagated to the Calc nodes.
      * 该提示会传播到Calc节点
-     * 
+     *
      * CALC说明：
      * - Calc节点是Calcite特有的节点，结合了Project和Filter的功能
      * - 提示可以影响Calc节点的优化策略
-     * - 例如：/*+ CALC_MERGE */ 提示合并Calc操作
+     * - 例如：/*+ CALC_MERGE  提示合并Calc操作
      */
     CALC(Calc.class), // 定义CALC枚举值，关联Calc.class，表示该提示会传播到Calc节点
 
     /**
      * The hint would be propagated to the Correlate nodes.
      * 该提示会传播到Correlate节点
-     * 
+     *
      * CORRELATE说明：
      * - Correlate节点表示相关子查询，即子查询引用了外部查询的列
      * - 提示可以影响相关子查询的去相关策略
-     * - 例如：/*+ UNNEST */ 提示对相关子查询进行去相关
+     * - 例如：/*+ UNNEST  提示对相关子查询进行去相关
      */
     CORRELATE(Correlate.class), // 定义CORRELATE枚举值，关联Correlate.class，表示该提示会传播到Correlate节点
 
     /**
      * The hint would be propagated to the Filter nodes.
      * 该提示会传播到Filter节点
-     * 
+     *
      * FILTER说明：
      * - Filter节点表示过滤操作，用于根据条件过滤行
      * - 提示可以影响过滤条件的下推策略
-     * - 例如：/*+ FILTER_PUSHDOWN */ 提示将过滤条件尽可能下推
+     * - 例如：/*+ FILTER_PUSHDOWN  提示将过滤条件尽可能下推
      */
     FILTER(Filter.class), // 定义FILTER枚举值，关联Filter.class，表示该提示会传播到Filter节点
 
     /**
      * The hint would be propagated to the SetOp(Union, Intersect, Minus) nodes.
      * 该提示会传播到SetOp(Union、Intersect、Minus)节点
-     * 
+     *
      * SETOP说明：
      * - SetOp节点表示集合操作，包括UNION、INTERSECT、MINUS(EXCEPT)
      * - 提示可以影响集合操作的执行策略
-     * - 例如：/*+ UNION_ALL */ 提示使用UNION ALL而不是UNION DISTINCT
+     * - 例如：/*+ UNION_ALL  提示使用UNION ALL而不是UNION DISTINCT
      */
     SETOP(SetOp.class), // 定义SETOP枚举值，关联SetOp.class，表示该提示会传播到SetOp(Union、Intersect、Minus)节点
 
     /**
      * The hint would be propagated to the Sort nodes.
      * 该提示会传播到Sort节点
-     * 
+     *
      * SORT说明：
      * - Sort节点表示排序操作，用于ORDER BY子句
      * - 提示可以影响排序算法的选择
-     * - 例如：/*+ TOP_N */ 提示使用Top-N排序优化
+     * - 例如：/*+ TOP_N  提示使用Top-N排序优化
      */
     SORT(Sort.class), // 定义SORT枚举值，关联Sort.class，表示该提示会传播到Sort节点
 
     /**
      * The hint would be propagated to the Values nodes.
      * 该提示会传播到Values节点
-     * 
+     *
      * VALUES说明：
      * - Values节点表示值列表，用于VALUES子句
      * - 提示可以影响Values节点的优化策略
-     * - 例如：/*+ VALUES_MERGE */ 提示合并多个Values操作
+     * - 例如：/*+ VALUES_MERGE  提示合并多个Values操作
      */
     VALUES(Values.class), // 定义VALUES枚举值，关联Values.class，表示该提示会传播到Values节点
 
     /**
      * The hint would be propagated to the Window nodes.
      * 该提示会传播到Window节点
-     * 
+     *
      * WINDOW说明：
      * - Window节点表示窗口函数操作，用于OVER子句
      * - 提示可以影响窗口函数的计算策略
-     * - 例如：/*+ WINDOW_MERGE */ 提示合并多个Window操作
+     * - 例如：/*+ WINDOW_MERGE  提示合并多个Window操作
      */
     WINDOW(Window.class), // 定义WINDOW枚举值，关联Window.class，表示该提示会传播到Window节点
 
     /**
      * The hint would be propagated to the Snapshot nodes.
      * 该提示会传播到Snapshot节点
-     * 
+     *
      * SNAPSHOT说明：
      * - Snapshot节点表示快照操作，用于时态查询
      * - 提示可以影响快照的获取策略
-     * - 例如：/*+ SNAPSHOT_AS_OF */ 提示使用特定时间点的快照
+     * - 例如：/*+ SNAPSHOT_AS_OF  提示使用特定时间点的快照
      */
     SNAPSHOT(Snapshot.class), // 定义SNAPSHOT枚举值，关联Snapshot.class，表示该提示会传播到Snapshot节点
 
     /**
      * The hint would be propagated to the TableFunctionScan nodes.
      * 该提示会传播到TableFunctionScan节点
-     * 
+     *
      * TABLE_FUNCTION_SCAN说明：
      * - TableFunctionScan节点表示表函数扫描，用于调用表值函数
      * - 提示可以影响表函数的执行策略
-     * - 例如：/*+ TABLE_FUNCTION */ 提示优化表函数的执行
+     * - 例如：/*+ TABLE_FUNCTION  提示优化表函数的执行
      */
     TABLE_FUNCTION_SCAN(TableFunctionScan.class); // 定义TABLE_FUNCTION_SCAN枚举值，关联TableFunctionScan.class，表示该提示会传播到TableFunctionScan节点
 

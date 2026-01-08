@@ -40,11 +40,11 @@ import static java.util.Objects.requireNonNull; // 静态导入requireNonNull方
  * <p>Several implementations of SortExchange are possible; the purpose of this
  * base class allows rules to be written that apply to all of those
  * implementations. // SortExchange可以有多种实现方式；这个基类的目的是允许编写适用于所有这些实现的规则
- * 
+ *
  * 【类作用详解】：SortExchange是Calcite中一个抽象的关系表达式类，它将数据交换（Exchange）和排序（Sort）两个操作合并为一个操作。
  * 在分布式查询执行中，通常需要先对数据进行重分布（按照某种分布策略将数据发送到不同的节点），然后再对数据进行排序。
  * SortExchange将这两个步骤合并，可以提高执行效率，减少中间结果的传输开销。
- * 
+ *
  * 例如：在分布式环境中执行ORDER BY操作时，可能需要先将数据按照某个字段哈希分布到各个节点，然后在每个节点上进行局部排序，
  * 最后再进行全局排序。SortExchange可以表示这种同时进行数据交换和排序的操作。
  */
@@ -96,9 +96,9 @@ public abstract class SortExchange extends Exchange { // 声明SortExchange为�
 
   public abstract SortExchange copy(RelTraitSet traitSet, RelNode newInput, // 声明抽象的copy方法，子类必须实现此方法以创建SortExchange的副本
       RelDistribution newDistribution, RelCollation newCollation); // 抽象copy方法的参数：新的特征集合、新的输入关系表达式、新的分布规范、新的排序规范
-  【方法详解】：copy方法用于创建SortExchange的副本。第一个copy方法（带有final修饰符）是一个便捷方法，
-  它保持排序规范不变，只允许修改特征集合、输入关系表达式和分布规范。
-  第二个copy方法是抽象方法，要求子类实现，允许修改所有参数包括排序规范。
+//  【方法详解】：copy方法用于创建SortExchange的副本。第一个copy方法（带有final修饰符）是一个便捷方法，
+//  它保持排序规范不变，只允许修改特征集合、输入关系表达式和分布规范。
+//  第二个copy方法是抽象方法，要求子类实现，允许修改所有参数包括排序规范。
 
   /**
    * Returns the array of {@link org.apache.calcite.rel.RelFieldCollation}s
