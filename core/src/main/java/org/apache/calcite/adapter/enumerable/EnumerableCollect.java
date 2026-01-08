@@ -91,10 +91,10 @@ public class EnumerableCollect extends Collect implements EnumerableRel {
 
     final SqlTypeName collectionType = getCollectionType();
 
-    // final Enumerable child = <<child adapter>>;
-    // final Enumerable<Object[]> converted = child.select(<<conversion code>>);
-    // if collectionType is ARRAY or MULTISET: final List<Object[]> list = converted.toList();
-    // if collectionType is MAP:               final Map<Object, Object> map = converted.toMap();
+    // final Enumerable child = <<child adapter>>;  // 注释:生成的代码将包含子适配器的枚举
+    // final Enumerable<Object[]> converted = child.select(<<conversion代码>>);  // 注释:将子节点数据转换为Object[]数组
+    // if collectionType is ARRAY or MULTISET: final List<Object[]> list = converted.toList();  // 注释:如果是ARRAY或MULTISET类型,转换为List
+    // if collectionType is MAP:               final Map<Object, Object> map = converted.toMap();  // 注释:如果是MAP类型,转换为Map
     Expression child_ =
         builder.append(
             "child", result.block);

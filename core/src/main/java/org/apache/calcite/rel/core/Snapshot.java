@@ -131,7 +131,7 @@ public abstract class Snapshot extends SingleRel implements Hintable {
   @Override public boolean isValid(Litmus litmus, @Nullable Context context) {
     RelDataType dataType = period.getType();
     if (!SqlTypeUtil.isTimestamp(dataType)) {
-      return litmus.fail("The system time period specification expects Timestamp type but is '"
+      return litmus.fail("The system时间 period specification expects Timestamp type but is '"
           + dataType.getSqlTypeName() + "'");
     }
     return litmus.succeed();

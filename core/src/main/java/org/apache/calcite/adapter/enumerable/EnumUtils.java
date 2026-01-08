@@ -14,676 +14,927 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.adapter.enumerable;
+package org.apache.calcite.adapter.enumerable; // 包声明：定义该类属于org.apache.calcite.adapter.enumerable包
 
-import org.apache.calcite.adapter.java.JavaTypeFactory;
-import org.apache.calcite.avatica.util.DateTimeUtils;
-import org.apache.calcite.linq4j.AbstractEnumerable;
-import org.apache.calcite.linq4j.Enumerable;
-import org.apache.calcite.linq4j.Enumerator;
-import org.apache.calcite.linq4j.JoinType;
-import org.apache.calcite.linq4j.Nullness;
-import org.apache.calcite.linq4j.Ord;
-import org.apache.calcite.linq4j.function.Function1;
-import org.apache.calcite.linq4j.function.Function2;
-import org.apache.calcite.linq4j.function.Predicate2;
-import org.apache.calcite.linq4j.tree.BlockBuilder;
-import org.apache.calcite.linq4j.tree.BlockStatement;
-import org.apache.calcite.linq4j.tree.ConstantExpression;
-import org.apache.calcite.linq4j.tree.ConstantUntypedNull;
-import org.apache.calcite.linq4j.tree.DeclarationStatement;
-import org.apache.calcite.linq4j.tree.Expression;
-import org.apache.calcite.linq4j.tree.ExpressionType;
-import org.apache.calcite.linq4j.tree.Expressions;
-import org.apache.calcite.linq4j.tree.FunctionExpression;
-import org.apache.calcite.linq4j.tree.MethodCallExpression;
-import org.apache.calcite.linq4j.tree.MethodDeclaration;
-import org.apache.calcite.linq4j.tree.NewArrayExpression;
-import org.apache.calcite.linq4j.tree.ParameterExpression;
-import org.apache.calcite.linq4j.tree.Primitive;
-import org.apache.calcite.linq4j.tree.Statement;
-import org.apache.calcite.linq4j.tree.Types;
-import org.apache.calcite.linq4j.tree.UnaryExpression;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexProgramBuilder;
-import org.apache.calcite.runtime.PairList;
-import org.apache.calcite.runtime.SortedMultiMap;
-import org.apache.calcite.runtime.SqlFunctions;
-import org.apache.calcite.runtime.Utilities;
-import org.apache.calcite.sql.SqlCollation;
-import org.apache.calcite.util.BuiltInMethod;
-import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.adapter.java.JavaTypeFactory; // 导入Java类型工厂，用于创建Java类型
+import org.apache.calcite.avatica.util.DateTimeUtils; // 导入日期时间工具类，提供常量和方法用于日期时间计算
+import org.apache.calcite.linq4j.AbstractEnumerable; // 导入抽象可枚举类，用于实现可枚举接口
+import org.apache.calcite.linq4j.Enumerable; // 导入可枚举接口，表示可以迭代的序列
+import org.apache.calcite.linq4j.Enumerator; // 导入枚举器接口，用于遍历集合
+import org.apache.calcite.linq4j.JoinType; // 导入连接类型枚举，定义INNER、LEFT、RIGHT等连接类型
+import org.apache.calcite.linq4j.Nullness; // 导入空值处理工具类
+import org.apache.calcite.linq4j.Ord; // 导入有序包装类，用于索引和值的配对
+import org.apache.calcite.linq4j.function.Function1; // 导入单参数函数接口
+import org.apache.calcite.linq4j.function.Function2; // 导入双参数函数接口
+import org.apache.calcite.linq4j.function.Predicate2; // 导入双参数谓词接口
+import org.apache.calcite.linq4j.tree.BlockBuilder; // 导入代码块构建器，用于构建Java代码块
+import org.apache.calcite.linq4j.tree.BlockStatement; // 导入代码块语句，表示一个代码块
+import org.apache.calcite.linq4j.tree.ConstantExpression; // 导入常量表达式，表示常量值
+import org.apache.calcite.linq4j.tree.ConstantUntypedNull; // 导入无类型空常量表达式
+import org.apache.calcite.linq4j.tree.DeclarationStatement; // 导入声明语句，用于变量声明
+import org.apache.calcite.linq4j.tree.Expression; // 导入表达式基类，表示各种表达式
+import org.apache.calcite.linq4j.tree.ExpressionType; // 导入表达式类型枚举，定义各种表达式类型
+import org.apache.calcite.linq4j.tree.Expressions; // 导入表达式工厂类，用于创建各种表达式
+import org.apache.calcite.linq4j.tree.FunctionExpression; // 导入函数表达式，表示Lambda表达式
+import org.apache.calcite.linq4j.tree.MethodCallExpression; // 导入方法调用表达式，表示方法调用
+import org.apache.calcite.linq4j.tree.MethodDeclaration; // 导入方法声明，表示方法定义
+import org.apache.calcite.linq4j.tree.NewArrayExpression; // 导入数组创建表达式
+import org.apache.calcite.linq4j.tree.ParameterExpression; // 导入参数表达式，表示方法参数
+import org.apache.calcite.linq4j.tree.Primitive; // 导入基本类型枚举，定义Java基本类型
+import org.apache.calcite.linq4j.tree.Statement; // 导入语句基类，表示各种语句
+import org.apache.calcite.linq4j.tree.Types; // 导入类型工具类，提供类型操作方法
+import org.apache.calcite.linq4j.tree.UnaryExpression; // 导入一元表达式，表示单目运算符表达式
+import org.apache.calcite.rel.RelNode; // 导入关系表达式节点，表示关系代数操作
+import org.apache.calcite.rel.core.JoinRelType; // 导入关系连接类型，定义INNER、LEFT、RIGHT等连接类型
+import org.apache.calcite.rel.type.RelDataType; // 导入关系数据类型，表示Calcite中的数据类型
+import org.apache.calcite.rel.type.RelDataTypeField; // 导入关系数据类型字段，表示字段定义
+import org.apache.calcite.rex.RexBuilder; // 导入Rex表达式构建器，用于构建行表达式
+import org.apache.calcite.rex.RexNode; // 导入行表达式节点，表示行表达式
+import org.apache.calcite.rex.RexProgramBuilder; // 导入Rex程序构建器，用于构建Rex程序
+import org.apache.calcite.runtime.PairList; // 导入键值对列表，存储键值对集合
+import org.apache.calcite.runtime.SortedMultiMap; // 导入排序多重映射，支持一对多映射
+import org.apache.calcite.runtime.SqlFunctions; // 导入SQL函数工具类，提供SQL内置函数实现
+import org.apache.calcite.runtime.Utilities; // 导入工具类，提供通用工具方法
+import org.apache.calcite.sql.SqlCollation; // 导入SQL排序规则，定义字符串比较规则
+import org.apache.calcite.util.BuiltInMethod; // 导入内置方法枚举，列出Calcite内置方法
+import org.apache.calcite.util.Pair; // 导入键值对类，存储两个值
+import org.apache.calcite.util.Util; // 导入工具类，提供通用工具方法
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList; // 导入Google不可变列表，提供不可变列表实现
+import com.google.common.collect.ImmutableMap; // 导入Google不可变映射，提供不可变映射实现
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable; // 导入可空注解，标记可能为null的值
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.lang.reflect.Type;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.text.Collator;
-import java.util.AbstractList;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TimeZone;
-import java.util.function.Function;
+import java.lang.reflect.Method; // 导入方法类，用于反射操作
+import java.lang.reflect.Modifier; // 导入修饰符类，用于获取方法修饰符
+import java.lang.reflect.Type; // 导入类型接口，表示Java类型
+import java.math.BigDecimal; // 导入BigDecimal类，用于高精度十进制运算
+import java.math.RoundingMode; // 导入舍入模式枚举，定义各种舍入方式
+import java.sql.Date; // 导入SQL日期类，表示日期值
+import java.sql.Time; // 导入SQL时间类，表示时间值
+import java.sql.Timestamp; // 导入SQL时间戳类，表示日期时间值
+import java.text.Collator; // 导入排序器类，用于字符串比较
+import java.util.AbstractList; // 导入抽象列表类，用于自定义列表实现
+import java.util.ArrayDeque; // 导入数组双端队列，提供高效的队列操作
+import java.util.ArrayList; // 导入动态数组列表，提供可变长度数组
+import java.util.Arrays; // 导入数组工具类，提供数组操作方法
+import java.util.Deque; // 导入双端队列接口，支持两端操作
+import java.util.HashMap; // 导入哈希映射，提供键值对存储
+import java.util.List; // 导入列表接口，表示有序集合
+import java.util.Locale; // 导入语言环境类，用于本地化
+import java.util.Map; // 导入映射接口，表示键值对集合
+import java.util.TimeZone; // 导入时区类，用于时区处理
+import java.util.function.Function; // 导入函数接口，表示函数式编程
 
-import static org.apache.calcite.config.CalciteSystemProperty.JOIN_SELECTOR_COMPACT_CODE_THRESHOLD;
+import static org.apache.calcite.config.CalciteSystemProperty.JOIN_SELECTOR_COMPACT_CODE_THRESHOLD; // 导入连接选择器紧凑代码阈值配置
 
-import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNull; // 导入Objects工具类的requireNonNull方法，用于空值检查
 
 /**
  * Utilities for generating programs in the Enumerable (functional)
  * style.
+ * 用于生成可枚举（函数式）风格程序的工具类。
+ * 
+ * 这个类提供了许多静态方法，用于在Calcite的Enumerable适配器中生成Java代码。
+ * 它是Calcite将关系代数转换为可执行的Java代码的核心工具类之一。
+ * 
+ * 主要功能包括：
+ * 1. 类型转换：在Calcite内部类型和Java类型之间进行转换
+ * 2. 表达式生成：生成各种Java表达式，如方法调用、类型转换等
+ * 3. 连接操作：生成连接选择器，用于连接左右输入
+ * 4. 窗口操作：生成滚动、滑动、会话窗口的选择器
+ * 5. 方法调用：智能匹配方法参数，支持类型转换
  */
-public class EnumUtils {
+public class EnumUtils { // 类声明：EnumUtils工具类，提供生成可枚举风格程序的静态方法
 
-  private EnumUtils() {}
+  private EnumUtils() {} // 私有构造方法，防止实例化（工具类不需要实例）
 
-  static final boolean BRIDGE_METHODS = true;
+  static final boolean BRIDGE_METHODS = true; // 静态常量：是否生成桥接方法，用于处理类型擦除后的方法重写
 
-  static final List<ParameterExpression> NO_PARAMS =
-      ImmutableList.of();
+  static final List<ParameterExpression> NO_PARAMS = // 静态常量：空的参数表达式列表，用于表示无参数
+      ImmutableList.of(); // 使用不可变列表创建空列表
 
-  static final List<Expression> NO_EXPRS =
-      ImmutableList.of();
+  static final List<Expression> NO_EXPRS = // 静态常量：空的表达式列表，用于表示无表达式
+      ImmutableList.of(); // 使用不可变列表创建空列表
 
-  public static final List<String> LEFT_RIGHT =
-      ImmutableList.of("left", "right");
+  public static final List<String> LEFT_RIGHT = // 公共静态常量：左右输入的参数名称列表，用于连接操作
+      ImmutableList.of("left", "right"); // 使用不可变列表创建包含"left"和"right"的列表
 
-  /** Declares a method that overrides another method. */
-  public static MethodDeclaration overridingMethodDecl(Method method,
-      Iterable<ParameterExpression> parameters,
-      BlockStatement body) {
-    return Expressions.methodDecl(
-        method.getModifiers() & ~Modifier.ABSTRACT,
-        method.getReturnType(),
-        method.getName(),
-        parameters,
-        body);
+  /**
+   * Declares a method that overrides another method.
+   * 声明一个覆盖另一个方法的方法。
+   *
+   * @param method 要覆盖的方法
+   * @param parameters 方法的参数表达式列表
+   * @param body 方法体代码块
+   * @return 方法声明表达式
+   */
+  public static MethodDeclaration overridingMethodDecl(Method method, // 参数：要覆盖的方法对象
+      Iterable<ParameterExpression> parameters, // 参数：方法的参数表达式列表（可迭代）
+      BlockStatement body) { // 参数：方法体代码块语句
+    return Expressions.methodDecl( // 返回：调用Expressions工厂创建方法声明
+        method.getModifiers() & ~Modifier.ABSTRACT, // 移除ABSTRACT修饰符，保留其他修饰符（如public等）
+        method.getReturnType(), // 使用原方法的返回类型
+        method.getName(), // 使用原方法的方法名
+        parameters, // 使用传入的参数列表
+        body); // 使用传入的方法体
   }
 
-  static Type javaClass(
-      JavaTypeFactory typeFactory, RelDataType type) {
-    final Type clazz = typeFactory.getJavaClass(type);
-    return clazz instanceof Class ? clazz : Object[].class;
+  /**
+   * Gets the Java class for a given RelDataType.
+   * 获取给定关系数据类型对应的Java类。
+   *
+   * @param typeFactory Java类型工厂，用于类型转换
+   * @param type 关系数据类型
+   * @return Java类型（Class或Object[].class）
+   */
+  static Type javaClass( // 静态方法：获取Java类
+      JavaTypeFactory typeFactory, // 参数：Java类型工厂
+      RelDataType type) { // 参数：关系数据类型
+    final Type clazz = typeFactory.getJavaClass(type); // 调用类型工厂获取Java类
+    return clazz instanceof Class ? clazz : Object[].class; // 如果是Class类型则返回，否则返回Object[].class（用于数组类型）
   }
 
-  static List<Type> fieldTypes(
-      final JavaTypeFactory typeFactory,
-      final List<? extends RelDataType> inputTypes) {
-    return new AbstractList<Type>() {
-      @Override public Type get(int index) {
-        return EnumUtils.javaClass(typeFactory, inputTypes.get(index));
+  /**
+   * Gets a list of Java types for a list of RelDataTypes.
+   * 获取关系数据类型列表对应的Java类型列表。
+   * 使用延迟计算，只在需要时才计算每个类型。
+   *
+   * @param typeFactory Java类型工厂
+   * @param inputTypes 关系数据类型列表
+   * @return Java类型列表（通过AbstractList实现延迟计算）
+   */
+  static List<Type> fieldTypes( // 静态方法：获取字段类型列表
+      final JavaTypeFactory typeFactory, // 参数：Java类型工厂（final，不可修改）
+      final List<? extends RelDataType> inputTypes) { // 参数：关系数据类型列表（final，不可修改）
+    return new AbstractList<Type>() { // 返回：创建一个抽象列表，实现延迟计算
+      @Override public Type get(int index) { // 重写get方法：获取指定索引的Java类型
+        return EnumUtils.javaClass(typeFactory, inputTypes.get(index)); // 调用javaClass方法转换
       }
-      @Override public int size() {
-        return inputTypes.size();
+      @Override public int size() { // 重写size方法：返回列表大小
+        return inputTypes.size(); // 直接返回输入列表的大小
       }
     };
   }
 
-  static List<RelDataType> fieldRowTypes(
-      final RelDataType inputRowType,
-      final @Nullable List<? extends RexNode> extraInputs,
-      final List<Integer> argList) {
-    final List<RelDataTypeField> inputFields = inputRowType.getFieldList();
-    return new AbstractList<RelDataType>() {
-      @Override public RelDataType get(int index) {
-        final int arg = argList.get(index);
-        return arg < inputFields.size()
-            ? inputFields.get(arg).getType()
-            : requireNonNull(extraInputs, "extraInputs")
-                .get(arg - inputFields.size()).getType();
+  /**
+   * Gets a list of RelDataTypes for fields based on argument indices.
+   * 根据参数索引列表获取字段的关系数据类型列表。
+   * 支持从输入行类型和额外的输入中获取类型。
+   *
+   * @param inputRowType 输入行的关系数据类型
+   * @param extraInputs 额外的输入表达式列表（可能为null）
+   * @param argList 参数索引列表，指定要获取哪些字段
+   * @return 关系数据类型列表（通过AbstractList实现延迟计算）
+   */
+  static List<RelDataType> fieldRowTypes( // 静态方法：获取字段行类型列表
+      final RelDataType inputRowType, // 参数：输入行的关系数据类型
+      final @Nullable List<? extends RexNode> extraInputs, // 参数：额外的输入表达式列表（可能为null，@Nullable注解标记）
+      final List<Integer> argList) { // 参数：参数索引列表
+    final List<RelDataTypeField> inputFields = inputRowType.getFieldList(); // 获取输入行的所有字段列表
+    return new AbstractList<RelDataType>() { // 返回：创建一个抽象列表，实现延迟计算
+      @Override public RelDataType get(int index) { // 重写get方法：获取指定索引的关系数据类型
+        final int arg = argList.get(index); // 获取参数索引
+        return arg < inputFields.size() // 如果索引小于输入字段数量
+            ? inputFields.get(arg).getType() // 则从输入字段中获取类型
+            : requireNonNull(extraInputs, "extraInputs") // 否则从额外输入中获取（确保extraInputs不为null）
+                .get(arg - inputFields.size()).getType(); // 计算在extraInputs中的索引并获取类型
       }
-      @Override public int size() {
-        return argList.size();
+      @Override public int size() { // 重写size方法：返回列表大小
+        return argList.size(); // 返回参数索引列表的大小
       }
     };
   }
 
-  static Expression joinSelector(JoinRelType joinType, PhysType physType,
-      List<PhysType> inputPhysTypes) {
-    final int outputFieldCount = physType.getRowType().getFieldCount();
+  /**
+   * Creates a join selector expression for joining two inputs.
+   * 创建用于连接两个输入的连接选择器表达式。
+   * 连接选择器是一个函数，接收左右两个输入，返回连接后的结果行。
+   *
+   * @param joinType 连接类型（INNER、LEFT、RIGHT、FULL等）
+   * @param physType 输出行的物理类型
+   * @param inputPhysTypes 输入行的物理类型列表
+   * @return 连接选择器Lambda表达式
+   */
+  static Expression joinSelector(JoinRelType joinType, // 参数：连接关系类型
+      PhysType physType, // 参数：输出行的物理类型
+      List<PhysType> inputPhysTypes) { // 参数：输入行的物理类型列表
+    final int outputFieldCount = physType.getRowType().getFieldCount(); // 获取输出行的字段数量
     // If there are many output fields, create the output dynamically so that the code size stays
     // below the limit. See CALCITE-3094.
-    if (shouldGenerateCompactCode(outputFieldCount)) {
-      return joinSelectorCompact(joinType, physType, inputPhysTypes);
+    // 如果输出字段很多，则动态创建输出以保持代码大小低于限制。参见CALCITE-3094。
+    if (shouldGenerateCompactCode(outputFieldCount)) { // 如果需要生成紧凑代码
+      return joinSelectorCompact(joinType, physType, inputPhysTypes); // 返回紧凑版本的连接选择器
     }
 
     // A parameter for each input.
-    final List<ParameterExpression> parameters = new ArrayList<>();
+    // 为每个输入创建一个参数。
+    final List<ParameterExpression> parameters = new ArrayList<>(); // 创建参数表达式列表
 
     // Generate all fields.
-    final List<Expression> expressions = new ArrayList<>();
-    for (Ord<PhysType> ord : Ord.zip(inputPhysTypes)) {
-      final PhysType inputPhysType =
-          ord.e.makeNullable(joinType.generatesNullsOn(ord.i));
+    // 生成所有字段表达式。
+    final List<Expression> expressions = new ArrayList<>(); // 创建表达式列表
+    for (Ord<PhysType> ord : Ord.zip(inputPhysTypes)) { // 遍历输入物理类型列表（带索引）
+      final PhysType inputPhysType = // 获取当前输入物理类型
+          ord.e.makeNullable(joinType.generatesNullsOn(ord.i)); // 根据连接类型，如果该侧可能生成null，则使类型可空
       // If input item is just a primitive, we do not generate specialized
       // primitive apply override since it won't be called anyway
       // Function<T> always operates on boxed arguments
-      final ParameterExpression parameter =
-          Expressions.parameter(Primitive.box(inputPhysType.getJavaRowType()),
-              EnumUtils.LEFT_RIGHT.get(ord.i));
-      parameters.add(parameter);
-      if (expressions.size() == outputFieldCount) {
+      // 如果输入项只是基本类型，我们不生成专门的基本类型应用覆盖，因为它不会被调用
+      // Function<T>总是操作装箱参数
+      final ParameterExpression parameter = // 创建参数表达式
+          Expressions.parameter(Primitive.box(inputPhysType.getJavaRowType()), // 使用装箱后的Java行类型
+              EnumUtils.LEFT_RIGHT.get(ord.i)); // 使用"left"或"right"作为参数名
+      parameters.add(parameter); // 添加参数到参数列表
+      if (expressions.size() == outputFieldCount) { // 如果已生成的表达式数量等于输出字段数
         // For instance, if semi-join needs to return just the left inputs
-        break;
+        // 例如，如果半连接只需要返回左输入
+        break; // 则停止生成更多字段
       }
-      final int fieldCount = inputPhysType.getRowType().getFieldCount();
-      for (int i = 0; i < fieldCount; i++) {
-        Expression expression =
-            inputPhysType.fieldReference(parameter, i,
-                physType.getJavaFieldType(expressions.size()));
-        if (joinType.generatesNullsOn(ord.i)) {
-          expression =
-              Expressions.condition(
-                  Expressions.equal(parameter, Expressions.constant(null)),
-                  Expressions.constant(null),
-                  expression);
+      final int fieldCount = inputPhysType.getRowType().getFieldCount(); // 获取当前输入的字段数量
+      for (int i = 0; i < fieldCount; i++) { // 遍历当前输入的所有字段
+        Expression expression = // 创建字段引用表达式
+            inputPhysType.fieldReference(parameter, i, // 参数、字段索引
+                physType.getJavaFieldType(expressions.size())); // 输出字段的Java类型
+        if (joinType.generatesNullsOn(ord.i)) { // 如果该侧连接会生成null值（如LEFT JOIN的右侧）
+          expression = // 创建条件表达式，处理null值
+              Expressions.condition( // 条件表达式：if-then-else
+                  Expressions.equal(parameter, Expressions.constant(null)), // 条件：参数是否为null
+                  Expressions.constant(null), // 为null时返回null
+                  expression); // 不为null时返回字段引用
         }
-        expressions.add(expression);
+        expressions.add(expression); // 添加字段表达式到表达式列表
       }
     }
-    return Expressions.lambda(
-        Function2.class,
-        physType.record(expressions),
-        parameters);
+    return Expressions.lambda( // 返回：创建Lambda表达式
+        Function2.class, // 函数类型：双参数函数
+        physType.record(expressions), // 函数体：创建记录（输出行）
+        parameters); // 参数列表：left和right参数
   }
 
-  static boolean shouldGenerateCompactCode(int outputFieldCount) {
-    int compactCodeThreshold = JOIN_SELECTOR_COMPACT_CODE_THRESHOLD.value();
-    return compactCodeThreshold >= 0 && outputFieldCount >= compactCodeThreshold;
+  /**
+   * Determines whether to generate compact code based on output field count.
+   * 根据输出字段数量决定是否生成紧凑代码。
+   * 紧凑代码可以减少生成的代码大小，避免超过Java方法大小限制。
+   *
+   * @param outputFieldCount 输出字段数量
+   * @return 是否生成紧凑代码
+   */
+  static boolean shouldGenerateCompactCode(int outputFieldCount) { // 静态方法：判断是否生成紧凑代码
+    int compactCodeThreshold = JOIN_SELECTOR_COMPACT_CODE_THRESHOLD.value(); // 获取紧凑代码阈值配置
+    return compactCodeThreshold >= 0 && outputFieldCount >= compactCodeThreshold; // 如果阈值>=0且字段数>=阈值，则返回true
   }
 
-  static Expression joinSelectorCompact(JoinRelType joinType, PhysType physType,
-      List<PhysType> inputPhysTypes) {
+  /**
+   * Creates a compact join selector expression for joining two inputs.
+   * 创建紧凑版本的连接选择器表达式。
+   * 紧凑版本使用数组来存储输出字段，减少代码大小。
+   *
+   * @param joinType 连接类型
+   * @param physType 输出行的物理类型
+   * @param inputPhysTypes 输入行的物理类型列表
+   * @return 连接选择器Lambda表达式
+   */
+  static Expression joinSelectorCompact(JoinRelType joinType, // 参数：连接关系类型
+      PhysType physType, // 参数：输出行的物理类型
+      List<PhysType> inputPhysTypes) { // 参数：输入行的物理类型列表
     // A parameter for each input.
-    final List<ParameterExpression> parameters = new ArrayList<>();
+    // 为每个输入创建一个参数。
+    final List<ParameterExpression> parameters = new ArrayList<>(); // 创建参数表达式列表
 
     // Generate all fields.
-    final int outputFieldCount = physType.getRowType().getFieldCount();
+    // 生成所有字段。
+    final int outputFieldCount = physType.getRowType().getFieldCount(); // 获取输出行的字段数量
 
-    final BlockBuilder compactCode = new BlockBuilder();
+    final BlockBuilder compactCode = new BlockBuilder(); // 创建代码块构建器，用于构建紧凑代码
     // Even if the fields are all of the same type, they are always boxed,
     // so we use an Object[] that is easier to match with the input arrays.
-    final ParameterExpression compactOutputVar =
-        Expressions.variable(Object[].class, "outputArray");
-    final DeclarationStatement exp =
-        Expressions.declare(
-            0, compactOutputVar, new NewArrayExpression(Object.class, 1,
-                Expressions.constant(outputFieldCount), null));
-    compactCode.add(exp);
+    // 即使所有字段都是相同类型，它们也总是被装箱，所以我们使用Object[]，这更容易与输入数组匹配。
+    final ParameterExpression compactOutputVar = // 创建输出数组变量表达式
+        Expressions.variable(Object[].class, "outputArray"); // 类型：Object[]，名称：outputArray
+    final DeclarationStatement exp = // 创建数组声明语句
+        Expressions.declare( // 声明变量
+            0, // 修饰符：0表示无修饰符
+            compactOutputVar, // 变量表达式
+            new NewArrayExpression(Object.class, 1, // 创建新数组：Object类型，一维
+                Expressions.constant(outputFieldCount), // 数组长度：输出字段数量
+                null)); // 初始化值：null
+    compactCode.add(exp); // 添加数组声明到代码块
 
-    int outputField = 0;
-    for (Ord<PhysType> ord : Ord.zip(inputPhysTypes)) {
-      final PhysType inputPhysType =
-          ord.e.makeNullable(joinType.generatesNullsOn(ord.i));
+    int outputField = 0; // 输出字段索引，从0开始
+    for (Ord<PhysType> ord : Ord.zip(inputPhysTypes)) { // 遍历输入物理类型列表（带索引）
+      final PhysType inputPhysType = // 获取当前输入物理类型
+          ord.e.makeNullable(joinType.generatesNullsOn(ord.i)); // 根据连接类型，如果该侧可能生成null，则使类型可空
       // If the parameter is an array we declare as Object[] because it
       // needs to match the type of the array that will be returned
-      final Type parameterType = Types.isArray(inputPhysType.getJavaRowType())
-          ? Object[].class
-          : Primitive.box(inputPhysType.getJavaRowType());
+      // 如果参数是数组，我们声明为Object[]，因为它需要与将被返回的数组类型匹配
+      final Type parameterType = Types.isArray(inputPhysType.getJavaRowType()) // 如果Java行类型是数组
+          ? Object[].class // 则使用Object[]作为参数类型
+          : Primitive.box(inputPhysType.getJavaRowType()); // 否则使用装箱后的Java行类型
 
-      final ParameterExpression parameter =
-          Expressions.parameter(parameterType, EnumUtils.LEFT_RIGHT.get(ord.i));
-      parameters.add(parameter);
-      if (outputField == outputFieldCount) {
+      final ParameterExpression parameter = // 创建参数表达式
+          Expressions.parameter(parameterType, // 参数类型
+              EnumUtils.LEFT_RIGHT.get(ord.i)); // 参数名称："left"或"right"
+      parameters.add(parameter); // 添加参数到参数列表
+      if (outputField == outputFieldCount) { // 如果已处理的字段数等于输出字段数
         // For instance, if semi-join needs to return just the left inputs
-        break;
+        // 例如，如果半连接只需要返回左输入
+        break; // 则停止处理
       }
-      final int fieldCount = inputPhysType.getRowType().getFieldCount();
+      final int fieldCount = inputPhysType.getRowType().getFieldCount(); // 获取当前输入的字段数量
       // Delegate copying the row values to JavaRowFormat
-      final List<Statement> copyStatements =
-          Nullness.castNonNull(
-              inputPhysType.getFormat().copy(parameter, Nullness.castNonNull(compactOutputVar),
-                  outputField, fieldCount));
-      if (joinType.generatesNullsOn(ord.i)) {
+      // 将行值复制委托给JavaRowFormat
+      final List<Statement> copyStatements = // 获取复制语句列表
+          Nullness.castNonNull( // 强制转换非空（编译器无法推断）
+              inputPhysType.getFormat().copy(parameter, // 调用格式对象的copy方法复制字段
+                  Nullness.castNonNull(compactOutputVar), // 输出数组（强制非空）
+                  outputField, // 输出数组起始位置
+                  fieldCount)); // 要复制的字段数量
+      if (joinType.generatesNullsOn(ord.i)) { // 如果该侧连接会生成null值
         // [CALCITE-6593] NPE when outer joining tables with many fields and unmatching rows
-        compactCode.add(
-            Expressions.ifThen(Expressions.notEqual(parameter, Expressions.constant(null)),
-                Expressions.block(copyStatements)));
-      } else {
-        for (Statement copyStatement : copyStatements) {
-          compactCode.add(copyStatement);
+        // [CALCITE-6593] 在外连接多字段表且行不匹配时出现空指针异常
+        compactCode.add( // 添加条件语句到代码块
+            Expressions.ifThen( // if-then语句
+                Expressions.notEqual(parameter, Expressions.constant(null)), // 条件：参数不为null
+                Expressions.block(copyStatements))); // 执行复制语句块
+      } else { // 如果该侧连接不会生成null值
+        for (Statement copyStatement : copyStatements) { // 遍历所有复制语句
+          compactCode.add(copyStatement); // 直接添加到代码块
         }
       }
-      outputField += fieldCount;
+      outputField += fieldCount; // 更新输出字段索引
     }
 
-    compactCode.add(Nullness.castNonNull(compactOutputVar));
-    return Expressions.lambda(
-        Function2.class,
-        compactCode.toBlock(),
-        parameters);
+    compactCode.add(Nullness.castNonNull(compactOutputVar)); // 添加返回语句，返回输出数组
+    return Expressions.lambda( // 返回：创建Lambda表达式
+        Function2.class, // 函数类型：双参数函数
+        compactCode.toBlock(), // 函数体：代码块
+        parameters); // 参数列表：left和right参数
   }
 
   /**
    * In Calcite, {@code java.sql.Date} and {@code java.sql.Time} are
    * stored as {@code Integer} type, {@code java.sql.Timestamp} is
    * stored as {@code Long} type.
+   * 在Calcite中，java.sql.Date和java.sql.Time以Integer类型存储，
+   * java.sql.Timestamp以Long类型存储。
+   *
+   * Converts an expression to internal representation type.
+   * 将表达式转换为内部表示类型。
+   * 内部表示类型是指Calcite内部使用的优化存储类型，如日期和时间用整数存储。
+   *
+   * @param operand 要转换的表达式
+   * @param targetType 目标类型（可能为null）
+   * @return 转换后的表达式
    */
-  static Expression toInternal(Expression operand, @Nullable Type targetType) {
-    return toInternal(operand, operand.getType(), targetType);
+  static Expression toInternal(Expression operand, // 参数：操作数表达式
+      @Nullable Type targetType) { // 参数：目标类型（可能为null）
+    return toInternal(operand, operand.getType(), targetType); // 调用重载方法，传入源类型
   }
 
-  private static Expression toInternal(Expression operand,
-      Type fromType, @Nullable Type targetType) {
-    if (fromType == java.sql.Date.class) {
-      if (targetType == int.class) {
-        return Expressions.call(BuiltInMethod.DATE_TO_INT.method, operand);
-      } else if (targetType == Integer.class) {
-        return Expressions.call(BuiltInMethod.DATE_TO_INT_OPTIONAL.method, operand);
+  /**
+   * Converts an expression to internal representation type.
+   * 将表达式转换为内部表示类型。
+   *
+   * @param operand 要转换的表达式
+   * @param fromType 源类型
+   * @param targetType 目标类型（可能为null）
+   * @return 转换后的表达式
+   */
+  private static Expression toInternal(Expression operand, // 私有静态方法：转换为内部表示
+      Type fromType, // 参数：源类型
+      @Nullable Type targetType) { // 参数：目标类型（可能为null）
+    if (fromType == java.sql.Date.class) { // 如果源类型是java.sql.Date
+      if (targetType == int.class) { // 如果目标类型是基本int
+        return Expressions.call(BuiltInMethod.DATE_TO_INT.method, operand); // 调用DateToInt方法
+      } else if (targetType == Integer.class) { // 如果目标类型是包装类Integer
+        return Expressions.call(BuiltInMethod.DATE_TO_INT_OPTIONAL.method, operand); // 调用DateToIntOptional方法
       }
-    } else if (fromType == java.sql.Time.class) {
-      if (targetType == int.class) {
-        return Expressions.call(BuiltInMethod.TIME_TO_INT.method, operand);
-      } else if (targetType == Integer.class) {
-        return Expressions.call(BuiltInMethod.TIME_TO_INT_OPTIONAL.method, operand);
+    } else if (fromType == java.sql.Time.class) { // 如果源类型是java.sql.Time
+      if (targetType == int.class) { // 如果目标类型是基本int
+        return Expressions.call(BuiltInMethod.TIME_TO_INT.method, operand); // 调用TimeToInt方法
+      } else if (targetType == Integer.class) { // 如果目标类型是包装类Integer
+        return Expressions.call(BuiltInMethod.TIME_TO_INT_OPTIONAL.method, operand); // 调用TimeToIntOptional方法
       }
-    } else if (fromType == java.sql.Timestamp.class) {
-      if (targetType == long.class) {
-        return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG.method, operand);
-      } else if (targetType == Long.class) {
-        return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG_OPTIONAL.method, operand);
+    } else if (fromType == java.sql.Timestamp.class) { // 如果源类型是java.sql.Timestamp
+      if (targetType == long.class) { // 如果目标类型是基本long
+        return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG.method, operand); // 调用TimestampToLong方法
+      } else if (targetType == Long.class) { // 如果目标类型是包装类Long
+        return Expressions.call(BuiltInMethod.TIMESTAMP_TO_LONG_OPTIONAL.method, operand); // 调用TimestampToLongOptional方法
       }
     }
-    return operand;
+    return operand; // 如果不需要转换，直接返回原表达式
   }
 
   /** Converts from internal representation to JDBC representation used by
    * arguments of user-defined functions. For example, converts date values from
-   * {@code int} to {@link java.sql.Date}. */
-  private static Expression fromInternal(Expression operand, Type targetType) {
-    return fromInternal(operand, operand.getType(), targetType);
+   * {@code int} to {@link java.sql.Date}.
+   * 从内部表示转换为用户定义函数参数使用的JDBC表示。
+   * 例如，将日期值从int转换为java.sql.Date。
+   *
+   * @param operand 要转换的表达式
+   * @param targetType 目标类型
+   * @return 转换后的表达式
+   */
+  private static Expression fromInternal(Expression operand, // 私有静态方法：从内部表示转换
+      Type targetType) { // 参数：目标类型
+    return fromInternal(operand, operand.getType(), targetType); // 调用重载方法，传入源类型
   }
 
-  private static Expression fromInternal(Expression operand,
-      Type fromType, Type targetType) {
-    if (operand == ConstantUntypedNull.INSTANCE) {
-      return operand;
+  /**
+   * Converts from internal representation to JDBC representation.
+   * 从内部表示转换为JDBC表示。
+   *
+   * @param operand 要转换的表达式
+   * @param fromType 源类型
+   * @param targetType 目标类型
+   * @return 转换后的表达式
+   */
+  private static Expression fromInternal(Expression operand, // 私有静态方法：从内部表示转换
+      Type fromType, // 参数：源类型
+      Type targetType) { // 参数：目标类型
+    if (operand == ConstantUntypedNull.INSTANCE) { // 如果操作数是无类型空常量
+      return operand; // 直接返回
     }
-    if (!(operand.getType() instanceof Class)) {
-      return operand;
+    if (!(operand.getType() instanceof Class)) { // 如果操作数类型不是Class（如泛型类型）
+      return operand; // 直接返回
     }
-    if (Types.isAssignableFrom(targetType, fromType)) {
-      return operand;
+    if (Types.isAssignableFrom(targetType, fromType)) { // 如果目标类型可以赋值源类型
+      return operand; // 直接返回，不需要转换
     }
-    if (targetType == java.sql.Date.class) {
+    if (targetType == java.sql.Date.class) { // 如果目标类型是java.sql.Date
       // E.g. from "int" or "Integer" to "java.sql.Date",
       // generate "SqlFunctions.internalToDate".
-      if (isA(fromType, Primitive.INT)) {
-        return Expressions.call(BuiltInMethod.INTERNAL_TO_DATE.method, operand);
+      // 例如，从"int"或"Integer"到"java.sql.Date"，生成"SqlFunctions.internalToDate"。
+      if (isA(fromType, Primitive.INT)) { // 如果源类型是int或Integer
+        return Expressions.call(BuiltInMethod.INTERNAL_TO_DATE.method, operand); // 调用internalToDate方法
       }
-    } else if (targetType == java.sql.Time.class) {
+    } else if (targetType == java.sql.Time.class) { // 如果目标类型是java.sql.Time
       // E.g. from "int" or "Integer" to "java.sql.Time",
       // generate "SqlFunctions.internalToTime".
-      if (isA(fromType, Primitive.INT)) {
-        return Expressions.call(BuiltInMethod.INTERNAL_TO_TIME.method, operand);
+      // 例如，从"int"或"Integer"到"java.sql.Time"，生成"SqlFunctions.internalToTime"。
+      if (isA(fromType, Primitive.INT)) { // 如果源类型是int或Integer
+        return Expressions.call(BuiltInMethod.INTERNAL_TO_TIME.method, operand); // 调用internalToTime方法
       }
-    } else if (targetType == java.sql.Timestamp.class) {
+    } else if (targetType == java.sql.Timestamp.class) { // 如果目标类型是java.sql.Timestamp
       // E.g. from "long" or "Long" to "java.sql.Timestamp",
       // generate "SqlFunctions.internalToTimestamp".
-      if (isA(fromType, Primitive.LONG)) {
-        return Expressions.call(BuiltInMethod.INTERNAL_TO_TIMESTAMP.method, operand);
+      // 例如，从"long"或"Long"到"java.sql.Timestamp"，生成"SqlFunctions.internalToTimestamp"。
+      if (isA(fromType, Primitive.LONG)) { // 如果源类型是long或Long
+        return Expressions.call(BuiltInMethod.INTERNAL_TO_TIMESTAMP.method, operand); // 调用internalToTimestamp方法
       }
     }
-    if (Primitive.is(operand.type)
-        && Primitive.isBox(targetType)) {
+    if (Primitive.is(operand.type) // 如果操作数是基本类型
+        && Primitive.isBox(targetType)) { // 且目标是包装类型
       // E.g. operand is "int", target is "Long", generate "(long) operand".
-      return Expressions.convert_(operand,
-          Primitive.unbox(targetType));
+      // 例如，操作数是"int"，目标是"Long"，生成"(long) operand"。
+      return Expressions.convert_(operand, // 转换表达式
+          Primitive.unbox(targetType)); // 转换为基本类型
     }
-    return operand;
+    return operand; // 如果不需要转换，直接返回原表达式
   }
 
-  static List<Expression> fromInternal(Class<?>[] targetTypes,
-      List<Expression> expressions) {
-    final List<Expression> list = new ArrayList<>();
-    if (targetTypes.length == expressions.size()) {
-      for (int i = 0; i < expressions.size(); i++) {
-        list.add(fromInternal(expressions.get(i), targetTypes[i]));
+  /**
+   * Converts a list of expressions from internal to JDBC representation.
+   * 将表达式列表从内部表示转换为JDBC表示。
+   *
+   * @param targetTypes 目标类型数组
+   * @param expressions 表达式列表
+   * @return 转换后的表达式列表
+   */
+  static List<Expression> fromInternal(Class<?>[] targetTypes, // 静态方法：批量从内部表示转换
+      List<Expression> expressions) { // 参数：表达式列表
+    final List<Expression> list = new ArrayList<>(); // 创建结果列表
+    if (targetTypes.length == expressions.size()) { // 如果目标类型数量等于表达式数量
+      for (int i = 0; i < expressions.size(); i++) { // 遍历所有表达式
+        list.add(fromInternal(expressions.get(i), targetTypes[i])); // 逐个转换并添加
       }
-    } else {
-      int j = 0;
-      for (Expression expression : expressions) {
-        Class<?> type;
-        if (!targetTypes[j].isArray()) {
-          type = targetTypes[j];
-          j++;
-        } else {
-          type = targetTypes[j].getComponentType();
+    } else { // 如果数量不匹配（可能是处理可变参数）
+      int j = 0; // 目标类型索引
+      for (Expression expression : expressions) { // 遍历所有表达式
+        Class<?> type; // 目标类型变量
+        if (!targetTypes[j].isArray()) { // 如果当前目标类型不是数组
+          type = targetTypes[j]; // 直接使用该类型
+          j++; // 移动到下一个目标类型
+        } else { // 如果是数组类型（可变参数）
+          type = targetTypes[j].getComponentType(); // 获取数组元素类型
         }
-        list.add(fromInternal(expression, type));
+        list.add(fromInternal(expression, type)); // 转换并添加
       }
     }
-    return list;
+    return list; // 返回转换后的列表
   }
 
-  static Type fromInternal(Type type) {
-    if (type == java.sql.Date.class || type == java.sql.Time.class) {
-      return int.class;
+  /**
+   * Gets the internal representation type for a given type.
+   * 获取给定类型的内部表示类型。
+   *
+   * @param type Java类型
+   * @return 内部表示类型
+   */
+  static Type fromInternal(Type type) { // 静态方法：获取内部表示类型
+    if (type == java.sql.Date.class || type == java.sql.Time.class) { // 如果是Date或Time
+      return int.class; // 返回int类型
     }
-    if (type == java.sql.Timestamp.class) {
-      return long.class;
+    if (type == java.sql.Timestamp.class) { // 如果是Timestamp
+      return long.class; // 返回long类型
     }
-    return type;
+    return type; // 其他类型直接返回
   }
 
-  private static @Nullable Type toInternal(RelDataType type) {
-    return toInternal(type, false);
+  /**
+   * Gets the internal representation type for a RelDataType.
+   * 获取关系数据类型的内部表示类型。
+   *
+   * @param type 关系数据类型
+   * @return 内部表示类型（可能为null）
+   */
+  private static @Nullable Type toInternal(RelDataType type) { // 私有静态方法：获取内部表示类型
+    return toInternal(type, false); // 调用重载方法，不强制非空
   }
 
-  static @Nullable Type toInternal(RelDataType type, boolean forceNotNull) {
-    switch (type.getSqlTypeName()) {
-    case DATE:
-    case TIME:
-      return type.isNullable() && !forceNotNull ? Integer.class : int.class;
-    case TIMESTAMP:
-      return type.isNullable() && !forceNotNull ? Long.class : long.class;
-    default:
-      return null; // we don't care; use the default storage type
+  /**
+   * Gets the internal representation type for a RelDataType.
+   * 获取关系数据类型的内部表示类型。
+   *
+   * @param type 关系数据类型
+   * @param forceNotNull 是否强制非空（忽略可空性）
+   * @return 内部表示类型（可能为null）
+   */
+  static @Nullable Type toInternal(RelDataType type, // 静态方法：获取内部表示类型
+      boolean forceNotNull) { // 参数：是否强制非空
+    switch (type.getSqlTypeName()) { // 根据SQL类型名称判断
+    case DATE: // 如果是日期类型
+    case TIME: // 如果是时间类型
+      return type.isNullable() && !forceNotNull ? Integer.class : int.class; // 如果可空且不强制非空，返回Integer，否则返回int
+    case TIMESTAMP: // 如果是时间戳类型
+      return type.isNullable() && !forceNotNull ? Long.class : long.class; // 如果可空且不强制非空，返回Long，否则返回long
+    default: // 其他类型
+      return null; // 不关心，使用默认存储类型
     }
   }
 
-  static List<@Nullable Type> internalTypes(List<? extends RexNode> operandList) {
-    return Util.transform(operandList, node -> toInternal(node.getType()));
+  /**
+   * Gets the internal representation types for a list of RexNodes.
+   * 获取Rex节点列表的内部表示类型列表。
+   *
+   * @param operandList Rex节点列表
+   * @return 内部表示类型列表
+   */
+  static List<@Nullable Type> internalTypes(List<? extends RexNode> operandList) { // 静态方法：批量获取内部表示类型
+    return Util.transform(operandList, // 使用Util工具类转换列表
+        node -> toInternal(node.getType())); // 对每个节点调用toInternal方法
   }
 
   /**
    * Convert {@code operand} to target type {@code toType}.
+   * 将操作数转换为目标类型。
    *
-   * @param operand The expression to convert
-   * @param toType  Target type
+   * @param operand The expression to convert 要转换的表达式
+   * @param toType  Target type 目标类型
    * @return A new expression with type {@code toType} or original if there
-   * is no need to convert
+   * is no need to convert 返回具有目标类型的新表达式，如果不需要转换则返回原表达式
    */
-  public static Expression convert(Expression operand, Type toType) {
-    final Type fromType = operand.getType();
-    return convert(operand, fromType, toType);
+  public static Expression convert(Expression operand, // 公共静态方法：类型转换
+      Type toType) { // 参数：目标类型
+    final Type fromType = operand.getType(); // 获取源类型
+    return convert(operand, fromType, toType); // 调用重载方法进行转换
   }
 
   /**
    * Convert {@code operand} to target type {@code toType}.
+   * 将操作数转换为目标类型。
    *
-   * @param operand  The expression to convert
-   * @param fromType Field type
-   * @param toType   Target type
+   * @param operand  The expression to convert 要转换的表达式
+   * @param fromType Field type 字段类型
+   * @param toType   Target type 目标类型
    * @return A new expression with type {@code toType} or original if there
-   * is no need to convert
+   * is no need to convert 返回具有目标类型的新表达式，如果不需要转换则返回原表达式
    */
-  public static Expression convert(Expression operand, Type fromType,
-      Type toType) {
-    if (!Types.needTypeCast(fromType, toType)) {
-      return operand;
+  public static Expression convert(Expression operand, // 公共静态方法：类型转换
+      Type fromType, // 参数：源类型
+      Type toType) { // 参数：目标类型
+    if (!Types.needTypeCast(fromType, toType)) { // 如果不需要类型转换
+      return operand; // 直接返回原表达式
     }
 
     // TODO use Expressions#convertChecked to throw exception in case of overflow (CALCITE-6366)
+    // TODO: 使用Expressions#convertChecked在溢出时抛出异常（CALCITE-6366）
 
     // E.g. from "Short" to "int".
     // Generate "x.intValue()".
-    final Primitive toPrimitive = Primitive.of(toType);
-    final Primitive toBox = Primitive.ofBox(toType);
-    final Primitive fromBox = Primitive.ofBox(fromType);
-    final Primitive fromPrimitive = Primitive.of(fromType);
-    final boolean fromNumber = fromType instanceof Class
+    // 例如，从"Short"到"int"，生成"x.intValue()"。
+    final Primitive toPrimitive = Primitive.of(toType); // 获取目标基本类型枚举
+    final Primitive toBox = Primitive.ofBox(toType); // 获取目标包装类型枚举
+    final Primitive fromBox = Primitive.ofBox(fromType); // 获取源包装类型枚举
+    final Primitive fromPrimitive = Primitive.of(fromType); // 获取源基本类型枚举
+    final boolean fromNumber = fromType instanceof Class // 判断源类型是否是Number的子类
         && Number.class.isAssignableFrom((Class) fromType);
-    if (fromType == String.class) {
-      if (toPrimitive != null) {
-        switch (toPrimitive) {
-        case CHAR:
-        case SHORT:
-        case INT:
-        case LONG:
-        case FLOAT:
-        case DOUBLE:
+    if (fromType == String.class) { // 如果源类型是String
+      if (toPrimitive != null) { // 如果目标是基本类型
+        switch (toPrimitive) { // 根据目标基本类型判断
+        case CHAR: // 如果是char
+        case SHORT: // 如果是short
+        case INT: // 如果是int
+        case LONG: // 如果是long
+        case FLOAT: // 如果是float
+        case DOUBLE: // 如果是double
           // Generate "SqlFunctions.toShort(x)".
-          return Expressions.call(
-              SqlFunctions.class,
-              "to" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()),
-              operand);
-        default:
+          // 生成"SqlFunctions.toShort(x)"。
+          return Expressions.call( // 调用SqlFunctions的静态方法
+              SqlFunctions.class, // 类名
+              "to" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()), // 方法名：toShort、toInt等
+              operand); // 参数
+        default: // 其他基本类型
           // Generate "parseShort(x)".
-          return Expressions.call(
-              toPrimitive.getBoxClass(),
-              "parse" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()),
-              operand);
+          // 生成"parseShort(x)"。
+          return Expressions.call( // 调用包装类的parse方法
+              toPrimitive.getBoxClass(), // 包装类
+              "parse" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()), // 方法名：parseShort、parseInt等
+              operand); // 参数
         }
       }
-      if (toBox != null) {
-        switch (toBox) {
-        case VOID:
-          return Expressions.constant(null);
-        case CHAR:
+      if (toBox != null) { // 如果目标是包装类型
+        switch (toBox) { // 根据目标包装类型判断
+        case VOID: // 如果是Void
+          return Expressions.constant(null); // 返回null常量
+        case CHAR: // 如果是Character
           // Generate "SqlFunctions.toCharBoxed(x)".
-          return Expressions.call(
-              SqlFunctions.class,
-              "to" + SqlFunctions.initcap(toBox.getPrimitiveName()) + "Boxed",
-              operand);
-        default:
+          // 生成"SqlFunctions.toCharBoxed(x)"。
+          return Expressions.call( // 调用SqlFunctions的静态方法
+              SqlFunctions.class, // 类名
+              "to" + SqlFunctions.initcap(toBox.getPrimitiveName()) + "Boxed", // 方法名：toCharBoxed等
+              operand); // 参数
+        default: // 其他包装类型
           // Generate "Short.valueOf(x)".
-          return Expressions.call(
-              toBox.getBoxClass(),
-              "valueOf",
-              operand);
+          // 生成"Short.valueOf(x)"。
+          return Expressions.call( // 调用包装类的valueOf方法
+              toBox.getBoxClass(), // 包装类
+              "valueOf", // 方法名
+              operand); // 参数
         }
       }
     }
-    if (toPrimitive != null) {
-      if (fromPrimitive != null) {
+    if (toPrimitive != null) { // 如果目标是基本类型
+      if (fromPrimitive != null) { // 如果源也是基本类型
         // E.g. from "float" to "double"
-        if (toPrimitive == Primitive.BOOLEAN) {
+        // 例如，从"float"到"double"
+        if (toPrimitive == Primitive.BOOLEAN) { // 如果目标是boolean
           // Conversion to Boolean can use the existing 'convert_' function
-          return Expressions.convert_(operand, toPrimitive.getPrimitiveClass());
+          // 转换为Boolean可以使用现有的'convert_'函数
+          return Expressions.convert_(operand, toPrimitive.getPrimitiveClass()); // 调用convert_方法
         }
         // Other destination types require checked conversions
-        return Expressions.convertChecked(
-            operand, toPrimitive.getPrimitiveClass());
+        // 其他目标类型需要检查转换
+        return Expressions.convertChecked( // 调用convertChecked方法，会检查溢出
+            operand, toPrimitive.getPrimitiveClass()); // 转换为目标基本类型
       }
-      if (fromType == BigDecimal.class && toPrimitive.isFixedNumeric()) {
+      if (fromType == BigDecimal.class && toPrimitive.isFixedNumeric()) { // 如果源是BigDecimal且目标是精确数值类型
         // Conversion from decimal to an exact type
-        ConstantExpression zero = Expressions.constant(0);
+        // 从十进制到精确类型的转换
+        ConstantExpression zero = Expressions.constant(0); // 创建0常量
         // Elsewhere Calcite uses this rounding mode implicitly, so we have to be consistent.
         // E.g., this is the rounding mode used by BigDecimal.longValue().
-        Expression rounding = Expressions.constant(RoundingMode.DOWN);
+        // Calcite在其他地方隐式使用这种舍入模式，所以我们必须保持一致。
+        // 例如，这是BigDecimal.longValue()使用的舍入模式。
+        Expression rounding = Expressions.constant(RoundingMode.DOWN); // 创建DOWN舍入模式常量
         // Generate 'rounded = operand.setScale(0, RoundingMode.DOWN);'
-        Expression rounded = Expressions.call(operand, "setScale", zero, rounding);
+        // 生成'rounded = operand.setScale(0, RoundingMode.DOWN);'
+        Expression rounded = Expressions.call(operand, "setScale", zero, rounding); // 调用setScale方法
         // Generate 'return rounded.to*ValueExact()'
-        return Expressions.unboxExact(rounded, toPrimitive);
-      } else if (fromNumber || fromBox == Primitive.CHAR) {
+        // 生成'return rounded.to*ValueExact()'
+        return Expressions.unboxExact(rounded, toPrimitive); // 调用unboxExact方法，精确拆箱
+      } else if (fromNumber || fromBox == Primitive.CHAR) { // 如果源是Number或Character
         // Generate "x.shortValue()".
-        return Expressions.unbox(operand, toPrimitive);
-      } else {
+        // 生成"x.shortValue()"。
+        return Expressions.unbox(operand, toPrimitive); // 调用unbox方法，拆箱
+      } else { // 其他情况
         // E.g. from "Object" to "short".
         // Generate "SqlFunctions.toShort(x)"
-        return Expressions.call(
-            SqlFunctions.class,
-            "to" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()),
-            operand);
+        // 例如，从"Object"到"short"，生成"SqlFunctions.toShort(x)"
+        return Expressions.call( // 调用SqlFunctions的静态方法
+            SqlFunctions.class, // 类名
+            "to" + SqlFunctions.initcap(toPrimitive.getPrimitiveName()), // 方法名：toShort等
+            operand); // 参数
       }
-    } else if (fromNumber && toBox != null) {
+    } else if (fromNumber && toBox != null) { // 如果源是Number且目标是包装类型
       // E.g. from "Short" to "Integer"
       // Generate "x == null ? null : Integer.valueOf(x.intValue())"
-      return Expressions.condition(
-          Expressions.equal(operand, RexImpTable.NULL_EXPR),
-          RexImpTable.NULL_EXPR,
-          Expressions.box(
-              Expressions.unbox(operand, toBox),
-              toBox));
-    } else if (fromPrimitive != null && toBox != null) {
+      // 例如，从"Short"到"Integer"，生成"x == null ? null : Integer.valueOf(x.intValue())"
+      return Expressions.condition( // 创建条件表达式
+          Expressions.equal(operand, RexImpTable.NULL_EXPR), // 条件：操作数是否为null
+          RexImpTable.NULL_EXPR, // 为null时返回null
+          Expressions.box( // 不为null时
+              Expressions.unbox(operand, toBox), // 先拆箱
+              toBox)); // 再装箱为目标类型
+    } else if (fromPrimitive != null && toBox != null) { // 如果源是基本类型且目标是包装类型
       // E.g. from "int" to "Long".
       // Generate Long.valueOf(x)
       // Eliminate primitive casts like Long.valueOf((long) x)
-      if (operand instanceof UnaryExpression) {
-        UnaryExpression una = (UnaryExpression) operand;
-        if (una.nodeType == ExpressionType.Convert
-            && Primitive.of(una.getType()) == toBox) {
-          Primitive origin = Primitive.of(una.expression.type);
-          if (origin != null && toBox.assignableFrom(origin)) {
-            return Expressions.box(una.expression, toBox);
+      // 例如，从"int"到"Long"，生成Long.valueOf(x)
+      // 消除基本类型转换，如Long.valueOf((long) x)
+      if (operand instanceof UnaryExpression) { // 如果操作数是一元表达式
+        UnaryExpression una = (UnaryExpression) operand; // 强制转换
+        if (una.nodeType == ExpressionType.Convert // 如果是转换表达式
+            && Primitive.of(una.getType()) == toBox) { // 且转换结果类型与目标类型相同
+          Primitive origin = Primitive.of(una.expression.type); // 获取原始类型
+          if (origin != null && toBox.assignableFrom(origin)) { // 如果原始类型可以赋值给目标类型
+            return Expressions.box(una.expression, toBox); // 直接对原始表达式装箱，消除冗余转换
           }
         }
       }
-      if (fromType == toBox.primitiveClass) {
-        return Expressions.box(operand, toBox);
+      if (fromType == toBox.primitiveClass) { // 如果源类型就是目标类型的基本类型
+        return Expressions.box(operand, toBox); // 直接装箱
       }
       // E.g., from "int" to "Byte".
       // Convert it first and generate "Byte.valueOf((byte)x)"
       // Because there is no method "Byte.valueOf(int)" in Byte
-      return Expressions.box(
-          Expressions.convert_(operand, toBox.getPrimitiveClass()),
-          toBox);
+      // 例如，从"int"到"Byte"。
+      // 先转换再生成"Byte.valueOf((byte)x)"
+      // 因为Byte中没有"Byte.valueOf(int)"方法
+      return Expressions.box( // 装箱
+          Expressions.convert_(operand, toBox.getPrimitiveClass()), // 先转换为基本类型
+          toBox); // 再装箱
     }
     // Convert datetime types to internal storage type:
     // 1. java.sql.Date -> int or Integer
     // 2. java.sql.Time -> int or Integer
     // 3. java.sql.Timestamp -> long or Long
-    if (representAsInternalType(fromType)) {
-      final Expression internalTypedOperand =
+    // 将日期时间类型转换为内部存储类型：
+    // 1. java.sql.Date -> int or Integer
+    // 2. java.sql.Time -> int or Integer
+    // 3. java.sql.Timestamp -> long or Long
+    if (representAsInternalType(fromType)) { // 如果源类型需要用内部类型表示
+      final Expression internalTypedOperand = // 转换为内部类型
           toInternal(operand, fromType, toType);
-      if (operand != internalTypedOperand) {
-        return internalTypedOperand;
+      if (operand != internalTypedOperand) { // 如果转换后不同
+        return internalTypedOperand; // 返回转换后的表达式
       }
     }
     // Convert internal storage type to datetime types:
     // 1. int or Integer -> java.sql.Date
     // 2. int or Integer -> java.sql.Time
     // 3. long or Long -> java.sql.Timestamp
-    if (representAsInternalType(toType)) {
-      final Expression originTypedOperand =
+    // 将内部存储类型转换为日期时间类型：
+    // 1. int or Integer -> java.sql.Date
+    // 2. int or Integer -> java.sql.Time
+    // 3. long or Long -> java.sql.Timestamp
+    if (representAsInternalType(toType)) { // 如果目标类型需要用内部类型表示
+      final Expression originTypedOperand = // 从内部类型转换
           fromInternal(operand, fromType, toType);
-      if (operand != originTypedOperand) {
-        return originTypedOperand;
+      if (operand != originTypedOperand) { // 如果转换后不同
+        return originTypedOperand; // 返回转换后的表达式
       }
     }
-    if (toType == BigDecimal.class) {
-      if (fromBox != null) {
+    if (toType == BigDecimal.class) { // 如果目标是BigDecimal
+      if (fromBox != null) { // 如果源是包装类型
         // E.g. from "Integer" to "BigDecimal".
         // Generate "x == null ? null : new BigDecimal(x.intValue())"
-        return Expressions.condition(
-            Expressions.equal(operand, RexImpTable.NULL_EXPR),
-            RexImpTable.NULL_EXPR,
-            Expressions.new_(
-                BigDecimal.class,
-                Expressions.unbox(operand, fromBox)));
+        // 例如，从"Integer"到"BigDecimal"，生成"x == null ? null : new BigDecimal(x.intValue())"
+        return Expressions.condition( // 创建条件表达式
+            Expressions.equal(operand, RexImpTable.NULL_EXPR), // 条件：操作数是否为null
+            RexImpTable.NULL_EXPR, // 为null时返回null
+            Expressions.new_( // 不为null时
+                BigDecimal.class, // 创建BigDecimal对象
+                Expressions.unbox(operand, fromBox))); // 拆箱后作为构造参数
       }
-      if (fromPrimitive != null) {
+      if (fromPrimitive != null) { // 如果源是基本类型
         // E.g. from "int" to "BigDecimal".
         // Generate "new BigDecimal(x)"
-        return Expressions.new_(BigDecimal.class, operand);
+        // 例如，从"int"到"BigDecimal"，生成"new BigDecimal(x)"
+        return Expressions.new_(BigDecimal.class, operand); // 创建BigDecimal对象
       }
       // E.g. from "Object" to "BigDecimal".
       // Generate "x == null ? null : SqlFunctions.toBigDecimal(x)"
-      return Expressions.condition(
-          Expressions.equal(operand, RexImpTable.NULL_EXPR),
-          RexImpTable.NULL_EXPR,
-          Expressions.call(
-              SqlFunctions.class,
-              "toBigDecimal",
-              operand));
-    } else if (toType == String.class) {
-      if (fromPrimitive != null) {
-        switch (fromPrimitive) {
-        case DOUBLE:
-        case FLOAT:
+      // 例如，从"Object"到"BigDecimal"，生成"x == null ? null : SqlFunctions.toBigDecimal(x)"
+      return Expressions.condition( // 创建条件表达式
+          Expressions.equal(operand, RexImpTable.NULL_EXPR), // 条件：操作数是否为null
+          RexImpTable.NULL_EXPR, // 为null时返回null
+          Expressions.call( // 不为null时
+              SqlFunctions.class, // 类名
+              "toBigDecimal", // 方法名
+              operand)); // 参数
+    } else if (toType == String.class) { // 如果目标是String
+      if (fromPrimitive != null) { // 如果源是基本类型
+        switch (fromPrimitive) { // 根据源基本类型判断
+        case DOUBLE: // 如果是double
+        case FLOAT: // 如果是float
           // E.g. from "double" to "String"
           // Generate "SqlFunctions.toString(x)"
-          return Expressions.call(
-              SqlFunctions.class,
-              "toString",
-              operand);
-        default:
+          // 例如，从"double"到"String"，生成"SqlFunctions.toString(x)"
+          return Expressions.call( // 调用SqlFunctions的toString方法
+              SqlFunctions.class, // 类名
+              "toString", // 方法名
+              operand); // 参数
+        default: // 其他基本类型
           // E.g. from "int" to "String"
           // Generate "Integer.toString(x)"
-          return Expressions.call(
-              fromPrimitive.getBoxClass(),
-              "toString",
-              operand);
+          // 例如，从"int"到"String"，生成"Integer.toString(x)"
+          return Expressions.call( // 调用包装类的toString方法
+              fromPrimitive.getBoxClass(), // 包装类
+              "toString", // 方法名
+              operand); // 参数
         }
-      } else if (fromType == BigDecimal.class) {
+      } else if (fromType == BigDecimal.class) { // 如果源是BigDecimal
         // E.g. from "BigDecimal" to "String"
         // Generate "SqlFunctions.toString(x)"
-        return Expressions.condition(
-            Expressions.equal(operand, RexImpTable.NULL_EXPR),
-            RexImpTable.NULL_EXPR,
-            Expressions.call(
-                SqlFunctions.class,
-                "toString",
-                operand));
-      } else {
-        Expression result;
-        try {
+        // 例如，从"BigDecimal"到"String"，生成"SqlFunctions.toString(x)"
+        return Expressions.condition( // 创建条件表达式
+            Expressions.equal(operand, RexImpTable.NULL_EXPR), // 条件：操作数是否为null
+            RexImpTable.NULL_EXPR, // 为null时返回null
+            Expressions.call( // 不为null时
+                SqlFunctions.class, // 类名
+                "toString", // 方法名
+                operand)); // 参数
+      } else { // 其他类型
+        Expression result; // 结果表达式变量
+        try { // 尝试调用toString方法
           // Avoid to generate code like:
           // "null.toString()" or "(xxx) null.toString()"
-          if (operand instanceof ConstantExpression) {
-            ConstantExpression ce = (ConstantExpression) operand;
-            if (ce.value == null) {
-              return Expressions.convert_(operand, toType);
+          // 避免生成如下代码："null.toString()"或"(xxx) null.toString()"
+          if (operand instanceof ConstantExpression) { // 如果是常量表达式
+            ConstantExpression ce = (ConstantExpression) operand; // 强制转换
+            if (ce.value == null) { // 如果值为null
+              return Expressions.convert_(operand, toType); // 直接转换
             }
           }
           // Try to call "toString()" method
           // E.g. from "Integer" to "String"
           // Generate "x == null ? null : x.toString()"
-          result =
-              Expressions.condition(
-                  Expressions.equal(operand, RexImpTable.NULL_EXPR),
-                  RexImpTable.NULL_EXPR,
-                  Expressions.call(operand, "toString"));
-        } catch (RuntimeException e) {
+          // 尝试调用"toString()"方法
+          // 例如，从"Integer"到"String"，生成"x == null ? null : x.toString()"
+          result = // 创建结果表达式
+              Expressions.condition( // 条件表达式
+                  Expressions.equal(operand, RexImpTable.NULL_EXPR), // 条件：操作数是否为null
+                  RexImpTable.NULL_EXPR, // 为null时返回null
+                  Expressions.call(operand, "toString")); // 不为null时调用toString方法
+        } catch (RuntimeException e) { // 捕获运行时异常
           // For some special cases, e.g., "BuiltInMethod.LESSER",
           // its return type is generic ("Comparable"), which contains
           // no "toString()" method. We fall through to "(String)x".
-          return Expressions.convert_(operand, toType);
+          // 对于某些特殊情况，例如"BuiltInMethod.LESSER"，
+          // 其返回类型是泛型（"Comparable"），不包含"toString()"方法。
+          // 我们回退到"(String)x"。
+          return Expressions.convert_(operand, toType); // 直接转换
         }
-        return result;
+        return result; // 返回结果
       }
     }
-    return Expressions.convert_(operand, toType);
+    return Expressions.convert_(operand, toType); // 默认情况：直接转换
   }
 
-  /** Converts a value to a given class. */
-  public static <T> @Nullable T evaluate(Object o, Class<T> clazz) {
+  /** Converts a value to a given class.
+   * 将值转换为给定的类。
+   *
+   * @param o 要转换的对象
+   * @param clazz 目标类
+   * @return 转换后的值（可能为null）
+   */
+  public static <T> @Nullable T evaluate(Object o, // 公共静态方法：评估并转换值
+      Class<T> clazz) { // 参数：目标类
     // We need optimization here for constant folding.
     // Not all the expressions can be interpreted (e.g. ternary), so
     // we rely on optimization capabilities to fold non-interpretable
     // expressions.
-    //noinspection unchecked
-    clazz = Primitive.box(clazz);
-    BlockBuilder bb = new BlockBuilder();
-    final Expression expr =
-        convert(Expressions.constant(o), clazz);
-    bb.add(Expressions.return_(null, expr));
-    final FunctionExpression<?> convert =
-        Expressions.lambda(bb.toBlock(), ImmutableList.of());
-    return clazz.cast(convert.compile().dynamicInvoke());
+    // 我们需要在这里进行常量折叠优化。
+    // 并非所有表达式都可以被解释（例如三元运算符），
+    // 所以我们依赖优化能力来折叠不可解释的表达式。
+    //noinspection unchecked // 忽略未检查的转换警告
+    clazz = Primitive.box(clazz); // 将类转换为包装类型
+    BlockBuilder bb = new BlockBuilder(); // 创建代码块构建器
+    final Expression expr = // 创建转换表达式
+        convert(Expressions.constant(o), clazz); // 将对象转换为常量表达式并转换类型
+    bb.add(Expressions.return_(null, expr)); // 添加返回语句
+    final FunctionExpression<?> convert = // 创建Lambda表达式
+        Expressions.lambda(bb.toBlock(), ImmutableList.of()); // 无参数Lambda
+    return clazz.cast(convert.compile().dynamicInvoke()); // 编译并动态调用，然后转换类型
   }
 
-  private static boolean isA(Type fromType, Primitive primitive) {
-    return Primitive.of(fromType) == primitive
-        || Primitive.ofBox(fromType) == primitive;
+  /**
+   * Checks if a type matches a primitive type.
+   * 检查类型是否匹配基本类型。
+   *
+   * @param fromType 要检查的类型
+   * @param primitive 基本类型枚举
+   * @return 是否匹配
+   */
+  private static boolean isA(Type fromType, // 私有静态方法：检查是否是某基本类型
+      Primitive primitive) { // 参数：基本类型枚举
+    return Primitive.of(fromType) == primitive // 判断是否是基本类型
+        || Primitive.ofBox(fromType) == primitive; // 或判断是否是包装类型
   }
 
-  private static boolean representAsInternalType(Type type) {
-    return type == java.sql.Date.class
-        || type == java.sql.Time.class
-        || type == java.sql.Timestamp.class;
+  /**
+   * Checks if a type should be represented as internal type.
+   * 检查类型是否应该用内部类型表示。
+   *
+   * @param type 要检查的类型
+   * @return 是否用内部类型表示
+   */
+  private static boolean representAsInternalType(Type type) { // 私有静态方法：检查是否用内部类型表示
+    return type == java.sql.Date.class // 如果是Date
+        || type == java.sql.Time.class // 或Time
+        || type == java.sql.Timestamp.class; // 或Timestamp
   }
 
   /**
@@ -699,42 +950,58 @@ public class EnumUtils {
    * before it is assigned to the Integer type Lvalue(In Java, Decimal can not be assigned to
    * Integer directly).
    *
-   * @param targetTypes Formal operand types declared for the function arguments
-   * @param arguments Input expressions to the function
-   * @return Input expressions with probable type conversion
+   * 在SqlTypeAssignmentRule中，一些规则决定一种类型是否可以赋值给另一种类型。
+   * 基于这些规则，函数可以接受可赋值类型的参数。
+   *
+   * <p>例如，Long类型的函数操作数可以接受Integer作为输入。
+   * 详情参见org.apache.calcite.sql.SqlUtil#filterRoutinesByParameterType()。
+   *
+   * <p>在查询执行期间，一些可赋值类型需要显式转换为目标类型。
+   * 即，Decimal表达式应该在赋值给Integer类型左值之前转换为Integer
+   * （在Java中，Decimal不能直接赋值给Integer）。
+   *
+   * @param targetTypes Formal operand types declared for the function arguments 函数参数声明的形式操作数类型
+   * @param arguments Input expressions to the function 函数的输入表达式
+   * @return Input expressions with probable type conversion 带有可能类型转换的输入表达式
    */
-  static List<Expression> convertAssignableTypes(Class<?>[] targetTypes,
-      List<Expression> arguments) {
-    final List<Expression> list = new ArrayList<>();
-    if (targetTypes.length == arguments.size()) {
-      for (int i = 0; i < arguments.size(); i++) {
-        list.add(convertAssignableType(arguments.get(i), targetTypes[i]));
+  static List<Expression> convertAssignableTypes(Class<?>[] targetTypes, // 静态方法：转换可赋值类型
+      List<Expression> arguments) { // 参数：参数类型数组和表达式列表
+    final List<Expression> list = new ArrayList<>(); // 创建结果列表
+    if (targetTypes.length == arguments.size()) { // 如果类型数量等于表达式数量
+      for (int i = 0; i < arguments.size(); i++) { // 遍历所有表达式
+        list.add(convertAssignableType(arguments.get(i), targetTypes[i])); // 逐个转换
       }
-    } else {
-      int j = 0;
-      for (Expression argument : arguments) {
-        Class<?> type;
-        if (!targetTypes[j].isArray()) {
-          type = targetTypes[j];
-          j++;
-        } else {
-          type = targetTypes[j].getComponentType();
+    } else { // 如果数量不匹配（可能是处理可变参数）
+      int j = 0; // 类型索引
+      for (Expression argument : arguments) { // 遍历所有表达式
+        Class<?> type; // 目标类型变量
+        if (!targetTypes[j].isArray()) { // 如果当前类型不是数组
+          type = targetTypes[j]; // 直接使用该类型
+          j++; // 移动到下一个类型
+        } else { // 如果是数组类型（可变参数）
+          type = targetTypes[j].getComponentType(); // 获取数组元素类型
         }
-        list.add(convertAssignableType(argument, type));
+        list.add(convertAssignableType(argument, type)); // 转换并添加
       }
     }
-    return list;
+    return list; // 返回转换后的列表
   }
 
   /**
    * Handles decimal type specifically with explicit type conversion.
+   * 专门处理Decimal类型，进行显式类型转换。
+   *
+   * @param argument 参数表达式
+   * @param targetType 目标类型
+   * @return 转换后的表达式
    */
-  private static Expression convertAssignableType(
-      Expression argument, Type targetType) {
-    if (targetType != BigDecimal.class) {
-      return argument;
+  private static Expression convertAssignableType( // 私有静态方法：转换可赋值类型
+      Expression argument, // 参数：参数表达式
+      Type targetType) { // 参数：目标类型
+    if (targetType != BigDecimal.class) { // 如果目标不是BigDecimal
+      return argument; // 直接返回
     }
-    return convert(argument, targetType);
+    return convert(argument, targetType); // 否则进行转换
   }
 
   /**
@@ -743,570 +1010,35 @@ public class EnumUtils {
    * Tries best effort to convert the
    * accepted arguments to match parameter type.
    *
-   * @param targetExpression Target expression, or null if method is static
-   * @param clazz Class against which method is invoked
-   * @param methodName Name of method
-   * @param arguments Argument expressions
+   * 是org.apache.calcite.linq4j.tree.Expressions#call的更强大版本。
+   * 尽最大努力将接受的参数转换为匹配参数类型。
    *
-   * @return MethodCallExpression that call the given name method
-   * @throws RuntimeException if no suitable method found
+   * @param targetExpression Target expression, or null if method is static 目标表达式，如果方法是静态则为null
+   * @param clazz Class against which method is invoked 调用方法的类
+   * @param methodName Name of method 方法名
+   * @param arguments Argument expressions 参数表达式列表
+   *
+   * @return MethodCallExpression that call the given name method 调用给定名称方法的方法调用表达式
+   * @throws RuntimeException if no suitable method found 如果找不到合适的方法则抛出运行时异常
    */
-  public static MethodCallExpression call(@Nullable Expression targetExpression,
-      Class clazz, String methodName, List<? extends Expression> arguments) {
-    Class[] argumentTypes = Types.toClassArray(arguments);
-    try {
-      Method candidate = clazz.getMethod(methodName, argumentTypes);
-      return Expressions.call(targetExpression, candidate, arguments);
-    } catch (NoSuchMethodException e) {
-      for (Method method : clazz.getMethods()) {
-        if (method.getName().equals(methodName)) {
-          final boolean varArgs = method.isVarArgs();
-          final Class<?>[] parameterTypes = method.getParameterTypes();
-          if (Types.allAssignable(varArgs, parameterTypes, argumentTypes)) {
-            return Expressions.call(targetExpression, method, arguments);
+  public static MethodCallExpression call(@Nullable Expression targetExpression, // 公共静态方法：智能方法调用
+      Class clazz, // 参数：目标类
+      String methodName, // 参数：方法名
+      List<? extends Expression> arguments) { // 参数：参数表达式列表
+    Class[] argumentTypes = Types.toClassArray(arguments); // 将参数表达式转换为类型数组
+    try { // 尝试精确匹配
+      Method candidate = clazz.getMethod(methodName, argumentTypes); // 获取精确匹配的方法
+      return Expressions.call(targetExpression, candidate, arguments); // 调用方法
+    } catch (NoSuchMethodException e) { // 捕获无方法异常
+      for (Method method : clazz.getMethods()) { // 遍历所有公共方法
+        if (method.getName().equals(methodName)) { // 如果方法名匹配
+          final boolean varArgs = method.isVarArgs(); // 判断是否是可变参数方法
+          final Class<?>[] parameterTypes = method.getParameterTypes(); // 获取参数类型数组
+          if (Types.allAssignable(varArgs, parameterTypes, argumentTypes)) { // 如果所有参数都可赋值
+            return Expressions.call(targetExpression, method, arguments); // 调用方法
           }
           // fall through
-          final List<? extends Expression> typeMatchedArguments =
+          // 继续尝试类型转换匹配
+          final List<? extends Expression> typeMatchedArguments = // 尝试类型转换匹配
               matchMethodParameterTypes(varArgs, parameterTypes, arguments);
-          if (typeMatchedArguments != null) {
-            return Expressions.call(targetExpression, method, typeMatchedArguments);
-          }
-        }
-      }
-      throw new RuntimeException("while resolving method '" + methodName
-          + Arrays.toString(argumentTypes) + "' in class " + clazz, e);
-    }
-  }
-
-  private static @Nullable List<? extends Expression> matchMethodParameterTypes(boolean varArgs,
-      Class<?>[] parameterTypes, List<? extends Expression> arguments) {
-    if ((varArgs  && arguments.size() < parameterTypes.length - 1)
-        || (!varArgs && arguments.size() != parameterTypes.length)) {
-      return null;
-    }
-    final List<Expression> typeMatchedArguments = new ArrayList<>();
-    for (int i = 0; i < arguments.size(); i++) {
-      Class<?> parameterType =
-          !varArgs || i < parameterTypes.length - 1
-              ? parameterTypes[i]
-              : Object.class;
-      final Expression typeMatchedArgument =
-          matchMethodParameterType(arguments.get(i), parameterType);
-      if (typeMatchedArgument == null) {
-        return null;
-      }
-      typeMatchedArguments.add(typeMatchedArgument);
-    }
-    return typeMatchedArguments;
-  }
-
-  /**
-   * Matches an argument expression to method parameter type with best effort.
-   *
-   * @param argument Argument Expression
-   * @param parameter Parameter type
-   * @return Converted argument expression that matches the parameter type.
-   *         Returns null if it is impossible to match.
-   */
-  private static @Nullable Expression matchMethodParameterType(
-      Expression argument, Class<?> parameter) {
-    Type argumentType = argument.getType();
-    if (Types.isAssignableFrom(parameter, argumentType)) {
-      return argument;
-    }
-    // Object.class is not assignable from primitive types,
-    // but the method with Object parameters can accept primitive types.
-    // E.g., "array(Object... args)" in SqlFunctions
-    if (parameter == Object.class
-        && Primitive.of(argumentType) != null) {
-      return argument;
-    }
-    // Convert argument with Object.class type to parameter explicitly
-    if (argumentType == Object.class
-        && Primitive.of(argumentType) == null) {
-      return convert(argument, parameter);
-    }
-    // assignable types that can be accepted with explicit conversion
-    if (parameter == BigDecimal.class
-        && Primitive.ofBoxOr(argumentType) != null) {
-      return convert(argument, parameter);
-    }
-    return null;
-  }
-
-  /** Transforms a JoinRelType to Linq4j JoinType. */
-  static JoinType toLinq4jJoinType(JoinRelType joinRelType) {
-    switch (joinRelType) {
-    case INNER:
-      return JoinType.INNER;
-    case LEFT:
-      return JoinType.LEFT;
-    case RIGHT:
-      return JoinType.RIGHT;
-    case FULL:
-      return JoinType.FULL;
-    case SEMI:
-      return JoinType.SEMI;
-    case ANTI:
-      return JoinType.ANTI;
-    case ASOF:
-      return JoinType.ASOF;
-    case LEFT_ASOF:
-      return JoinType.LEFT_ASOF;
-    default:
-      break;
-    }
-    throw new IllegalStateException(
-        "Unable to convert " + joinRelType + " to Linq4j JoinType");
-  }
-
-  /** Returns a predicate expression based on a join condition. */
-  static Expression generatePredicate(
-      EnumerableRelImplementor implementor,
-      RexBuilder rexBuilder,
-      RelNode left,
-      RelNode right,
-      PhysType leftPhysType,
-      PhysType rightPhysType,
-      RexNode condition) {
-    final BlockBuilder builder = new BlockBuilder();
-    final ParameterExpression left_ =
-        Expressions.parameter(leftPhysType.getJavaRowType(), "left");
-    final ParameterExpression right_ =
-        Expressions.parameter(rightPhysType.getJavaRowType(), "right");
-    final RexProgramBuilder program =
-        new RexProgramBuilder(
-            implementor.getTypeFactory().builder()
-                .addAll(left.getRowType().getFieldList())
-                .addAll(right.getRowType().getFieldList())
-                .build(),
-            rexBuilder);
-    program.addCondition(condition);
-    builder.add(
-        Expressions.return_(null,
-            RexToLixTranslator.translateCondition(program.getProgram(),
-                implementor.getTypeFactory(),
-                builder,
-                new RexToLixTranslator.InputGetterImpl(
-                    ImmutableMap.of(left_, leftPhysType,
-                        right_, rightPhysType)),
-                implementor.allCorrelateVariables,
-                implementor.getConformance())));
-    return Expressions.lambda(Predicate2.class, builder.toBlock(), left_, right_);
-  }
-
-  /**
-   * Generates a window selector which appends attribute of the window based on
-   * the parameters.
-   *
-   * <p>Note that it only works for batch scenario. E.g. all data is known and
-   * there is no late data.
-   */
-  static Expression tumblingWindowSelector(
-      PhysType inputPhysType,
-      PhysType outputPhysType,
-      Expression wmColExpr,
-      Expression windowSizeExpr,
-      Expression offsetExpr) {
-    // Generate all fields.
-    final List<Expression> expressions = new ArrayList<>();
-    // If input item is just a primitive, we do not generate specialized
-    // primitive apply override since it won't be called anyway
-    // Function<T> always operates on boxed arguments
-    final ParameterExpression parameter =
-        Expressions.parameter(Primitive.box(inputPhysType.getJavaRowType()), "_input");
-    final int fieldCount = inputPhysType.getRowType().getFieldCount();
-    for (int i = 0; i < fieldCount; i++) {
-      Expression expression =
-          inputPhysType.fieldReference(parameter, i,
-              outputPhysType.getJavaFieldType(expressions.size()));
-      expressions.add(expression);
-    }
-    final Expression wmColExprToLong = EnumUtils.convert(wmColExpr, long.class);
-
-    // Find the fixed window for a timestamp given a window size and an offset, and return the
-    // window start.
-    // wmColExprToLong - (wmColExprToLong + windowSizeMillis - offsetMillis) % windowSizeMillis
-    Expression windowStartExpr =
-        Expressions.subtract(wmColExprToLong,
-            Expressions.modulo(
-                Expressions.add(wmColExprToLong,
-                    Expressions.subtract(windowSizeExpr, offsetExpr)),
-            windowSizeExpr));
-
-    expressions.add(windowStartExpr);
-
-    // The window end equals to the window start plus window size.
-    // windowStartMillis + sizeMillis
-    Expression windowEndExpr =
-        Expressions.add(windowStartExpr, windowSizeExpr);
-
-    expressions.add(windowEndExpr);
-
-    return Expressions.lambda(Function1.class,
-        outputPhysType.record(expressions), parameter);
-  }
-
-  /**
-   * Creates enumerable implementation that applies sessionization to elements from the input
-   * enumerator based on a specified key. Elements are windowed into sessions separated by
-   * periods with no input for at least the duration specified by gap parameter.
-   */
-  public static Enumerable<@Nullable Object[]> sessionize(
-      Enumerator<@Nullable Object[]> inputEnumerator,
-      int indexOfWatermarkedColumn, int indexOfKeyColumn, long gap) {
-    return new AbstractEnumerable<@Nullable Object[]>() {
-      @Override public Enumerator<@Nullable Object[]> enumerator() {
-        return new SessionizationEnumerator(inputEnumerator,
-            indexOfWatermarkedColumn, indexOfKeyColumn, gap);
-      }
-    };
-  }
-
-  /** Enumerator that converts rows into sessions separated by gaps. */
-  private static class SessionizationEnumerator implements Enumerator<@Nullable Object[]> {
-    private final Enumerator<@Nullable Object[]> inputEnumerator;
-    private final int indexOfWatermarkedColumn;
-    private final int indexOfKeyColumn;
-    private final long gap;
-    private final Deque<@Nullable Object[]> list;
-    private boolean initialized;
-
-    /**
-     * Note that it only works for batch scenario. E.g. all data is known and there is no
-     * late data.
-     *
-     * @param inputEnumerator the enumerator to provide an array of objects as input
-     * @param indexOfWatermarkedColumn the index of timestamp column upon which a watermark is built
-     * @param indexOfKeyColumn the index of column that acts as grouping key
-     * @param gap gap parameter
-     */
-    SessionizationEnumerator(Enumerator<@Nullable Object[]> inputEnumerator,
-        int indexOfWatermarkedColumn, int indexOfKeyColumn, long gap) {
-      this.inputEnumerator = inputEnumerator;
-      this.indexOfWatermarkedColumn = indexOfWatermarkedColumn;
-      this.indexOfKeyColumn = indexOfKeyColumn;
-      this.gap = gap;
-      list = new ArrayDeque<>();
-      initialized = false;
-    }
-
-    @Override public @Nullable Object[] current() {
-      if (!initialized) {
-        initialize();
-        initialized = true;
-      }
-      return list.removeFirst();
-    }
-
-    @Override public boolean moveNext() {
-      return initialized ? !list.isEmpty() : inputEnumerator.moveNext();
-    }
-
-    @Override public void reset() {
-      list.clear();
-      inputEnumerator.reset();
-      initialized = false;
-    }
-
-    @Override public void close() {
-      list.clear();
-      inputEnumerator.close();
-      initialized = false;
-    }
-
-    private void initialize() {
-      List<@Nullable Object[]> elements = new ArrayList<>();
-      // initialize() will be called when inputEnumerator.moveNext() is true,
-      // thus firstly should take the current element.
-      elements.add(inputEnumerator.current());
-      // sessionization needs to see all data.
-      while (inputEnumerator.moveNext()) {
-        elements.add(inputEnumerator.current());
-      }
-
-      Map<@Nullable Object, SortedMultiMap<Pair<Long, Long>, @Nullable Object[]>> sessionKeyMap =
-          new HashMap<>();
-      for (@Nullable Object[] element : elements) {
-        SortedMultiMap<Pair<Long, Long>, @Nullable Object[]> session =
-            sessionKeyMap.computeIfAbsent(element[indexOfKeyColumn], k -> new SortedMultiMap<>());
-        Object watermark =
-            requireNonNull(element[indexOfWatermarkedColumn],
-                "element[indexOfWatermarkedColumn]");
-        Pair<Long, Long> initWindow =
-            computeInitWindow(SqlFunctions.toLong(watermark), gap);
-        session.putMulti(initWindow, element);
-      }
-
-      // merge per key session windows if there is any overlap between windows.
-      for (Map.Entry<@Nullable Object, SortedMultiMap<Pair<Long, Long>, @Nullable Object[]>>
-          perKeyEntry : sessionKeyMap.entrySet()) {
-        Map<Pair<Long, Long>, List<@Nullable Object[]>> finalWindowElementsMap = new HashMap<>();
-        Pair<Long, Long> currentWindow = null;
-        List<@Nullable Object[]> tempElementList = new ArrayList<>();
-        for (Map.Entry<Pair<Long, Long>, List<@Nullable Object[]>> sessionEntry
-            : perKeyEntry.getValue().entrySet()) {
-          // check the next window can be merged.
-          if (currentWindow == null || !isOverlapped(currentWindow, sessionEntry.getKey())) {
-            // cannot merge window as there is no overlap
-            if (currentWindow != null) {
-              finalWindowElementsMap.put(currentWindow, new ArrayList<>(tempElementList));
-            }
-
-            currentWindow = sessionEntry.getKey();
-            tempElementList.clear();
-            tempElementList.addAll(sessionEntry.getValue());
-          } else {
-            // merge windows.
-            currentWindow = mergeWindows(currentWindow, sessionEntry.getKey());
-            // merge elements in windows.
-            tempElementList.addAll(sessionEntry.getValue());
-          }
-        }
-
-        if (!tempElementList.isEmpty()) {
-          requireNonNull(currentWindow, "currentWindow is null");
-          finalWindowElementsMap.put(currentWindow, new ArrayList<>(tempElementList));
-        }
-
-        // construct final results from finalWindowElementsMap.
-        for (Map.Entry<Pair<Long, Long>, List<@Nullable Object[]>> finalWindowElementsEntry
-            : finalWindowElementsMap.entrySet()) {
-          for (@Nullable Object[] element : finalWindowElementsEntry.getValue()) {
-            @Nullable Object[] curWithWindow = new Object[element.length + 2];
-            System.arraycopy(element, 0, curWithWindow, 0, element.length);
-            curWithWindow[element.length] = finalWindowElementsEntry.getKey().left;
-            curWithWindow[element.length + 1] = finalWindowElementsEntry.getKey().right;
-            list.offer(curWithWindow);
-          }
-        }
-      }
-    }
-
-    private static boolean isOverlapped(Pair<Long, Long> a, Pair<Long, Long> b) {
-      return !(b.left >= a.right);
-    }
-
-    private static Pair<Long, Long> mergeWindows(Pair<Long, Long> a, Pair<Long, Long> b) {
-      return new Pair<>(a.left <= b.left ? a.left : b.left, a.right >= b.right ? a.right : b.right);
-    }
-
-    private static Pair<Long, Long> computeInitWindow(long ts, long gap) {
-      return new Pair<>(ts, ts + gap);
-    }
-  }
-
-  /**
-   * Create enumerable implementation that applies hopping on each element from the input
-   * enumerator and produces at least one element for each input element.
-   */
-  public static Enumerable<@Nullable Object[]> hopping(
-      Enumerator<@Nullable Object[]> inputEnumerator,
-      int indexOfWatermarkedColumn, long emitFrequency, long windowSize, long offset) {
-    return new AbstractEnumerable<@Nullable Object[]>() {
-      @Override public Enumerator<@Nullable Object[]> enumerator() {
-        return new HopEnumerator(inputEnumerator,
-            indexOfWatermarkedColumn, emitFrequency, windowSize, offset);
-      }
-    };
-  }
-
-  /** Enumerator that computes HOP. */
-  private static class HopEnumerator implements Enumerator<@Nullable Object[]> {
-    private final Enumerator<@Nullable Object[]> inputEnumerator;
-    private final int indexOfWatermarkedColumn;
-    private final long emitFrequency;
-    private final long windowSize;
-    private final long offset;
-    private final Deque<@Nullable Object[]> list;
-
-    /**
-     * Note that it only works for batch scenario. E.g. all data is known and there is no late data.
-     *
-     * @param inputEnumerator the enumerator to provide an array of objects as input
-     * @param indexOfWatermarkedColumn the index of timestamp column upon which a watermark is built
-     * @param slide sliding size
-     * @param windowSize window size
-     * @param offset indicates how much windows should off
-     */
-    HopEnumerator(Enumerator<@Nullable Object[]> inputEnumerator,
-        int indexOfWatermarkedColumn, long slide, long windowSize, long offset) {
-      this.inputEnumerator = inputEnumerator;
-      this.indexOfWatermarkedColumn = indexOfWatermarkedColumn;
-      this.emitFrequency = slide;
-      this.windowSize = windowSize;
-      this.offset = offset;
-      list = new ArrayDeque<>();
-    }
-
-    @Override public @Nullable Object[] current() {
-      if (!list.isEmpty()) {
-        return takeOne();
-      } else {
-        @Nullable Object[] current = inputEnumerator.current();
-        Object watermark =
-            requireNonNull(current[indexOfWatermarkedColumn],
-                "element[indexOfWatermarkedColumn]");
-        PairList<Long, Long> windows =
-            hopWindows(SqlFunctions.toLong(watermark), emitFrequency,
-                windowSize, offset);
-        windows.forEach((left, right) -> {
-          @Nullable Object[] curWithWindow = new Object[current.length + 2];
-          System.arraycopy(current, 0, curWithWindow, 0, current.length);
-          curWithWindow[current.length] = left;
-          curWithWindow[current.length + 1] = right;
-          list.offer(curWithWindow);
-        });
-        return takeOne();
-      }
-    }
-
-    @Override public boolean moveNext() {
-      return !list.isEmpty() || inputEnumerator.moveNext();
-    }
-
-    @Override public void reset() {
-      inputEnumerator.reset();
-      list.clear();
-    }
-
-    @Override public void close() {
-    }
-
-    private @Nullable Object[] takeOne() {
-      return requireNonNull(list.pollFirst(), "list.pollFirst()");
-    }
-  }
-
-  private static PairList<Long, Long> hopWindows(long tsMillis,
-      long periodMillis, long sizeMillis, long offsetMillis) {
-    PairList<Long, Long> ret =
-        PairList.withCapacity(Math.toIntExact(sizeMillis / periodMillis));
-    long lastStart =
-        tsMillis - ((tsMillis + periodMillis - offsetMillis) % periodMillis);
-    for (long start = lastStart;
-         start > tsMillis - sizeMillis;
-         start -= periodMillis) {
-      ret.add(start, start + sizeMillis);
-    }
-    return ret;
-  }
-
-  /**
-   * Apply tumbling per row from the enumerable input.
-   */
-  public static <TSource, TResult> Enumerable<TResult> tumbling(
-      Enumerable<TSource> inputEnumerable,
-      Function1<TSource, TResult> outSelector) {
-    return new AbstractEnumerable<TResult>() {
-      // Applies tumbling on each element from the input enumerator and produces
-      // exactly one element for each input element.
-      @Override public Enumerator<TResult> enumerator() {
-        return new Enumerator<TResult>() {
-          final Enumerator<TSource> inputs = inputEnumerable.enumerator();
-
-          @Override public TResult current() {
-            return outSelector.apply(inputs.current());
-          }
-
-          @Override public boolean moveNext() {
-            return inputs.moveNext();
-          }
-
-          @Override public void reset() {
-            inputs.reset();
-          }
-
-          @Override public void close() {
-            inputs.close();
-          }
-        };
-      }
-    };
-  }
-
-  public static @Nullable Expression generateCollatorExpression(@Nullable SqlCollation collation) {
-    if (collation == null) {
-      return null;
-    }
-    Collator collator = collation.getCollator();
-    if (collator == null) {
-      return null;
-    }
-
-    // Utilities.generateCollator(
-    //      new Locale(
-    //          collation.getLocale().getLanguage(),
-    //          collation.getLocale().getCountry(),
-    //          collation.getLocale().getVariant()),
-    //      collation.getCollator().getStrength());
-    final Locale locale = collation.getLocale();
-    final int strength = collator.getStrength();
-    return Expressions.call(
-        Utilities.class,
-        "generateCollator",
-        Expressions.new_(
-            Locale.class,
-            Expressions.constant(locale.getLanguage()),
-            Expressions.constant(locale.getCountry()),
-            Expressions.constant(locale.getVariant())),
-        Expressions.constant(strength));
-  }
-
-  /** Returns a function that converts an internal value to an external
-   * value.
-   *
-   * <p>Datetime values' internal representations have no time zone,
-   * and their external values are moments (relative to UTC epoch),
-   * so the {@code timeZone} parameter supplies the implicit time zone of
-   * the internal representation. If you specify the local time zone of the
-   * JVM, then {@link Timestamp#toString}, {@link Date#toString()}, and
-   * {@link Time#toString()} on the external values will give a value
-   * consistent with the internal values. */
-  public static Function<Object, Object> toExternal(RelDataType type,
-      TimeZone timeZone) {
-    switch (type.getSqlTypeName()) {
-    case DATE:
-      return o -> {
-        int d = (Integer) o;
-        long v = d * DateTimeUtils.MILLIS_PER_DAY;
-        v -= timeZone.getOffset(v);
-        return new Date(v);
-      };
-    case TIME:
-      return o -> {
-        long v = (Integer) o;
-        v -= timeZone.getOffset(v);
-        return new Time(v % DateTimeUtils.MILLIS_PER_DAY);
-      };
-    case TIMESTAMP:
-      return o -> {
-        long v = (Long) o;
-        v -= timeZone.getOffset(v);
-        return new Timestamp(v);
-      };
-    default:
-      return Function.identity();
-    }
-  }
-
-  /** Returns a function that converts an array of internal values to
-   * a list of external values. */
-  @SuppressWarnings("unchecked")
-  public static Function<@Nullable Object[], List<@Nullable Object>> toExternal(
-      List<RelDataType> types, TimeZone timeZone) {
-    final Function<Object, Object>[] functions = new Function[types.size()];
-    for (int i = 0; i < types.size(); i++) {
-      functions[i] = toExternal(types.get(i), timeZone);
-    }
-    final @Nullable Object[] objects = new @Nullable Object[types.size()];
-    return values -> {
-      for (int i = 0; i < values.length; i++) {
-        objects[i] = values[i] == null
-            ? null
-            : functions[i].apply(values[i]);
-      }
-      return Arrays.asList(objects.clone());
-    };
-  }
-}
+          if (typeMatchedArguments != null) { // 如果匹配成功

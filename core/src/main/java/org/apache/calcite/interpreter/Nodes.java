@@ -66,10 +66,10 @@ public class Nodes {
       node = new ValuesNode(this, value);
     }
 
-    public void visit(TableScan scan) {
-      final ImmutableList<RexNode> filters = ImmutableList.of();
-      node = TableScanNode.create(this, scan, filters, null);
-    }
+    public void visit(TableScan scan) { // visit 方法，处理表扫描节点
+      final ImmutableList<RexNode> filters = ImmutableList.of(); // 创建空的过滤器列表，表示没有任何过滤条件，ImmutableList.of() 创建不可变的空列表
+      node = TableScanNode.create(this, scan, filters, null); // 调用 TableScanNode 工厂方法创建表扫描节点，传入编译器、扫描节点、空过滤器和空投影列表
+    } // visit 方法结束
 
     public void visit(Bindables.BindableTableScan scan) {
       node = TableScanNode.create(this, scan, scan.filters, scan.projects);

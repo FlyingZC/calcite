@@ -14,128 +14,624 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.plan;
+package org.apache.calcite.plan; // 声明包名，该接口位于org.apache.calcite.plan包中，这是Calcite优化器核心包
 
 /**
- * RelOptCost defines an interface for optimizer cost in terms of number of rows
- * processed, CPU cost, and I/O cost. Optimizer implementations may use all of
- * this information, or selectively ignore portions of it. The specific units
- * for all of these quantities are rather vague; most relational expressions
- * provide a default cost calculation, but optimizers can override this by
- * plugging in their own cost models with well-defined meanings for each unit.
- * Optimizers which supply their own cost models may also extend this interface
- * with additional cost metrics such as memory usage.
+ * RelOptCost接口：定义了关系代数优化器成本模型的抽象接口
+ *
+ * 核心作用：
+ * 1. 定义了SQL查询优化过程中评估执行计划成本的标准接口
+ * 2. 提供了三个核心成本维度：行数（rows）、CPU成本、I/O成本
+ * 3. 允许优化器实现根据具体场景使用全部或部分成本信息
+ * 4. 为不同优化器策略提供统一的成本比较和计算接口
+ *
+ * 成本模型说明：
+ * - 行数（rows）：表示处理的数据行数，反映数据规模
+ * - CPU成本：表示CPU资源消耗，反映计算复杂度
+ * - I/O成本：表示I/O资源消耗，反映磁盘/网络访问开销
+ *
+ * 成本单位说明：
+ * - 各个成本指标的具体单位是模糊的，没有严格的物理单位定义
+ * - 大多数关系表达式提供默认的成本计算方式
+ * - 优化器可以通过插入自定义的成本模型来覆盖默认计算
+ * - 自定义成本模型可以为每个单位定义明确的含义
+ *
+ * 扩展性：
+ * - 提供自定义成本模型的优化器可以扩展此接口
+ * - 可以添加额外的成本指标，如内存使用量、网络传输量等
+ * - 这种设计允许针对不同场景（如分布式、内存数据库等）定制成本评估
+ *
+ * 在Calcite优化器中的位置：
+ * - 是VolcanoPlanner和HepPlanner等优化器的核心组件
+ * - 用于在多个等价的执行计划中选择最优计划
+ * - 配合RelOptRule和RelOptPlanner实现基于成本的优化（CBO）
+ *
+ * 典型使用场景：
+ * 1. 索引选择：比较使用索引和全表扫描的成本
+ * 2. 连接顺序选择：评估不同连接顺序的成本
+ * 3. 算法选择：比较Hash Join、Sort Merge Join、Nested Loop Join的成本
+ * 4. 并行度选择：评估不同并行执行策略的成本
  */
-public interface RelOptCost {
-  //~ Methods ----------------------------------------------------------------
+public interface RelOptCost { // 定义公共接口，所有成本实现类必须实现此接口
+  //~ Methods ---------------------------------------------------------------- // 方法分隔符，表示以下是方法定义区域
 
-  /** Returns the number of rows processed; this should not be
-   * confused with the row count produced by a relational expression
-   * ({@link org.apache.calcite.rel.RelNode#estimateRowCount}). */
-  double getRows();
+  /**
+   * 获取处理的数据行数
+   *
+   * 详细说明：
+   * - 返回该关系表达式处理的数据行数
+   * - 这个值表示输入数据的规模，而不是输出数据的规模
+   * - 在优化过程中，行数是估算值，不是精确值
+   * - 行数估算基于统计信息（如表的行数、列的基数、选择性等）
+   *
+   * 与estimateRowCount的区别：
+   * - getRows()：表示处理的行数（输入行数），反映数据扫描规模
+   * - estimateRowCount()：表示产生的行数（输出行数），反映过滤后的结果规模
+   * - 例如：对于过滤操作，getRows()返回扫描的行数，estimateRowCount()返回过滤后的行数
+   *
+   * 在成本计算中的作用：
+   * - 行数直接影响CPU成本和I/O成本的估算
+   * - 通常CPU成本 = 行数 × 每行处理成本
+   * - 通常I/O成本 = 行数 × 每行I/O成本
+   *
+   * 返回值：
+   * @return 处理的行数，double类型，支持小数以处理估算值
+   */
+  double getRows(); // 获取处理的数据行数，反映数据扫描规模
 
-  /** Returns usage of CPU resources. */
-  double getCpu();
+  /**
+   * 获取CPU资源使用成本
+   *
+   * 详细说明：
+   * - 返回该关系表达式消耗的CPU资源成本
+   * - CPU成本反映计算复杂度和处理时间
+   * - 包括比较、计算、聚合、排序等操作的CPU开销
+   *
+   * CPU成本的影响因素：
+   * 1. 操作类型：扫描、过滤、连接、聚合、排序等
+   * 2. 数据量：处理行数越多，CPU成本越高
+   * 3. 算法复杂度：不同算法的CPU成本不同（如Hash Join vs Nested Loop Join）
+   * 4. 表达式复杂度：WHERE条件、计算表达式等
+   * 5. 数据类型：不同数据类型的处理成本不同
+   *
+   * 典型CPU成本计算：
+   * - Table Scan：行数 × 每行扫描CPU成本
+   * - Filter：行数 × 过滤条件评估CPU成本
+   * - Hash Join：构建哈希表CPU成本 + 探测哈希表CPU成本
+   * - Sort：行数 × log(行数) × 比较CPU成本
+   * - Aggregate：行数 × 分组键哈希CPU成本 + 聚合函数计算CPU成本
+   *
+   * 返回值：
+   * @return CPU成本，double类型，单位是抽象的CPU时间单位
+   */
+  double getCpu(); // 获取CPU资源使用成本，反映计算复杂度和处理时间
 
-  /** Returns usage of I/O resources. */
-  double getIo();
+  /**
+   * 获取I/O资源使用成本
+   *
+   * 详细说明：
+   * - 返回该关系表达式消耗的I/O资源成本
+   * - I/O成本反映磁盘读取、网络传输等I/O操作的开销
+   * - I/O成本通常远高于CPU成本，是性能优化的重点
+   *
+   * I/O成本的影响因素：
+   * 1. 数据访问方式：顺序读 vs 随机读
+   * 2. 数据量：读取的数据量越大，I/O成本越高
+   * 3. 缓存命中：数据是否在内存缓冲区中
+   * 4. 磁盘类型：SSD vs HDD的I/O性能差异
+   * 5. 网络传输：分布式场景下的网络I/O
+   *
+   * 典型I/O成本计算：
+   * - Table Scan（全表扫描）：表大小 / 顺序读取速度
+   * - Index Scan（索引扫描）：索引大小 + 数据页读取次数 × 随机读取成本
+   * - Hash Join：构建哈希表读取成本 + 探测数据读取成本
+   * - Sort：如果需要溢写到磁盘，则包括临时文件I/O成本
+   *
+   * I/O成本与CPU成本的权衡：
+   * - 索引扫描：I/O成本低（只读部分数据），但CPU成本高（需要回表）
+   * - 全表扫描：I/O成本高（读全部数据），但CPU成本低（顺序处理）
+   *
+   * 返回值：
+   * @return I/O成本，double类型，单位是抽象的I/O时间单位
+   */
+  double getIo(); // 获取I/O资源使用成本，反映磁盘读取和网络传输开销
 
-  /** Returns whether this cost represents an expression that hasn't actually
-   * been implemented (e.g. a pure relational algebra expression) or can't
-   * actually be implemented, e.g. a transfer of data between two disconnected
-   * sites. */
-  boolean isInfinite();
+  /**
+   * 判断成本是否为无限大
+   *
+   * 详细说明：
+   * - 返回true表示该成本代表一个无法实现的表达式
+   * - 无限成本用于标记不可行的执行计划
+   * - 优化器会自动排除无限成本的执行计划
+   *
+   * 无限成本的典型场景：
+   * 1. 未实现的关系表达式：
+   *    - 纯关系代数表达式，没有对应的物理实现
+   *    - 例如：某些理论上的连接算法尚未实现
+   * 2. 无法实现的场景：
+   *    - 两个断开连接的站点之间传输数据
+   *    - 例如：分布式环境下，数据源之间没有网络连接
+   * 3. 不支持的特性：
+   *    - 某些SQL特性在特定存储引擎中不支持
+   *    - 例如：某些存储引擎不支持窗口函数
+   * 4. 约束违反：
+   *    - 执行计划违反了某些约束条件
+   *    - 例如：资源限制、安全策略等
+   *
+   * 在优化过程中的作用：
+   * - 作为剪枝条件，提前排除不可行的执行计划
+   * - 避免优化器浪费资源在不可能实现的计划上
+   * - 提高优化效率，减少搜索空间
+   *
+   * 返回值：
+   * @return 如果成本为无限大（不可实现）返回true，否则返回false
+   */
+  boolean isInfinite(); // 判断成本是否为无限大，用于标记不可实现的执行计划
 
   // REVIEW jvs 3-Apr-2006:  we should standardize this
   // to Comparator/equals/hashCode
+  // 注释：代码审查意见（jvs，2006年4月3日）：应该将比较方法标准化为Comparator/equals/hashCode模式
+  // 这意味着未来可能重构接口，使用Java标准的Comparator接口来规范成本比较逻辑
 
   /**
-   * Compares this to another cost.
+   * 判断两个成本是否完全相等
    *
-   * @param cost another cost
-   * @return true iff this is exactly equal to other cost
+   * 详细说明：
+   * - 精确比较两个成本对象是否相等
+   * - 要求所有成本维度（rows、cpu、io）都精确相等
+   * - 不允许任何误差，是严格相等判断
+   *
+   * 使用场景：
+   * 1. 缓存查找：检查是否已经计算过相同的成本
+   * 2. 成本去重：避免重复计算相同的成本
+   * 3. 测试验证：验证成本计算的正确性
+   *
+   * 注意事项：
+   * - 由于成本是估算值，精确相等的情况较少
+   * - 实际优化中更常用isEqWithEpsilon()方法
+   * - 该方法不覆盖Object.equals()，因此添加@SuppressWarnings注解
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，用于与当前成本进行比较
+   *
+   * 返回值：
+   * @return 当且仅当两个成本完全相等时返回true
    */
-  @SuppressWarnings("NonOverridingEquals")
-  boolean equals(RelOptCost cost);
+  @SuppressWarnings("NonOverridingEquals") // 抑制警告：此方法不覆盖Object.equals()
+  boolean equals(RelOptCost cost); // 判断两个成本是否完全相等（不允许误差）
 
   /**
-   * Compares this to another cost, allowing for slight roundoff errors.
+   * 判断两个成本是否在误差范围内相等
    *
-   * @param cost another cost
-   * @return true iff this is the same as the other cost within a roundoff
-   * margin of error
+   * 详细说明：
+   * - 比较两个成本是否相等，允许微小的舍入误差
+   * - 这是实际优化中常用的成本比较方法
+   * - 考虑到浮点数计算的精度问题和成本估算的不确定性
+   *
+   * 为什么需要误差容忍：
+   * 1. 浮点数精度：
+   *    - 浮点数计算存在舍入误差
+   *    - 例如：0.1 + 0.2 != 0.3（浮点数精度问题）
+   * 2. 成本估算不确定性：
+   *    - 统计信息可能不准确
+   *    - 成本模型可能简化了实际情况
+   * 3. 优化器稳定性：
+   *    - 避免因微小差异导致优化器选择不同的执行计划
+   *    - 提高优化结果的稳定性和可预测性
+   *
+   * 误差范围（epsilon）：
+   * - 通常是一个很小的值，如1e-10或1e-6
+   * - 具体值由实现类定义
+   * - 在VolcanoCost中，epsilon通常为1e-10
+   *
+   * 使用场景：
+   * 1. 成本比较：判断两个执行计划成本是否相同
+   * 2. 优化终止：当成本改进小于epsilon时停止优化
+   * 3. 等价计划识别：识别成本相同的等价执行计划
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，用于与当前成本进行比较
+   *
+   * 返回值：
+   * @return 当且仅当两个成本在舍入误差范围内相等时返回true
    */
-  boolean isEqWithEpsilon(RelOptCost cost);
+  boolean isEqWithEpsilon(RelOptCost cost); // 判断两个成本是否在误差范围内相等（允许舍入误差）
 
   /**
-   * Compares this to another cost.
+   * 判断当前成本是否小于或等于另一个成本
    *
-   * @param cost another cost
-   * @return true iff this is less than or equal to other cost
+   * 详细说明：
+   * - 比较两个成本的大小关系
+   * - 返回true表示当前成本小于或等于另一个成本
+   * - 这是优化器选择最优计划的核心比较方法
+   *
+   * 成本比较规则：
+   * - 优先比较总成本（综合考虑rows、cpu、io）
+   * - 具体的比较逻辑由实现类定义
+   * - 通常采用加权求和的方式：totalCost = w1*rows + w2*cpu + w3*io
+   *
+   * 典型比较策略：
+   * 1. VolcanoCost策略：
+   *    - 首先比较I/O成本（I/O通常是瓶颈）
+   *    - 如果I/O成本相同，再比较CPU成本
+   *    - 如果CPU成本也相同，最后比较行数
+   * 2. 加权求和策略：
+   *    - 计算总成本 = rows + cpu + io
+   *    - 比较总成本
+   * 3. 自定义策略：
+   *    - 根据具体场景定义权重
+   *    - 例如：内存数据库可能更关注CPU，磁盘数据库更关注I/O
+   *
+   * 在优化器中的作用：
+   * - 用于在多个等价执行计划中选择成本最低的计划
+   * - 配合VolcanoPlanner的动态规划算法
+   * - 在成本优化（CBO）中起到核心作用
+   *
+   * 使用场景：
+   * 1. 计划选择：在多个候选计划中选择最优计划
+   * 2. 剪枝优化：提前剪除成本更高的计划分支
+   * 3. 成本验证：验证优化后的计划是否真的更优
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，用于与当前成本进行比较
+   *
+   * 返回值：
+   * @return 当且仅当当前成本小于或等于另一个成本时返回true
    */
-  boolean isLe(RelOptCost cost);
+  boolean isLe(RelOptCost cost); // 判断当前成本是否小于或等于另一个成本
 
   /**
-   * Compares this to another cost.
+   * 判断当前成本是否严格小于另一个成本
    *
-   * @param cost another cost
-   * @return true iff this is strictly less than other cost
+   * 详细说明：
+   * - 比较两个成本的大小关系
+   * - 返回true表示当前成本严格小于另一个成本（不能相等）
+   * - 这是优化器判断是否有改进空间的比较方法
+   *
+   * 与isLe()的区别：
+   * - isLe()：允许相等，即 <=
+   * - isLt()：不允许相等，即 <
+   * - 当需要判断是否有改进时使用isLt()
+   * - 当需要判断是否更优时可以使用isLe()
+   *
+   * 使用场景：
+   * 1. 优化改进判断：
+   *    - 判断新的执行计划是否比当前计划有改进
+   *    - 用于动态规划中的状态更新
+   * 2. 迭代终止条件：
+   *    - 当没有更好的计划时停止迭代
+   * 3. 最优计划搜索：
+   *    - 在分支定界算法中判断是否需要继续搜索
+   *
+   * 在优化算法中的应用：
+   * 1. 动态规划：
+   *    - if (newPlanCost.isLt(bestCost)) { bestPlan = newPlan; }
+   * 2. 贪心算法：
+   *    - 选择当前成本最小的计划
+   * 3. 模拟退火：
+   *    - 接受成本更低的解
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，用于与当前成本进行比较
+   *
+   * 返回值：
+   * @return 当且仅当当前成本严格小于另一个成本时返回true
    */
-  boolean isLt(RelOptCost cost);
+  boolean isLt(RelOptCost cost); // 判断当前成本是否严格小于另一个成本（不能相等）
 
   /**
-   * Adds another cost to this.
+   * 将另一个成本加到当前成本上
    *
-   * @param cost another cost
-   * @return sum of this and other cost
+   * 详细说明：
+   * - 计算两个成本的和
+   * - 返回一个新的成本对象，不修改当前成本对象
+   * - 用于计算多个操作的总成本
+   *
+   * 成本加法的语义：
+   * - rows相加：总处理行数 = rows1 + rows2
+   * - cpu相加：总CPU成本 = cpu1 + cpu2
+   * - io相加：总I/O成本 = io1 + io2
+   *
+   * 使用场景：
+   * 1. 顺序操作：
+   *    - 计算多个顺序执行操作的总成本
+   *    - 例如：Scan -> Filter -> Project的总成本
+   * 2. 子计划成本：
+   *    - 计算子树的总成本
+   *    - 例如：Join操作的左右子树成本相加
+   * 3. 累积成本：
+   *    - 在优化过程中累积计算成本
+   *
+   * 典型应用：
+   * 1. 查询计划树：
+   *    - 从叶子节点向上累积成本
+   *    - 父节点成本 = 子节点成本 + 父节点操作成本
+   * 2. 管道操作：
+   *    - Pipeline中多个操作的成本相加
+   * 3. 批处理：
+   *    - 多个批次操作的成本相加
+   *
+   * 不变性：
+   * - 不修改当前成本对象（不可变性）
+   * - 返回新的成本对象
+   * - 支持链式调用：cost1.plus(cost2).plus(cost3)
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，将被加到当前成本上
+   *
+   * 返回值：
+   * @return 两个成本的和，返回新的成本对象
    */
-  RelOptCost plus(RelOptCost cost);
+  RelOptCost plus(RelOptCost cost); // 将另一个成本加到当前成本上，返回新的成本对象
 
   /**
-   * Subtracts another cost from this.
+   * 从当前成本中减去另一个成本
    *
-   * @param cost another cost
-   * @return difference between this and other cost
+   * 详细说明：
+   * - 计算两个成本的差
+   * - 返回一个新的成本对象，不修改当前成本对象
+   * - 用于计算成本差值或移除某个操作的成本
+   *
+   * 成本减法的语义：
+   * - rows相减：剩余处理行数 = rows1 - rows2
+   * - cpu相减：剩余CPU成本 = cpu1 - cpu2
+   * - io相减：剩余I/O成本 = io1 - io2
+   *
+   * 使用场景：
+   * 1. 成本改进计算：
+   *    - 计算优化后比优化前节省了多少成本
+   *    - improvement = oldCost.minus(newCost)
+   * 2. 增量成本：
+   *    - 计算添加某个操作增加的成本
+   *    - incrementalCost = newPlanCost.minus(basePlanCost)
+   * 3. 成本分解：
+   *    - 从总成本中分解出某个部分的成本
+   *
+   * 注意事项：
+   * - 减法结果可能为负数，需要特殊处理
+   * - 负成本在实际场景中没有意义
+   * - 实现类应该确保减法结果的合理性
+   *
+   * 典型应用：
+   * 1. 优化效果评估：
+   *    - 评估索引优化、重写规则等的效果
+   * 2. 成本分析：
+   *    - 分析查询计划中各部分的成本占比
+   * 3. 调试：
+   *    - 验证成本计算的正确性
+   *
+   * 不变性：
+   * - 不修改当前成本对象（不可变性）
+   * - 返回新的成本对象
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，将从当前成本中减去
+   *
+   * 返回值：
+   * @return 两个成本的差，返回新的成本对象
    */
-  RelOptCost minus(RelOptCost cost);
+  RelOptCost minus(RelOptCost cost); // 从当前成本中减去另一个成本，返回新的成本对象
 
   /**
-   * Multiplies this cost by a scalar factor.
+   * 将当前成本乘以一个标量因子
    *
-   * @param factor scalar factor
-   * @return scalar product of this and factor
+   * 详细说明：
+   * - 将成本的所有维度乘以给定的因子
+   * - 返回一个新的成本对象，不修改当前成本对象
+   * - 用于调整成本规模或计算重复操作的成本
+   *
+   * 成本乘法的语义：
+   * - rows乘以因子：处理行数 = rows × factor
+   * - cpu乘以因子：CPU成本 = cpu × factor
+   * - io乘以因子：I/O成本 = io × factor
+   *
+   * 使用场景：
+   * 1. 重复操作：
+   *    - 计算重复执行N次的总成本
+   *    - 例如：循环执行某个操作N次
+   * 2. 迭代操作：
+   *    - 计算迭代操作的成本
+   *    - 例如：迭代聚合的成本估算
+   * 3. 成本缩放：
+   *    - 根据数据规模调整成本
+   *    - 例如：数据量增加10倍，成本也增加10倍
+   * 4. 并行度调整：
+   *    - 计算不同并行度下的成本
+   *    - 例如：并行度为4时，成本约为单线程的1/4
+   *
+   * 典型应用：
+   * 1. 循环展开：
+   *    - 计算循环操作的总成本
+   * 2. 批处理：
+   *    - 计算处理多个批次的总成本
+   * 3. 迭代算法：
+   *    - 计算迭代收敛的成本
+   *
+   * 因子类型：
+   * - 整数：表示重复次数
+   * - 小数：表示缩放比例
+   * - 分数：表示并行加速比
+   *
+   * 不变性：
+   * - 不修改当前成本对象（不可变性）
+   * - 返回新的成本对象
+   *
+   * 参数说明：
+   * @param factor 标量因子，用于乘以成本的所有维度
+   *
+   * 返回值：
+   * @return 成本乘以因子后的结果，返回新的成本对象
    */
-  RelOptCost multiplyBy(double factor);
+  RelOptCost multiplyBy(double factor); // 将当前成本乘以一个标量因子，返回新的成本对象
 
   /**
-   * Computes the ratio between this cost and another cost.
+   * 计算当前成本与另一个成本的比值
    *
-   * <p>divideBy is the inverse of {@link #multiplyBy(double)}. For any
-   * finite, non-zero cost and factor f, <code>
-   * cost.divideBy(cost.multiplyBy(f))</code> yields <code>1 / f</code>.
+   * 详细说明：
+   * - 计算两个成本的比率
+   * - 是multiplyBy()的逆运算
+   * - 返回一个double值，表示成本的相对大小
    *
-   * @param cost Other cost
-   * @return Ratio between costs
+   * 数学关系：
+   * - divideBy是multiplyBy的逆运算
+   * - 对于任何有限的非零成本和因子f：
+   *   cost.divideBy(cost.multiplyBy(f)) 返回 1 / f
+   * - 例如：cost1 = cost2 × 2，则 cost1.divideBy(cost2) = 2
+   *
+   * 比值的含义：
+   * - 比值 > 1：当前成本是另一个成本的N倍
+   * - 比值 = 1：两个成本相等
+   * - 比值 < 1：当前成本是另一个成本的1/N
+   *
+   * 使用场景：
+   * 1. 性能比较：
+   *    - 比较两个执行计划的性能差异
+   *    - 例如：计划A的成本是计划B的2倍
+   * 2. 优化效果评估：
+   *    - 评估优化改进了多少倍
+   *    - 例如：优化后成本降低了50%（比值为0.5）
+   * 3. 成本分析：
+   *    - 分析不同操作的成本占比
+   * 4. 缩放因子计算：
+   *    - 计算需要调整的缩放因子
+   *
+   * 典型应用：
+   * 1. 索引效果：
+   *    - 全表扫描成本 / 索引扫描成本 = 性能提升倍数
+   * 2. 并行效果：
+   *    - 单线程成本 / 多线程成本 = 加速比
+   * 3. 缓存效果：
+   *    - 无缓存成本 / 有缓存成本 = 缓存命中率提升
+   *
+   * 注意事项：
+   * - 除数不能为零
+   * - 如果除数为零，应该返回无穷大或抛出异常
+   * - 具体行为由实现类定义
+   *
+   * 参数说明：
+   * @param cost 另一个成本对象，作为除数
+   *
+   * 返回值：
+   * @return 当前成本与另一个成本的比值
    */
-  double divideBy(RelOptCost cost);
+  double divideBy(RelOptCost cost); // 计算当前成本与另一个成本的比值
 
   /**
-   * Forces implementations to override {@link Object#toString} and provide a
-   * good cost rendering to use during tracing.
+   * 强制实现类覆盖Object.toString()方法
+   *
+   * 详细说明：
+   * - 要求实现类提供良好的成本字符串表示
+   * - 用于在调试和跟踪过程中显示成本信息
+   * - 帮助开发者和用户理解优化器的决策过程
+   *
+   * 字符串表示的要求：
+   * 1. 可读性：
+   *    - 清晰显示成本的各个维度
+   *    - 例如："rows=1000.0, cpu=500.0, io=200.0"
+   * 2. 简洁性：
+   *    - 避免冗余信息
+   *    - 突出关键成本指标
+   * 3. 一致性：
+   *    - 所有实现类应该使用统一的格式
+   * 4. 调试友好：
+   *    - 便于在日志中查看和分析
+   *
+   * 在调试和跟踪中的作用：
+   * 1. 优化过程跟踪：
+   *    - 显示优化器如何选择执行计划
+   *    - 记录每个候选计划的成本
+   * 2. 性能分析：
+   *    - 帮助识别性能瓶颈
+   *    - 分析哪些操作成本最高
+   * 3. 问题诊断：
+   *    - 当查询性能不佳时，查看成本信息
+   *    - 验证优化器是否选择了最优计划
+   *
+   * 典型输出格式：
+   * 1. VolcanoCost格式：
+   *    - "{rows: 1000.0, cpu: 500.0, io: 200.0}"
+   * 2. 简化格式：
+   *    - "1000.0 rows, 500.0 cpu, 200.0 io"
+   * 3. JSON格式：
+   *    - '{"rows":1000.0,"cpu":500.0,"io":200.0}'
+   *
+   * 使用场景：
+   * 1. 日志输出：
+   *    - 在优化过程中输出成本信息
+   * 2. 测试验证：
+   *    - 验证成本计算是否正确
+   * 3. 用户反馈：
+   *    - 向用户展示优化器的决策依据
+   *
+   * 返回值：
+   * @return 成本的字符串表示，应该清晰、简洁、易读
    */
-  @Override String toString();
+  @Override String toString(); // 强制覆盖Object.toString()，提供良好的成本字符串表示用于调试
 
-  static String toString(double value) {
-    if (value == Double.MAX_VALUE) {
-      return "{huge}";
-    } else if (value == Double.POSITIVE_INFINITY) {
-      return "{inf}";
-    } else if (value == 1.0) {
-      return "{tiny}";
-    } else if (value == 0.0) {
-      return "{0}";
-    } else {
-      return Double.toString(value);
+  /**
+   * 将double值转换为友好的字符串表示
+   *
+   * 详细说明：
+   * - 静态工具方法，用于格式化成本值
+   * - 将特殊的double值转换为可读的字符串
+   * - 提高成本信息的可读性和可理解性
+   *
+   * 特殊值处理：
+   * 1. Double.MAX_VALUE（最大值）：
+   *    - 转换为 "{huge}"
+   *    - 表示非常大的成本值
+   *    - 用于表示接近无穷大的成本
+   * 2. Double.POSITIVE_INFINITY（正无穷）：
+   *    - 转换为 "{inf}"
+   *    - 表示无限成本
+   *    - 用于标记不可实现的执行计划
+   * 3. 1.0（最小非零值）：
+   *    - 转换为 "{tiny}"
+   *    - 表示非常小的成本值
+   *    - 用于表示几乎可以忽略的成本
+   * 4. 0.0（零）：
+   *    - 转换为 "{0}"
+   *    - 表示零成本
+   *    - 用于表示不需要任何资源的操作
+   * 5. 普通值：
+   *    - 直接转换为字符串
+   *    - 例如：100.5 -> "100.5"
+   *
+   * 设计目的：
+   * 1. 可读性：
+   *    - 特殊值使用易读的字符串表示
+   *    - 避免显示冗长的科学计数法
+   * 2. 一致性：
+   *    - 所有成本值使用统一的格式
+   * 3. 调试友好：
+   *    - 快速识别特殊的成本值
+   *    - 便于在日志中分析
+   *
+   * 使用场景：
+   * 1. 日志输出：
+   *    - 在toString()方法中使用此方法格式化成本值
+   * 2. 调试信息：
+   *    - 在调试工具中显示成本信息
+   * 3. 测试输出：
+   *    - 在测试用例中验证成本值
+   *
+   * 参数说明：
+   * @param value 要格式化的double值，通常是成本的一个维度（rows、cpu或io）
+   *
+   * 返回值：
+   * @return 格式化后的字符串表示，特殊值使用简短标识
+   */
+  static String toString(double value) { // 静态方法：将double值转换为友好的字符串表示
+    if (value == Double.MAX_VALUE) { // 如果值是double类型的最大值
+      return "{huge}"; // 返回"{huge}"表示巨大的成本值
+    } else if (value == Double.POSITIVE_INFINITY) { // 如果值是正无穷
+      return "{inf}"; // 返回"{inf}"表示无限成本（不可实现）
+    } else if (value == 1.0) { // 如果值是1.0（最小非零值）
+      return "{tiny}"; // 返回"{tiny}"表示非常小的成本值
+    } else if (value == 0.0) { // 如果值是0.0
+      return "{0}"; // 返回"{0}"表示零成本
+    } else { // 如果是普通值
+      return Double.toString(value); // 直接转换为字符串
     }
   }
-}
+} // 接口定义结束

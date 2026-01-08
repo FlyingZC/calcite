@@ -16,19 +16,19 @@
  */
 
 /**
- * Defines core relational expressions.
+ * Defines core relational expressions. // 定义核心关系表达式，这是Calcite框架中最基础的关系代数操作集合
  *
- * <h2>Related packages and classes</h2>
+ * <h2>Related packages and classes</h2> // 相关包和类的详细说明
  * <ul>
  *
  * <li>Package <code>
  * <a href="../logical/package-summary.html">org.apache.calcite.rel.logical</a></code>
- * contains logical relational expressions
+ * contains logical relational expressions // org.apache.calcite.rel.logical包包含逻辑关系表达式，这些是查询优化过程中的逻辑表示，不涉及具体的物理实现细节
  *
  * <li>Package <code>
  * <a href="../package-summary.html">org.apache.calcite.rex</a></code>
- * defines the relational expression API
+ * defines the relational expression API // org.apache.calcite.rex包定义了行表达式(Row Expression)API，用于表示标量表达式、谓词等，是构建关系表达式的基础
  *
  * </ul>
  */
-package org.apache.calcite.rel.core;
+package org.apache.calcite.rel.core; // 声明当前包为org.apache.calcite.rel.core，这是Calcite框架中核心关系表达式的包路径

@@ -126,115 +126,124 @@ import static java.util.Objects.requireNonNull;
  * {@link org.apache.calcite.rel.core.Intersect},
  * {@link org.apache.calcite.rel.core.Aggregate}.
  */
+// SubstitutionVisitor（替换访问者）：用于将关系表达式树的一部分替换为另一棵树的核心类
+// 主要应用于物化视图识别和查询重写场景
+// 核心功能：在查询表达式中查找目标模式，并用替换表达式替换它，同时保持语义等价性
+// 使用自底向上的匹配算法，节点不需要完全相同，可以在每层返回残留表达式
 public class SubstitutionVisitor {
-  private static final boolean DEBUG = CalciteSystemProperty.DEBUG.value();
-  private static final Strong STRONG = new Strong() {
+  private static final boolean DEBUG = CalciteSystemProperty.DEBUG.value(); // 调试标志，用于打印详细的匹配过程信息
+  private static final Strong STRONG = new Strong() { // 强度检查器，用于确定Calc是否可以被提升到Join之上
     @Override public boolean isNull(RexInputRef ref) {
       // Here strong is used to determine if the nullable side calc can be pulled up to the join,
       // and we will adjust nullability if RexInputRef is not null,
       // so here RexInputRef is always satisfies null-if-null
-      return true;
+      return true; // 这里返回true表示RexInputRef总是满足null-if-null语义
     }
   };
 
+  // 默认的统一规则集合，定义了所有支持的匹配和替换规则
   public static final ImmutableList<UnifyRule> DEFAULT_RULES =
       ImmutableList.of(
-          TrivialRule.INSTANCE,
-          ScanToCalcUnifyRule.INSTANCE,
-          CalcToCalcUnifyRule.INSTANCE,
-          JoinOnLeftCalcToJoinUnifyRule.INSTANCE,
-          JoinOnRightCalcToJoinUnifyRule.INSTANCE,
-          JoinOnCalcsToJoinUnifyRule.INSTANCE,
-          AggregateToAggregateUnifyRule.INSTANCE,
-          AggregateOnCalcToAggregateUnifyRule.INSTANCE,
-          UnionToUnionUnifyRule.INSTANCE,
-          UnionOnCalcsToUnionUnifyRule.INSTANCE,
-          IntersectToIntersectUnifyRule.INSTANCE,
-          IntersectOnCalcsToIntersectUnifyRule.INSTANCE);
+          TrivialRule.INSTANCE, // 平凡规则：查询和目标完全相等
+          ScanToCalcUnifyRule.INSTANCE, // Scan到Calc的匹配规则
+          CalcToCalcUnifyRule.INSTANCE, // Calc到Calc的匹配规则
+          JoinOnLeftCalcToJoinUnifyRule.INSTANCE, // 左侧有Calc的Join到Join的匹配规则
+          JoinOnRightCalcToJoinUnifyRule.INSTANCE, // 右侧有Calc的Join到Join的匹配规则
+          JoinOnCalcsToJoinUnifyRule.INSTANCE, // 两侧都有Calc的Join到Join的匹配规则
+          AggregateToAggregateUnifyRule.INSTANCE, // Aggregate到Aggregate的匹配规则
+          AggregateOnCalcToAggregateUnifyRule.INSTANCE, // Calc上有Aggregate的匹配规则
+          UnionToUnionUnifyRule.INSTANCE, // Union到Union的匹配规则
+          UnionOnCalcsToUnionUnifyRule.INSTANCE, // Calc上有Union的匹配规则
+          IntersectToIntersectUnifyRule.INSTANCE, // Intersect到Intersect的匹配规则
+          IntersectOnCalcsToIntersectUnifyRule.INSTANCE); // Calc上有Intersect的匹配规则
 
   /**
    * Factory for a builder for relational expressions.
    */
-  protected final RelBuilder relBuilder;
+  protected final RelBuilder relBuilder; // 关系表达式构建器工厂，用于构建新的关系表达式
 
-  private final ImmutableList<UnifyRule> rules;
+  private final ImmutableList<UnifyRule> rules; // 可用的统一规则列表
   private final Map<Pair<Class, Class>, List<UnifyRule>> ruleMap =
-      new HashMap<>();
-  private final RelOptCluster cluster;
-  private final RexSimplify simplify;
-  private final Holder query;
-  private final MutableRel target;
+      new HashMap<>(); // 规则映射表，根据查询和目标类型快速查找适用规则
+  private final RelOptCluster cluster; // 关系优化集群，包含元数据、类型系统等
+  private final RexSimplify simplify; // 表达式简化器，用于简化条件表达式
+  private final Holder query; // 查询表达式的包装器，包含可变的关系表达式
+  private final MutableRel target; // 目标模式，需要在查询中查找并替换的模式
 
   /**
    * Nodes in {@link #target} that have no children.
    */
-  final List<MutableRel> targetLeaves;
+  final List<MutableRel> targetLeaves; // 目标树的叶子节点列表（没有子节点的节点）
 
   /**
    * Nodes in {@link #query} that have no children.
    */
-  final List<MutableRel> queryLeaves;
+  final List<MutableRel> queryLeaves; // 查询树的叶子节点列表（没有子节点的节点）
 
-  final Map<MutableRel, MutableRel> replacementMap = new HashMap<>();
+  final Map<MutableRel, MutableRel> replacementMap = new HashMap<>(); // 替换映射表，记录目标到替换节点的映射
 
   final Multimap<MutableRel, MutableRel> equivalents =
-      LinkedHashMultimap.create();
+      LinkedHashMultimap.create(); // 等价节点集合，记录语义等价但结构不同的节点
 
   /** Workspace while rule is being matched.
    * Careful, re-entrant!
    * Assumes no rule needs more than 2 slots. */
-  protected final MutableRel[] slots = new MutableRel[2];
+  protected final MutableRel[] slots = new MutableRel[2]; // 工作槽，用于规则匹配过程中存储临时数据，假设任何规则最多需要2个槽
 
   /** Creates a SubstitutionVisitor with the default rule set. */
   public SubstitutionVisitor(RelNode target_, RelNode query_) {
+    // 使用默认规则集和逻辑构建器创建SubstitutionVisitor
     this(target_, query_, DEFAULT_RULES, RelFactories.LOGICAL_BUILDER);
   }
 
   /** Creates a SubstitutionVisitor with the default logical builder. */
   public SubstitutionVisitor(RelNode target_, RelNode query_,
       ImmutableList<UnifyRule> rules) {
+    // 使用自定义规则集和默认逻辑构建器创建SubstitutionVisitor
     this(target_, query_, rules, RelFactories.LOGICAL_BUILDER);
   }
 
   public SubstitutionVisitor(RelNode target_, RelNode query_,
       ImmutableList<UnifyRule> rules, RelBuilderFactory relBuilderFactory) {
-    this.cluster = target_.getCluster();
+    // 完整的构造方法，初始化所有成员变量
+    this.cluster = target_.getCluster(); // 获取关系优化集群
     final RexExecutor executor =
-        Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR);
-    final RelOptPredicateList predicates = RelOptPredicateList.EMPTY;
+        Util.first(cluster.getPlanner().getExecutor(), RexUtil.EXECUTOR); // 获取表达式执行器
+    final RelOptPredicateList predicates = RelOptPredicateList.EMPTY; // 初始谓词列表为空
     this.simplify =
-        new RexSimplify(cluster.getRexBuilder(), predicates, executor);
-    this.rules = rules;
-    this.query = Holder.of(MutableRels.toMutable(query_));
-    this.target = MutableRels.toMutable(target_);
-    this.relBuilder = relBuilderFactory.create(cluster, null);
-    final Set<@Nullable MutableRel> parents = Sets.newIdentityHashSet();
-    final List<MutableRel> allNodes = new ArrayList<>();
+        new RexSimplify(cluster.getRexBuilder(), predicates, executor); // 创建表达式简化器
+    this.rules = rules; // 保存规则列表
+    this.query = Holder.of(MutableRels.toMutable(query_)); // 将查询转换为可变关系表达式
+    this.target = MutableRels.toMutable(target_); // 将目标转换为可变关系表达式
+    this.relBuilder = relBuilderFactory.create(cluster, null); // 创建关系表达式构建器
+    final Set<@Nullable MutableRel> parents = Sets.newIdentityHashSet(); // 父节点集合
+    final List<MutableRel> allNodes = new ArrayList<>(); // 所有节点列表
     final MutableRelVisitor visitor =
-        new MutableRelVisitor() {
+        new MutableRelVisitor() { // 创建访问器来遍历关系表达式树
           @Override public void visit(@Nullable MutableRel node) {
             requireNonNull(node, "node");
-            parents.add(node.getParent());
-            allNodes.add(node);
+            parents.add(node.getParent()); // 记录父节点
+            allNodes.add(node); // 记录所有节点
             super.visit(node);
           }
         };
-    visitor.go(target);
+    visitor.go(target); // 遍历目标树
 
     // Populate the list of leaves in the tree under "target".
     // Leaves are all nodes that are not parents.
     // For determinism, it is important that the list is in scan order.
-    allNodes.removeAll(parents);
-    targetLeaves = ImmutableList.copyOf(allNodes);
+    allNodes.removeAll(parents); // 移除父节点，剩下的就是叶子节点
+    targetLeaves = ImmutableList.copyOf(allNodes); // 保存目标树的叶子节点
 
-    allNodes.clear();
-    parents.clear();
-    visitor.go(query);
-    allNodes.removeAll(parents);
-    queryLeaves = ImmutableList.copyOf(allNodes);
+    allNodes.clear(); // 清空节点列表
+    parents.clear(); // 清空父节点集合
+    visitor.go(query); // 遍历查询树
+    allNodes.removeAll(parents); // 移除父节点，剩下的就是叶子节点
+    queryLeaves = ImmutableList.copyOf(allNodes); // 保存查询树的叶子节点
   }
 
   void register(MutableRel result, MutableRel query) {
+    // 注册替换结果，当前实现为空
   }
 
   /**
@@ -292,6 +301,12 @@ public class SubstitutionVisitor {
    * <a href="http://en.wikipedia.org/wiki/Satisfiability">Satisfiability</a>
    * problem.
    */
+  // splitFilter（拆分过滤器）：将条件表达式映射到目标表达式上
+  // 如果condition比target强，返回残留条件
+  // 如果condition等于target，返回TRUE
+  // 如果condition比target弱，返回null（无法匹配）
+  // 满足关系：condition = target AND residue
+  // 这是一个NP完全的可满足性问题
   @VisibleForTesting
   public static @Nullable RexNode splitFilter(final RexSimplify simplify,
       RexNode condition, RexNode target) {
@@ -337,6 +352,7 @@ public class SubstitutionVisitor {
    * Reorders some of the operands in this expression so structural comparison,
    * i.e., based on string representation, can be more precise.
    */
+  // canonizeNode（规范化节点）：重新排序表达式中的操作数，使结构比较（基于字符串表示）更精确
   private static RexNode canonizeNode(RexBuilder rexBuilder, RexNode condition) {
     switch (condition.getKind()) {
     case AND:
@@ -403,6 +419,8 @@ public class SubstitutionVisitor {
     }
   }
 
+  // splitOr（拆分或）：处理OR表达式的拆分
+  // 用于在条件是OR表达式时进行特殊处理
   private static @Nullable RexNode splitOr(
       final RexBuilder rexBuilder, RexNode condition, RexNode target) {
     List<RexNode> conditions = RelOptUtil.disjunctions(condition);
@@ -421,15 +439,16 @@ public class SubstitutionVisitor {
   }
 
   private static boolean isEquivalent(RexNode condition, RexNode target) {
+    // isEquivalent方法：判断两个条件表达式是否等价
     // Example:
     //  e: x = 1 AND y = 2 AND z = 3 AND NOT (x = 1 AND y = 2)
     //  disjunctions: {x = 1, y = 2, z = 3}
     //  notDisjunctions: {x = 1 AND y = 2}
     final Set<String> conditionDisjunctions =
-        new HashSet<>(RexUtil.strings(RelOptUtil.conjunctions(condition)));
+        new HashSet<>(RexUtil.strings(RelOptUtil.conjunctions(condition))); // 获取条件的合取项
     final Set<String> targetDisjunctions =
-        new HashSet<>(RexUtil.strings(RelOptUtil.conjunctions(target)));
-    return conditionDisjunctions.equals(targetDisjunctions);
+        new HashSet<>(RexUtil.strings(RelOptUtil.conjunctions(target))); // 获取目标的合取项
+    return conditionDisjunctions.equals(targetDisjunctions); // 比较是否相等
   }
 
   /**
@@ -439,6 +458,8 @@ public class SubstitutionVisitor {
    * that {@code x = 5 AND x > 10} is satisfiable, because at present it
    * cannot prove that it is not.
    */
+  // mayBeSatisfiable（可能可满足）：返回布尔表达式是否可能返回true
+  // 此方法可能产生假阳性。例如，它会说x = 5 AND x > 10是可满足的，因为目前无法证明它不是
   public static boolean mayBeSatisfiable(RexNode e) {
     // Example:
     //  e: x = 1 AND y = 2 AND z = 3 AND NOT (x = 1 AND y = 2)
@@ -493,15 +514,15 @@ public class SubstitutionVisitor {
 
   public @Nullable RelNode go0(RelNode replacement_) {
     assert false; // not called
-    MutableRel replacement = MutableRels.toMutable(replacement_);
+    MutableRel replacement = MutableRels.toMutable(replacement_); // 转换为可变关系表达式
     assert equalType(
-        "target", target, "replacement", replacement, Litmus.THROW);
-    replacementMap.put(target, replacement);
-    final UnifyResult unifyResult = matchRecurse(target);
+        "target", target, "replacement", replacement, Litmus.THROW); // 检查类型是否相等
+    replacementMap.put(target, replacement); // 记录替换映射
+    final UnifyResult unifyResult = matchRecurse(target); // 递归匹配目标
     if (unifyResult == null) {
-      return null;
+      return null; // 匹配失败
     }
-    final MutableRel node0 = unifyResult.result;
+    final MutableRel node0 = unifyResult.result; // 获取匹配结果
     MutableRel node = node0; // replaceAncestors(node0);
     if (DEBUG) {
       System.out.println("Convert: query:\n"
@@ -515,9 +536,9 @@ public class SubstitutionVisitor {
           + "\nnode0:\n"
           + node0.deep()
           + "\nnode:\n"
-          + node.deep());
+          + node.deep()); // 打印调试信息
     }
-    return MutableRels.fromMutable(node, relBuilder);
+    return MutableRels.fromMutable(node, relBuilder); // 转换回不可变关系表达式
   }
 
   /**
@@ -528,6 +549,8 @@ public class SubstitutionVisitor {
    * are both a qualified match for replacement R, is R join B, R join R,
    * A join R.
    */
+  // go方法：执行替换操作，返回所有可能的替换结果
+  // 例如：A join B中A和B都可以被R替换，则结果包括R join B, R join R, A join R
   @SuppressWarnings("MixedMutabilityReturnType")
   public List<RelNode> go(RelNode replacement_) {
     List<List<Replacement>> matches = go(MutableRels.toMutable(replacement_));
@@ -666,6 +689,7 @@ public class SubstitutionVisitor {
   /**
    * Equivalence checking for row types, but except for the field names.
    */
+  // rowTypesAreEquivalent（行类型等价）：检查行类型是否等价，但不考虑字段名
   private static boolean rowTypesAreEquivalent(
       MutableRel rel0, MutableRel rel1, Litmus litmus) {
     if (rel0.rowType.getFieldCount() != rel1.rowType.getFieldCount()) {
@@ -685,19 +709,21 @@ public class SubstitutionVisitor {
    * {@code stopTrying} indicates whether there's no need
    * to do matching for the same query node again.
    */
+  // Replacement（替换）：表示替换操作：替换前 -> 替换后
+  // stopTrying指示是否需要对相同的查询节点再次进行匹配
   static class Replacement {
-    final MutableRel before;
-    final MutableRel after;
-    final boolean stopTrying;
+    final MutableRel before; // 替换前的关系表达式
+    final MutableRel after; // 替换后的关系表达式
+    final boolean stopTrying; // 是否停止尝试
 
     Replacement(MutableRel before, MutableRel after) {
-      this(before, after, true);
+      this(before, after, true); // 默认stopTrying为true
     }
 
     Replacement(MutableRel before, MutableRel after, boolean stopTrying) {
-      this.before = before;
-      this.after = after;
-      this.stopTrying = stopTrying;
+      this.before = before; // 初始化替换前
+      this.after = after; // 初始化替换后
+      this.stopTrying = stopTrying; // 初始化停止标志
     }
   }
 
@@ -706,6 +732,9 @@ public class SubstitutionVisitor {
    *
    * <p>Assumes relational expressions (and their descendants) are not null.
    * Does not handle cycles. */
+  // replace（替换）：在关系表达式query中，将所有出现的find替换为replace
+  // 假设关系表达式（及其子孙）不为null
+  // 不处理循环
   public static @Nullable Replacement replace(MutableRel query, MutableRel find,
       MutableRel replace) {
     if (find.equals(replace)) {
@@ -717,6 +746,7 @@ public class SubstitutionVisitor {
   }
 
   /** Helper for {@link #replace}. */
+  // replaceRecurse（递归替换）：replace方法的辅助方法，递归地在树中查找并替换
   private static @Nullable Replacement replaceRecurse(MutableRel query,
       MutableRel find, MutableRel replace) {
     if (find.equals(query)) {
@@ -732,6 +762,7 @@ public class SubstitutionVisitor {
     return null;
   }
 
+  // undoReplacement（撤销替换）：撤销替换操作，恢复原始状态
   private static void undoReplacement(List<Replacement> replacement) {
     for (int i = replacement.size() - 1; i >= 0; i--) {
       Replacement r = replacement.get(i);
@@ -739,12 +770,15 @@ public class SubstitutionVisitor {
     }
   }
 
+  // redoReplacement（重做替换）：重新执行替换操作
   private static void redoReplacement(List<Replacement> replacement) {
     for (Replacement r : replacement) {
       r.before.replaceInParent(r.after);
     }
   }
 
+  // reverseSubstitute（反向替换）：生成所有可能的替换组合
+  // 通过递归地撤销和重做替换来生成所有可能的查询变体
   private static void reverseSubstitute(RelBuilder relBuilder, Holder query,
       List<List<Replacement>> matches, List<RelNode> sub,
       int replaceCount, int maxCount) {
@@ -761,6 +795,8 @@ public class SubstitutionVisitor {
     redoReplacement(matches.get(0));
   }
 
+  // matchRecurse（递归匹配）：递归地匹配目标关系表达式
+  // 自底向上地遍历目标树，尝试在每个级别匹配查询节点
   private @Nullable UnifyResult matchRecurse(MutableRel target) {
     assert false; // not called
     final List<MutableRel> targetInputs = target.getInputs();
@@ -833,6 +869,8 @@ public class SubstitutionVisitor {
     return null;
   }
 
+  // apply（应用规则）：应用统一规则到查询节点
+  // 创建规则调用并执行规则
   private @Nullable UnifyResult apply(UnifyRule rule, MutableRel query,
       MutableRel target) {
     final UnifyRuleCall call =
@@ -840,6 +878,8 @@ public class SubstitutionVisitor {
     return rule.apply(call);
   }
 
+  // applicableRules（适用规则）：获取适用于给定查询和目标类型的规则列表
+  // 使用缓存提高性能
   private List<UnifyRule> applicableRules(MutableRel query,
       MutableRel target) {
     final Class queryClass = query.getClass();
@@ -861,6 +901,8 @@ public class SubstitutionVisitor {
     return list;
   }
 
+  // mightMatch（可能匹配）：检查规则是否可能匹配给定的查询和目标类
+  // 基于类的继承关系进行预检查
   private static boolean mightMatch(UnifyRule rule,
       Class queryClass, Class targetClass) {
     return rule.queryOperand.clazz.isAssignableFrom(queryClass)
@@ -868,9 +910,10 @@ public class SubstitutionVisitor {
   }
 
   /** Exception thrown to exit a matcher. Not really an error. */
+  // MatchFailed（匹配失败）：用于退出匹配器的异常，不是真正的错误
   protected static class MatchFailed extends ControlFlowException {
     @SuppressWarnings("ThrowableInstanceNeverThrown")
-    public static final MatchFailed INSTANCE = new MatchFailed();
+    public static final MatchFailed INSTANCE = new MatchFailed(); // 单例实例
   }
 
   /** Rule that attempts to match a query relational expression
@@ -879,46 +922,54 @@ public class SubstitutionVisitor {
    * <p>The rule declares the query and target types; this allows the
    * engine to fire only a few rules in a given context.
    */
+  // UnifyRule（统一规则）：尝试将查询关系表达式匹配到目标关系表达式的抽象规则类
+  // 规则声明了查询和目标的类型，允许引擎在给定上下文中只触发少量规则
   public abstract static class UnifyRule {
-    protected final int slotCount;
-    protected final Operand queryOperand;
-    protected final Operand targetOperand;
-
-    protected UnifyRule(int slotCount, Operand queryOperand,
-        Operand targetOperand) {
-      this.slotCount = slotCount;
-      this.queryOperand = queryOperand;
-      this.targetOperand = targetOperand;
-    }
-
-    /**
-     * Applies this rule to a particular node in a query. The goal is
-     * to convert {@code query} into {@code target}. Before the rule is
-     * invoked, Calcite has made sure that query's children are equivalent
-     * to target's children.
-     *
-     * <p>There are 3 possible outcomes:
-     *
-     * <ul>
-     *
-     * <li>{@code query} already exactly matches {@code target}; returns
-     * {@code target}</li>
-     *
-     * <li>{@code query} is sufficiently close to a match for
-     * {@code target}; returns {@code target}</li>
-     *
-     * <li>{@code query} cannot be made to match {@code target}; returns
-     * null</li>
-     *
-     * </ul>
-     *
-     * <p>REVIEW: Is possible that we match query PLUS one or more of its
-     * ancestors?
-     *
-     * @param call Input parameters
-     */
-    protected abstract @Nullable UnifyResult apply(UnifyRuleCall call);
-
+    protected final int slotCount; // 规则需要的槽数量（用于存储临时数据）
+      protected final Operand queryOperand; // 查询操作数，定义查询端的匹配模式
+      protected final Operand targetOperand; // 目标操作数，定义目标端的匹配模式
+    
+      protected UnifyRule(int slotCount, Operand queryOperand,
+          Operand targetOperand) {
+        this.slotCount = slotCount; // 初始化槽数量
+        this.queryOperand = queryOperand; // 初始化查询操作数
+        this.targetOperand = targetOperand; // 初始化目标操作数
+      }
+    
+      /**
+       * Applies this rule to a particular node in a query. The goal is
+       * to convert {@code query} into {@code target}. Before the rule is
+       * invoked, Calcite has made sure that query's children are equivalent
+       * to target's children.
+       *
+       * <p>There are 3 possible outcomes:
+       *
+       * <ul>
+       *
+       * <li>{@code query} already exactly matches {@code target}; returns
+       * {@code target}</li>
+       *
+       * <li>{@code query} is sufficiently close to a match for
+       * {@code target}; returns {@code target}</li>
+       *
+       * <li>{@code query} cannot be made to match {@code target}; returns
+       * null</li>
+       *
+       * </ul>
+       *
+       * <p>REVIEW: Is possible that we match query PLUS one or more of its
+       * ancestors?
+       *
+       * @param call Input parameters
+       */
+      // apply方法：将规则应用到查询中的特定节点
+      // 目标是将query转换为target
+      // 在规则被调用之前，Calcite已经确保query的子节点与target的子节点等价
+      // 有三种可能的结果：
+      // 1. query已经完全匹配target，返回target
+      // 2. query足够接近匹配target，返回target
+      // 3. query无法匹配target，返回null
+      protected abstract @Nullable UnifyResult apply(UnifyRuleCall call);
     protected @Nullable UnifyRuleCall match(SubstitutionVisitor visitor, MutableRel query,
         MutableRel target) {
       if (queryOperand.matches(visitor, query)) {
@@ -946,50 +997,56 @@ public class SubstitutionVisitor {
   /**
    * Arguments to an application of a {@link UnifyRule}.
    */
+  // UnifyRuleCall（统一规则调用）：UnifyRule应用的参数封装类
   public class UnifyRuleCall {
-    protected final UnifyRule rule;
-    public final MutableRel query;
-    public final MutableRel target;
-    protected final ImmutableList<MutableRel> slots;
+    protected final UnifyRule rule; // 正在应用的规则
+    public final MutableRel query; // 查询节点
+    public final MutableRel target; // 目标节点
+    protected final ImmutableList<MutableRel> slots; // 工作槽数组
 
     public UnifyRuleCall(UnifyRule rule, MutableRel query, MutableRel target,
         ImmutableList<MutableRel> slots) {
-      this.rule = requireNonNull(rule, "rule");
-      this.query = requireNonNull(query, "query");
-      this.target = requireNonNull(target, "target");
-      this.slots = requireNonNull(slots, "slots");
+      this.rule = requireNonNull(rule, "rule"); // 初始化规则
+      this.query = requireNonNull(query, "query"); // 初始化查询
+      this.target = requireNonNull(target, "target"); // 初始化目标
+      this.slots = requireNonNull(slots, "slots"); // 初始化槽
     }
 
     public UnifyResult result(MutableRel result) {
+      // 创建统一结果，默认stopTrying为true
       return result(result,  true);
     }
 
     public UnifyResult result(MutableRel result, boolean stopTrying) {
-      assert MutableRels.contains(result, target);
+      // 创建统一结果
+      assert MutableRels.contains(result, target); // 确保结果包含目标
       assert equalType("result", result, "query", query,
-          Litmus.THROW);
-      MutableRel replace = replacementMap.get(target);
+          Litmus.THROW); // 确保类型相等
+      MutableRel replace = replacementMap.get(target); // 获取替换映射
       if (replace != null) {
         assert false; // replacementMap is always empty
         // result =
-        replace(result, target, replace);
+        replace(result, target, replace); // 执行替换
       }
-      register(result, query);
-      return new UnifyResult(this, result, stopTrying);
+      register(result, query); // 注册结果
+      return new UnifyResult(this, result, stopTrying); // 返回统一结果
     }
 
     /**
      * Creates a {@link UnifyRuleCall} based on the parent of {@code query}.
      */
+    // create方法：基于query的父节点创建UnifyRuleCall
     public UnifyRuleCall create(MutableRel query) {
       return new UnifyRuleCall(rule, query, target, slots);
     }
 
     public RelOptCluster getCluster() {
+      // 获取关系优化集群
       return cluster;
     }
 
     public RexSimplify getSimplify() {
+      // 获取表达式简化器
       return simplify;
     }
   }
@@ -1001,60 +1058,70 @@ public class SubstitutionVisitor {
    * contains {@code target}. {@code stopTrying} indicates whether there's
    * no need to do matching for the same query node again.
    */
+  // UnifyResult（统一结果）：UnifyRule应用的结果类
+  // 表示规则成功将query匹配到target，并生成了与query等价且包含target的result
+  // stopTrying指示是否需要对相同的查询节点再次进行匹配
   public static class UnifyResult {
-    private final UnifyRuleCall call;
-    private final MutableRel result;
-    private final boolean stopTrying;
+    private final UnifyRuleCall call; // 规则调用
+    private final MutableRel result; // 匹配结果
+    private final boolean stopTrying; // 是否停止尝试
 
     UnifyResult(UnifyRuleCall call, MutableRel result, boolean stopTrying) {
-      this.call = call;
+      this.call = call; // 初始化规则调用
       assert equalType("query", call.query, "result", result,
-          Litmus.THROW);
-      this.result = result;
-      this.stopTrying = stopTrying;
+          Litmus.THROW); // 确保类型相等
+      this.result = result; // 初始化结果
+      this.stopTrying = stopTrying; // 初始化停止标志
     }
   }
 
   /** Abstract base class for implementing {@link UnifyRule}. */
+  // AbstractUnifyRule（抽象统一规则）：实现UnifyRule的抽象基类
+  // 提供了工具方法和验证逻辑
   public abstract static class AbstractUnifyRule extends UnifyRule {
     @SuppressWarnings("method.invocation.invalid")
     protected AbstractUnifyRule(Operand queryOperand, Operand targetOperand,
         int slotCount) {
-      super(slotCount, queryOperand, targetOperand);
+      super(slotCount, queryOperand, targetOperand); // 调用父类构造方法
       //noinspection AssertWithSideEffects
-      assert isValid();
+      assert isValid(); // 验证规则的有效性
     }
 
     protected boolean isValid() {
-      final SlotCounter slotCounter = new SlotCounter();
-      slotCounter.visit(queryOperand);
-      assert slotCounter.queryCount == slotCount;
-      assert slotCounter.targetCount == 0;
-      slotCounter.queryCount = 0;
-      slotCounter.visit(targetOperand);
-      assert slotCounter.queryCount == 0;
-      assert slotCounter.targetCount == slotCount;
+      // 验证规则的有效性
+      final SlotCounter slotCounter = new SlotCounter(); // 创建槽计数器
+      slotCounter.visit(queryOperand); // 访问查询操作数
+      assert slotCounter.queryCount == slotCount; // 验证查询槽数量
+      assert slotCounter.targetCount == 0; // 验证目标槽数量为0
+      slotCounter.queryCount = 0; // 重置查询计数
+      slotCounter.visit(targetOperand); // 访问目标操作数
+      assert slotCounter.queryCount == 0; // 验证查询槽数量为0
+      assert slotCounter.targetCount == slotCount; // 验证目标槽数量
       return true;
     }
 
     /** Creates an operand with given inputs. */
+    // operand方法：创建具有给定输入的操作数
     protected static Operand operand(Class<? extends MutableRel> clazz,
         Operand... inputOperands) {
       return new InternalOperand(clazz, ImmutableList.copyOf(inputOperands));
     }
 
     /** Creates an operand that doesn't check inputs. */
+    // any方法：创建不检查输入的操作数
     protected static Operand any(Class<? extends MutableRel> clazz) {
       return new AnyOperand(clazz);
     }
 
     /** Creates an operand that matches a relational expression in the query. */
+    // query方法：创建匹配查询中关系表达式的操作数
     protected static Operand query(int ordinal) {
       return new QueryOperand(ordinal);
     }
 
     /** Creates an operand that matches a relational expression in the
      * target. */
+    // target方法：创建匹配目标中关系表达式的操作数
     protected static Operand target(int ordinal) {
       return new TargetOperand(ordinal);
     }
@@ -1067,18 +1134,21 @@ public class SubstitutionVisitor {
    * {@link MutableScan}s with the same
    * {@link org.apache.calcite.rel.core.TableScan} instance.
    */
+  // TrivialRule（平凡规则）：当查询已经等于目标时匹配的规则
+  // 匹配到同一表的扫描，因为它们是具有相同TableScan实例的MutableScan
   private static class TrivialRule extends AbstractUnifyRule {
-    private static final TrivialRule INSTANCE = new TrivialRule();
+    private static final TrivialRule INSTANCE = new TrivialRule(); // 单例实例
 
     private TrivialRule() {
-      super(any(MutableRel.class), any(MutableRel.class), 0);
+      super(any(MutableRel.class), any(MutableRel.class), 0); // 任意类型，不需要槽
     }
 
     @Override public @Nullable UnifyResult apply(UnifyRuleCall call) {
+      // 应用规则：如果查询等于目标，返回目标
       if (call.query.equals(call.target)) {
         return call.result(call.target);
       }
-      return null;
+      return null; // 不匹配
     }
   }
 
@@ -1087,11 +1157,14 @@ public class SubstitutionVisitor {
    * {@link MutableScan} to a {@link MutableCalc}
    * which has {@link MutableScan} as child.
    */
+  // ScanToCalcUnifyRule（扫描到计算统一规则）：将MutableScan匹配到具有MutableScan子节点的MutableCalc的规则
   private static class ScanToCalcUnifyRule extends AbstractUnifyRule {
 
-    public static final ScanToCalcUnifyRule INSTANCE = new ScanToCalcUnifyRule();
+    public static final ScanToCalcUnifyRule INSTANCE = new ScanToCalcUnifyRule(); // 单例实例
 
     private ScanToCalcUnifyRule() {
+      // 查询端：任意MutableScan
+      // 目标端：MutableCalc，其子节点是任意MutableScan
       super(any(MutableScan.class),
           operand(MutableCalc.class, any(MutableScan.class)), 0);
     }
@@ -1137,12 +1210,18 @@ public class SubstitutionVisitor {
    * 1. All columns of query can be expressed by target;
    * 2. The filtering condition of query must equals to or be weaker than target.
    */
+  // CalcToCalcUnifyRule（计算到计算统一规则）：将MutableCalc匹配到MutableCalc的规则
+  // 匹配条件：
+  // 1. 查询的所有列都可以用目标表示
+  // 2. 查询的过滤条件必须等于或弱于目标
   private static class CalcToCalcUnifyRule extends AbstractUnifyRule {
 
     public static final CalcToCalcUnifyRule INSTANCE =
-        new CalcToCalcUnifyRule();
+        new CalcToCalcUnifyRule(); // 单例实例
 
     private CalcToCalcUnifyRule() {
+      // 查询端：MutableCalc，其子节点使用槽0
+      // 目标端：MutableCalc，其子节点使用槽0
       super(operand(MutableCalc.class, query(0)),
           operand(MutableCalc.class, target(0)), 1);
     }
@@ -1206,12 +1285,16 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableJoin},
    * then match the {@link MutableJoin} in query to {@link MutableJoin} in target.
    */
+  // JoinOnLeftCalcToJoinUnifyRule（左计算连接到连接统一规则）：将左侧有Calc的Join匹配到Join的规则
+  // 尝试将MutableCalc提升到MutableJoin之上，然后匹配查询中的Join到目标中的Join
   private static class JoinOnLeftCalcToJoinUnifyRule extends AbstractUnifyRule {
 
     public static final JoinOnLeftCalcToJoinUnifyRule INSTANCE =
-        new JoinOnLeftCalcToJoinUnifyRule();
+        new JoinOnLeftCalcToJoinUnifyRule(); // 单例实例
 
     private JoinOnLeftCalcToJoinUnifyRule() {
+      // 查询端：MutableJoin，左子节点是MutableCalc（使用槽0），右子节点使用槽1
+      // 目标端：MutableJoin，左子节点使用槽0，右子节点使用槽1
       super(
           operand(MutableJoin.class, operand(MutableCalc.class, query(0)), query(1)),
           operand(MutableJoin.class, target(0), target(1)), 2);
@@ -1286,12 +1369,16 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableJoin},
    * then match the {@link MutableJoin} in query to {@link MutableJoin} in target.
    */
+  // JoinOnRightCalcToJoinUnifyRule（右计算连接到连接统一规则）：将右侧有Calc的Join匹配到Join的规则
+  // 尝试将MutableCalc提升到MutableJoin之上，然后匹配查询中的Join到目标中的Join
   private static class JoinOnRightCalcToJoinUnifyRule extends AbstractUnifyRule {
 
     public static final JoinOnRightCalcToJoinUnifyRule INSTANCE =
-        new JoinOnRightCalcToJoinUnifyRule();
+        new JoinOnRightCalcToJoinUnifyRule(); // 单例实例
 
     private JoinOnRightCalcToJoinUnifyRule() {
+      // 查询端：MutableJoin，左子节点使用槽0，右子节点是MutableCalc（使用槽1）
+      // 目标端：MutableJoin，左子节点使用槽0，右子节点使用槽1
       super(
           operand(MutableJoin.class, query(0), operand(MutableCalc.class, query(1))),
           operand(MutableJoin.class, target(0), target(1)), 2);
@@ -1366,12 +1453,16 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableJoin},
    * then match the {@link MutableJoin} in query to {@link MutableJoin} in target.
    */
+  // JoinOnCalcsToJoinUnifyRule（双计算连接到连接统一规则）：将两侧都有Calc的Join匹配到Join的规则
+  // 尝试将MutableCalc提升到MutableJoin之上，然后匹配查询中的Join到目标中的Join
   private static class JoinOnCalcsToJoinUnifyRule extends AbstractUnifyRule {
 
     public static final JoinOnCalcsToJoinUnifyRule INSTANCE =
-        new JoinOnCalcsToJoinUnifyRule();
+        new JoinOnCalcsToJoinUnifyRule(); // 单例实例
 
     private JoinOnCalcsToJoinUnifyRule() {
+      // 查询端：MutableJoin，左子节点是MutableCalc（使用槽0），右子节点是MutableCalc（使用槽1）
+      // 目标端：MutableJoin，左子节点使用槽0，右子节点使用槽1
       super(
           operand(MutableJoin.class,
               operand(MutableCalc.class, query(0)), operand(MutableCalc.class, query(1))),
@@ -1452,12 +1543,16 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableAggregate},
    * then match the {@link MutableAggregate} in query to {@link MutableAggregate} in target.
    */
+  // AggregateOnCalcToAggregateUnifyRule（计算上聚合到聚合统一规则）：将Calc上有Aggregate的匹配到Aggregate的规则
+  // 尝试将MutableCalc提升到MutableAggregate之上，然后匹配查询中的Aggregate到目标中的Aggregate
   private static class AggregateOnCalcToAggregateUnifyRule extends AbstractUnifyRule {
 
     public static final AggregateOnCalcToAggregateUnifyRule INSTANCE =
-        new AggregateOnCalcToAggregateUnifyRule();
+        new AggregateOnCalcToAggregateUnifyRule(); // 单例实例
 
     private AggregateOnCalcToAggregateUnifyRule() {
+      // 查询端：MutableAggregate，其子节点是MutableCalc（使用槽0）
+      // 目标端：MutableAggregate，其子节点使用槽0
       super(operand(MutableAggregate.class, operand(MutableCalc.class, query(0))),
           operand(MutableAggregate.class, target(0)), 1);
     }
@@ -1554,11 +1649,15 @@ public class SubstitutionVisitor {
    * {@link org.apache.calcite.rel.core.Aggregate} to a
    * {@link org.apache.calcite.rel.core.Aggregate}, provided
    * that they have the same child. */
+  // AggregateToAggregateUnifyRule（聚合到聚合统一规则）：将Aggregate匹配到Aggregate的规则
+  // 要求它们具有相同的子节点
   private static class AggregateToAggregateUnifyRule extends AbstractUnifyRule {
     public static final AggregateToAggregateUnifyRule INSTANCE =
-        new AggregateToAggregateUnifyRule();
+        new AggregateToAggregateUnifyRule(); // 单例实例
 
     private AggregateToAggregateUnifyRule() {
+      // 查询端：MutableAggregate，其子节点使用槽0
+      // 目标端：MutableAggregate，其子节点使用槽0
       super(operand(MutableAggregate.class, query(0)),
           operand(MutableAggregate.class, target(0)), 1);
     }
@@ -1592,11 +1691,13 @@ public class SubstitutionVisitor {
    * {@link MutableUnion} to a {@link MutableUnion} where the query and target
    * have the same inputs but might not have the same order.
    */
+  // UnionToUnionUnifyRule（并集到并集统一规则）：将MutableUnion匹配到MutableUnion的规则
+  // 要求查询和目标具有相同的输入，但顺序可能不同
   private static class UnionToUnionUnifyRule extends AbstractUnifyRule {
-    public static final UnionToUnionUnifyRule INSTANCE = new UnionToUnionUnifyRule();
+    public static final UnionToUnionUnifyRule INSTANCE = new UnionToUnionUnifyRule(); // 单例实例
 
     private UnionToUnionUnifyRule() {
-      super(any(MutableUnion.class), any(MutableUnion.class), 0);
+      super(any(MutableUnion.class), any(MutableUnion.class), 0); // 任意类型，不需要槽
     }
 
     @Override public @Nullable UnifyResult apply(UnifyRuleCall call) {
@@ -1618,12 +1719,14 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableUnion},
    * then match the {@link MutableUnion} in query to {@link MutableUnion} in target.
    */
+  // UnionOnCalcsToUnionUnifyRule（计算上并集到并集统一规则）：将Calc上有Union的匹配到Union的规则
+  // 尝试将MutableCalc提升到MutableUnion之上，然后匹配查询中的Union到目标中的Union
   private static class UnionOnCalcsToUnionUnifyRule extends AbstractUnifyRule {
     public static final UnionOnCalcsToUnionUnifyRule INSTANCE =
-        new UnionOnCalcsToUnionUnifyRule();
+        new UnionOnCalcsToUnionUnifyRule(); // 单例实例
 
     private UnionOnCalcsToUnionUnifyRule() {
-      super(any(MutableUnion.class), any(MutableUnion.class), 0);
+      super(any(MutableUnion.class), any(MutableUnion.class), 0); // 任意类型，不需要槽
     }
 
     @Override public @Nullable UnifyResult apply(UnifyRuleCall call) {
@@ -1636,12 +1739,14 @@ public class SubstitutionVisitor {
    * {@link MutableIntersect} to a {@link MutableIntersect} where the query and target
    * have the same inputs but might not have the same order.
    */
+  // IntersectToIntersectUnifyRule（交集到交集统一规则）：将MutableIntersect匹配到MutableIntersect的规则
+  // 要求查询和目标具有相同的输入，但顺序可能不同
   private static class IntersectToIntersectUnifyRule extends AbstractUnifyRule {
     public static final IntersectToIntersectUnifyRule INSTANCE =
-        new IntersectToIntersectUnifyRule();
+        new IntersectToIntersectUnifyRule(); // 单例实例
 
     private IntersectToIntersectUnifyRule() {
-      super(any(MutableIntersect.class), any(MutableIntersect.class), 0);
+      super(any(MutableIntersect.class), any(MutableIntersect.class), 0); // 任意类型，不需要槽
     }
 
     @Override public @Nullable UnifyResult apply(UnifyRuleCall call) {
@@ -1663,12 +1768,14 @@ public class SubstitutionVisitor {
    * We try to pull up the {@link MutableCalc} to top of {@link MutableIntersect},
    * then match the {@link MutableIntersect} in query to {@link MutableIntersect} in target.
    */
+  // IntersectOnCalcsToIntersectUnifyRule（计算上交集到交集统一规则）：将Calc上有Intersect的匹配到Intersect的规则
+  // 尝试将MutableCalc提升到MutableIntersect之上，然后匹配查询中的Intersect到目标中的Intersect
   private static class IntersectOnCalcsToIntersectUnifyRule extends AbstractUnifyRule {
     public static final IntersectOnCalcsToIntersectUnifyRule INSTANCE =
-        new IntersectOnCalcsToIntersectUnifyRule();
+        new IntersectOnCalcsToIntersectUnifyRule(); // 单例实例
 
     private IntersectOnCalcsToIntersectUnifyRule() {
-      super(any(MutableIntersect.class), any(MutableIntersect.class), 0);
+      super(any(MutableIntersect.class), any(MutableIntersect.class), 0); // 任意类型，不需要槽
     }
 
     @Override public @Nullable UnifyResult apply(UnifyRuleCall call) {
@@ -1683,6 +1790,9 @@ public class SubstitutionVisitor {
    *
    * @param call Input parameters
    */
+  // setOpApply（集合操作应用）：将AbstractUnifyRule应用到查询中的特定节点
+  // 尝试将MutableCalc提升到MutableUnion或MutableIntersect之上
+  // 此方法不适用于MutableMinus
   private static @Nullable UnifyResult setOpApply(UnifyRuleCall call) {
     if (call.query instanceof MutableMinus && call.target
         instanceof MutableMinus) {
@@ -1740,6 +1850,7 @@ public class SubstitutionVisitor {
   }
 
   /** Check if list0 and list1 contains the same nodes -- order is not considered. */
+  // sameRelCollectionNoOrderConsidered（相同关系集合不考虑顺序）：检查list0和list1是否包含相同的节点，不考虑顺序
   private static boolean sameRelCollectionNoOrderConsidered(
       List<MutableRel> list0, List<MutableRel> list1) {
     if (list0.size() != list1.size()) {
@@ -1756,11 +1867,13 @@ public class SubstitutionVisitor {
     return true;
   }
 
+  // fieldCnt（字段计数）：获取关系表达式的字段数量
   private static int fieldCnt(MutableRel rel) {
     return rel.rowType.getFieldCount();
   }
 
   /** Explain filtering condition and projections from MutableCalc. */
+  // explainCalc（解释计算）：从MutableCalc中提取过滤条件和投影表达式
   public static Pair<RexNode, List<RexNode>> explainCalc(MutableCalc calc) {
     final RexShuttle shuttle = getExpandShuttle(calc.program);
     final RexNode condition;
@@ -1778,6 +1891,8 @@ public class SubstitutionVisitor {
    * Generate result by merging parent and child if they are both MutableCalc.
    * Otherwise result is the child itself.
    */
+  // tryMergeParentCalcAndGenResult（尝试合并父Calc并生成结果）：如果父节点和子节点都是MutableCalc，则合并它们生成结果
+  // 否则结果就是子节点本身
   private static UnifyResult tryMergeParentCalcAndGenResult(
       UnifyRuleCall call, MutableRel child) {
     final MutableRel parent = call.query.getParent();
@@ -1795,6 +1910,7 @@ public class SubstitutionVisitor {
   }
 
   /** Merge two MutableCalc together. */
+  // mergeCalc（合并计算）：合并两个MutableCalc
   private static @Nullable MutableCalc mergeCalc(
       RexBuilder rexBuilder, MutableCalc topCalc, MutableCalc bottomCalc) {
     RexProgram topProgram = topCalc.program;
@@ -1812,6 +1928,8 @@ public class SubstitutionVisitor {
     return MutableCalc.of(bottomCalc.getInput(), mergedProgram);
   }
 
+  // getExpandShuttle（获取展开Shuttle）：构建一个展开RexLocalRef的shuttle
+  // 用于将RexProgram中的局部引用展开为实际表达式
   private static RexShuttle getExpandShuttle(RexProgram rexProgram) {
     return new RexShuttle() {
       @Override public RexNode visitLocalRef(RexLocalRef localRef) {
@@ -1821,6 +1939,8 @@ public class SubstitutionVisitor {
   }
 
   /** Check if condition cond0 implies cond1. */
+  // implies（蕴含）：检查条件cond0是否蕴含cond1
+  // 即cond0为true时，cond1是否也必须为true
   private static boolean implies(
       RelOptCluster cluster, RexNode cond0, RexNode cond1, RelDataType rowType) {
     RexExecutor rexImpl =
@@ -1831,6 +1951,8 @@ public class SubstitutionVisitor {
   }
 
   /** Check if join condition only references RexInputRef. */
+  // referenceByMapping（通过映射引用）：检查连接条件是否只引用RexInputRef
+  // 用于确定连接条件是否可以通过投影映射来重写
   private static boolean referenceByMapping(
       RexNode joinCondition, List<RexNode>... projectsOfInputs) {
     List<RexNode> projects = new ArrayList<>();
@@ -1854,6 +1976,7 @@ public class SubstitutionVisitor {
     return true;
   }
 
+  // sameJoinType（相同连接类型）：检查两个连接类型是否相同
   private static @Nullable JoinRelType sameJoinType(JoinRelType type0, JoinRelType type1) {
     if (type0 == type1) {
       return type0;
@@ -1862,6 +1985,8 @@ public class SubstitutionVisitor {
     }
   }
 
+  // permute（置换）：根据映射关系置换聚合操作的分组和聚合函数
+  // 用于在聚合操作上应用字段映射
   public static MutableAggregate permute(MutableAggregate aggregate,
       MutableRel input, Mapping mapping) {
     ImmutableBitSet groupSet = Mappings.apply(mapping, aggregate.groupSet);
@@ -1872,6 +1997,10 @@ public class SubstitutionVisitor {
     return MutableAggregate.of(input, groupSet, groupSets, aggregateCalls);
   }
 
+  // unifyAggregates（统一聚合）：统一两个聚合操作，生成等价的结果
+  // 处理两种情况：
+  // 1. 查询和目标具有相同的分组级别，生成投影
+  // 2. 查询是更粗粒度的聚合级别，生成聚合
   public static @Nullable MutableRel unifyAggregates(MutableAggregate query,
       @Nullable RexNode targetCond, MutableAggregate target) {
     MutableRel result;
@@ -2019,6 +2148,8 @@ public class SubstitutionVisitor {
   /**
    * Generate agg call by mv's grouping.
    */
+  // genAggCallWithTargetGrouping（根据目标分组生成聚合调用）：根据物化视图的分组生成聚合调用
+  // 用于在聚合重写时生成新的聚合函数调用
   private static @Nullable AggregateCall genAggCallWithTargetGrouping(AggregateCall queryAggCall,
       List<Integer> targetGroupByIndexes) {
     final SqlAggFunction aggregation = queryAggCall.getAggregation();
@@ -2058,6 +2189,8 @@ public class SubstitutionVisitor {
   }
 
   @Deprecated // to be removed before 2.0
+  // getRollup（获取上卷函数）：获取聚合函数的上卷函数
+  // 用于在粗粒度聚合重写时确定如何从细粒度聚合结果计算
   public static @Nullable SqlAggFunction getRollup(SqlAggFunction aggregation) {
     if (aggregation == SqlStdOperatorTable.SUM
         || aggregation == SqlStdOperatorTable.MIN
@@ -2080,6 +2213,8 @@ public class SubstitutionVisitor {
 
   /** Builds a shuttle that stores a list of expressions, and can map incoming
    * expressions to references to them. */
+  // getRexShuttle（获取RexShuttle）：构建一个存储表达式列表的shuttle，可以将传入的表达式映射到对它们的引用
+  // 用于在表达式重写时进行变量替换
   private static RexShuttle getRexShuttle(List<RexNode> rexNodes) {
     final Map<RexNode, Integer> map = new HashMap<>();
     for (int i = 0; i < rexNodes.size(); i++) {
@@ -2117,6 +2252,8 @@ public class SubstitutionVisitor {
   }
 
   /** Returns if one rel is weaker than another. */
+  // isWeaker（是否更弱）：判断一个关系表达式是否比另一个更弱
+  // 更弱意味着包含更多的行（条件更宽松）
   protected boolean isWeaker(MutableRel rel0, MutableRel rel) {
     if (rel0 == rel || equivalents.get(rel0).contains(rel)) {
       return false;
@@ -2143,6 +2280,7 @@ public class SubstitutionVisitor {
   }
 
   /** Returns whether two relational expressions have the same row-type. */
+  // equalType（类型相等）：判断两个关系表达式是否具有相同的行类型
   public static boolean equalType(String desc0, MutableRel rel0, String desc1,
       MutableRel rel1, Litmus litmus) {
     return RelOptUtil.equal(desc0, rel0.rowType, desc1, rel1.rowType, litmus);
@@ -2155,6 +2293,9 @@ public class SubstitutionVisitor {
    * {@link JoinOnRightCalcToJoinUnifyRule} <br/>
    * {@link JoinOnCalcsToJoinUnifyRule} <br/>
    */
+  // canPullUpCalcUnderJoin（检查是否可以提升计算）：检查Join下的Calc是否可以被提升
+  // 用于查询的JoinOnCalc统一到目标的Join时
+  // 工作规则：JoinOnLeftCalcToJoinUnifyRule、JoinOnRightCalcToJoinUnifyRule、JoinOnCalcsToJoinUnifyRule
   private static boolean canPullUpCalcUnderJoin(JoinRelType joinType,
       @Nullable Pair<RexNode, List<RexNode>> qInput0Explained,
       @Nullable Pair<RexNode, List<RexNode>> qInput1Explained) {
@@ -2169,6 +2310,8 @@ public class SubstitutionVisitor {
   }
 
   /** Determines if all projects are strong and the condition is always true. */
+  // isCalcStrong（Calc是否强）：确定所有投影都是强的，并且条件总是true
+  // 强意味着在null-if-null语义下是安全的
   private static boolean isCalcStrong(Pair<RexNode, List<RexNode>> inputExplained) {
     final RexNode cond = inputExplained.left;
     final List<RexNode> projs = inputExplained.right;
@@ -2196,6 +2339,10 @@ public class SubstitutionVisitor {
    * @param qInput1InputFields Input fields from the right input of the query join if exist
    * @return The Project expression that makes target equivalent to query
    */
+  // shiftAndAdjustProjectExpr（平移和调整投影表达式）：通过平移和调整表达式的可空性来生成投影表达式
+  // 用于Join重写，将查询中的Calc提升到物化视图的Join之上，以确保操作符等价性
+  // （已经确保提升是有效的）
+  // 工作规则：JoinOnLeftCalcToJoinUnifyRule、JoinOnRightCalcToJoinUnifyRule、JoinOnCalcsToJoinUnifyRule
   private static List<RexNode> shiftAndAdjustProjectExpr(MutableJoin query, MutableJoin target,
       RexBuilder rexBuilder,
       @Nullable List<RexNode> qInput0Projs, @Nullable List<RelDataTypeField> qInput0InputFields,
@@ -2282,6 +2429,7 @@ public class SubstitutionVisitor {
   }
 
   /** Cast RexNode to the given type if only nullability differs, otherwise throw. */
+  // adjustNullability（调整可空性）：如果只有可空性不同，则将RexNode转换为给定类型，否则抛出异常
   private static RexNode adjustNullability(RexNode rexNode,
       RelDataType type, RexBuilder rexBuilder) {
     if (rexNode.getType().equals(type)) {
@@ -2296,76 +2444,86 @@ public class SubstitutionVisitor {
   }
 
   /** Operand to a {@link UnifyRule}. */
+  // Operand（操作数）：UnifyRule的操作数抽象类，定义匹配模式
   public abstract static class Operand {
-    protected final Class<? extends MutableRel> clazz;
+    protected final Class<? extends MutableRel> clazz; // 操作数匹配的关系表达式类型
 
     protected Operand(Class<? extends MutableRel> clazz) {
-      this.clazz = clazz;
+      this.clazz = clazz; // 初始化类型
     }
 
     public abstract boolean matches(SubstitutionVisitor visitor, MutableRel rel);
+    // matches方法：判断关系表达式是否匹配此操作数
 
     public boolean isWeaker(SubstitutionVisitor visitor, MutableRel rel) {
-      return false;
+      // isWeaker方法：判断关系表达式是否弱于此操作数
+      return false; // 默认实现返回false
     }
   }
 
   /** Operand to a {@link UnifyRule} that matches a relational expression of a
    * given type. It has zero or more child operands. */
+  // InternalOperand（内部操作数）：匹配给定类型的关系表达式的操作数，可以有零个或多个子操作数
   private static class InternalOperand extends Operand {
-    private final List<Operand> inputs;
-
-    InternalOperand(Class<? extends MutableRel> clazz, List<Operand> inputs) {
-      super(clazz);
-      this.inputs = inputs;
-    }
-
-    @Override public boolean matches(SubstitutionVisitor visitor, MutableRel rel) {
-      return clazz.isInstance(rel)
-          && allMatch(visitor, inputs, rel.getInputs());
-    }
-
-    @Override public boolean isWeaker(SubstitutionVisitor visitor, MutableRel rel) {
-      return clazz.isInstance(rel)
-          && allWeaker(visitor, inputs, rel.getInputs());
-    }
-    private static boolean allMatch(SubstitutionVisitor visitor,
-        List<Operand> operands, List<MutableRel> rels) {
-      if (operands.size() != rels.size()) {
-        return false;
+      private final List<Operand> inputs; // 子操作数列表
+  
+      InternalOperand(Class<? extends MutableRel> clazz, List<Operand> inputs) {
+        super(clazz); // 初始化类型
+        this.inputs = inputs; // 初始化子操作数
       }
-      for (Pair<Operand, MutableRel> pair : Pair.zip(operands, rels)) {
-        if (!pair.left.matches(visitor, pair.right)) {
-          return false;
+  
+      @Override public boolean matches(SubstitutionVisitor visitor, MutableRel rel) {
+        // matches方法：检查关系表达式是否匹配此操作数
+        return clazz.isInstance(rel) // 检查类型
+            && allMatch(visitor, inputs, rel.getInputs()); // 检查所有子操作数
+      }
+  
+  
+      @Override public boolean isWeaker(SubstitutionVisitor visitor, MutableRel rel) {
+        // isWeaker方法：检查关系表达式是否弱于此操作数
+        return clazz.isInstance(rel) // 检查类型
+            && allWeaker(visitor, inputs, rel.getInputs()); // 检查所有子操作数
+      }
+      private static boolean allMatch(SubstitutionVisitor visitor,
+          List<Operand> operands, List<MutableRel> rels) {
+        // allMatch方法：检查所有操作数是否匹配
+        if (operands.size() != rels.size()) {
+          return false; // 数量不匹配
         }
-      }
-      return true;
-    }
-
-    private static boolean allWeaker(
-        SubstitutionVisitor visitor,
-        List<Operand> operands, List<MutableRel> rels) {
-      if (operands.size() != rels.size()) {
-        return false;
-      }
-      for (Pair<Operand, MutableRel> pair : Pair.zip(operands, rels)) {
-        if (!pair.left.isWeaker(visitor, pair.right)) {
-          return false;
+        for (Pair<Operand, MutableRel> pair : Pair.zip(operands, rels)) {
+          if (!pair.left.matches(visitor, pair.right)) {
+            return false; // 操作数不匹配
+          }
         }
+        return true;
       }
-      return true;
+  
+      private static boolean allWeaker(
+          SubstitutionVisitor visitor,
+          List<Operand> operands, List<MutableRel> rels) {
+        // allWeaker方法：检查所有操作数是否更弱
+        if (operands.size() != rels.size()) {
+          return false; // 数量不匹配
+        }
+        for (Pair<Operand, MutableRel> pair : Pair.zip(operands, rels)) {
+          if (!pair.left.isWeaker(visitor, pair.right)) {
+            return false; // 操作数不更弱
+          }
+        }
+        return true;
+      }
     }
-  }
 
   /** Operand to a {@link UnifyRule} that matches a relational expression of a
    * given type. */
+  // AnyOperand（任意操作数）：匹配给定类型的关系表达式的操作数，不检查子节点
   private static class AnyOperand extends Operand {
     AnyOperand(Class<? extends MutableRel> clazz) {
-      super(clazz);
+      super(clazz); // 初始化类型
     }
 
     @Override public boolean matches(SubstitutionVisitor visitor, MutableRel rel) {
-      return clazz.isInstance(rel);
+      return clazz.isInstance(rel); // 检查关系表达式是否是指定类型的实例
     }
   }
 
@@ -2377,58 +2535,66 @@ public class SubstitutionVisitor {
    * whether its relational expression, a descendant of the target, is
    * equivalent to this {@code QueryOperand}'s relational expression.
    */
+  // QueryOperand（查询操作数）：将特定的关系表达式分配给变量的操作数
+  // 应用于查询的子孙节点，将操作数写入槽数组，总是匹配
+  // 有一个对应的TargetOperand操作数，检查目标的关系表达式是否与此QueryOperand的关系表达式等价
   private static class QueryOperand extends Operand {
-    private final int ordinal;
+    private final int ordinal; // 槽序号
 
     protected QueryOperand(int ordinal) {
-      super(MutableRel.class);
-      this.ordinal = ordinal;
+      super(MutableRel.class); // 初始化为MutableRel类型
+      this.ordinal = ordinal; // 初始化槽序号
     }
 
     @Override public boolean matches(SubstitutionVisitor visitor, MutableRel rel) {
-      visitor.slots[ordinal] = rel;
-      return true;
+      visitor.slots[ordinal] = rel; // 将关系表达式存入槽中
+      return true; // 总是匹配
     }
   }
 
   /** Operand that checks that a relational expression matches the corresponding
    * relational expression that was passed to a {@link QueryOperand}. */
+  // TargetOperand（目标操作数）：检查关系表达式是否匹配传递给QueryOperand的相应关系表达式的操作数
   private static class TargetOperand extends Operand {
-    private final int ordinal;
+    private final int ordinal; // 槽序号
 
     protected TargetOperand(int ordinal) {
-      super(MutableRel.class);
-      this.ordinal = ordinal;
+      super(MutableRel.class); // 初始化为MutableRel类型
+      this.ordinal = ordinal; // 初始化槽序号
     }
 
     @Override public boolean matches(SubstitutionVisitor visitor,
         MutableRel rel) {
-      final MutableRel rel0 = visitor.slots[ordinal];
-      requireNonNull(rel0, "QueryOperand should have been called first");
-      return rel0 == rel || visitor.equivalents.get(rel0).contains(rel);
+      final MutableRel rel0 = visitor.slots[ordinal]; // 从槽中获取查询操作数存储的关系表达式
+      requireNonNull(rel0, "QueryOperand should have been called first"); // 确保QueryOperand已被调用
+      return rel0 == rel || visitor.equivalents.get(rel0).contains(rel); // 检查是否相同或等价
     }
 
     @Override public boolean isWeaker(SubstitutionVisitor visitor, MutableRel rel) {
-      final MutableRel rel0 = visitor.slots[ordinal];
-      requireNonNull(rel0, "QueryOperand should have been called first");
-      return visitor.isWeaker(rel0, rel);
+      final MutableRel rel0 = visitor.slots[ordinal]; // 从槽中获取查询操作数存储的关系表达式
+      requireNonNull(rel0, "QueryOperand should have been called first"); // 确保QueryOperand已被调用
+      return visitor.isWeaker(rel0, rel); // 检查是否弱于
     }
   }
 
   /** Visitor that counts how many {@link QueryOperand} and
    * {@link TargetOperand} in an operand tree. */
+  // SlotCounter（槽计数器）：访问器，计算操作数树中有多少QueryOperand和TargetOperand
   private static class SlotCounter {
-    int queryCount;
-    int targetCount;
+    int queryCount; // QueryOperand计数
+    int targetCount; // TargetOperand计数
 
     void visit(Operand operand) {
+      // visit方法：访问操作数并计数
       if (operand instanceof QueryOperand) {
-        ++queryCount;
+        ++queryCount; // QueryOperand计数加1
       } else if (operand instanceof TargetOperand) {
-        ++targetCount;
+        ++targetCount; // TargetOperand计数加1
       } else if (operand instanceof AnyOperand) {
         // nothing
+        // AnyOperand不需要计数
       } else {
+        // 递归访问InternalOperand的子操作数
         for (Operand input : ((InternalOperand) operand).inputs) {
           visit(input);
         }

@@ -14,93 +14,100 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.rel.metadata;
+package org.apache.calcite.rel.metadata; // 包声明：定义了RelMdCollation类所在的包，属于元数据处理包
 
-import org.apache.calcite.adapter.enumerable.EnumerableCorrelate;
-import org.apache.calcite.adapter.enumerable.EnumerableHashJoin;
-import org.apache.calcite.adapter.enumerable.EnumerableLimit;
-import org.apache.calcite.adapter.enumerable.EnumerableMergeJoin;
-import org.apache.calcite.adapter.enumerable.EnumerableMergeUnion;
-import org.apache.calcite.adapter.enumerable.EnumerableNestedLoopJoin;
-import org.apache.calcite.adapter.jdbc.JdbcToEnumerableConverter;
-import org.apache.calcite.linq4j.Ord;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.hep.HepRelVertex;
-import org.apache.calcite.plan.volcano.RelSubset;
-import org.apache.calcite.rel.RelCollation;
-import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.RelCollations;
-import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.Calc;
-import org.apache.calcite.rel.core.Filter;
-import org.apache.calcite.rel.core.Join;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.core.Match;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.Sort;
-import org.apache.calcite.rel.core.SortExchange;
-import org.apache.calcite.rel.core.TableModify;
-import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.core.Values;
-import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexCallBinding;
-import org.apache.calcite.rex.RexInputRef;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexProgram;
-import org.apache.calcite.sql.validate.SqlMonotonicity;
-import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.calcite.util.ImmutableIntList;
-import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.adapter.enumerable.EnumerableCorrelate; // 导入：可枚举相关联操作符，用于处理相关联查询
+import org.apache.calcite.adapter.enumerable.EnumerableHashJoin; // 导入：可枚举哈希连接实现
+import org.apache.calcite.adapter.enumerable.EnumerableLimit; // 导入：可枚举限制操作符，用于限制返回的行数
+import org.apache.calcite.adapter.enumerable.EnumerableMergeJoin; // 导入：可枚举归并连接实现
+import org.apache.calcite.adapter.enumerable.EnumerableMergeUnion; // 导入：可枚举归并联合操作符
+import org.apache.calcite.adapter.enumerable.EnumerableNestedLoopJoin; // 导入：可枚举嵌套循环连接实现
+import org.apache.calcite.adapter.jdbc.JdbcToEnumerableConverter; // 导入：JDBC到可枚举的转换器
+import org.apache.calcite.linq4j.Ord; // 导入：LINQ4J工具类，用于处理带索引的元素
+import org.apache.calcite.plan.RelOptTable; // 导入：关系优化表接口
+import org.apache.calcite.plan.hep.HepRelVertex; // 导入：HepPlanner的顶点表示
+import org.apache.calcite.plan.volcano.RelSubset; // 导入：Volcano优化器的关系子集
+import org.apache.calcite.rel.RelCollation; // 导入：关系排序特征，表示数据的排序方式
+import org.apache.calcite.rel.RelCollationTraitDef; // 导入：关系排序特征定义
+import org.apache.calcite.rel.RelCollations; // 导入：关系排序工具类
+import org.apache.calcite.rel.RelFieldCollation; // 导入：字段排序，描述单个字段的排序方向和空值处理
+import org.apache.calcite.rel.RelNode; // 导入：关系节点接口，所有关系代数操作的基类
+import org.apache.calcite.rel.core.Calc; // 导入：计算操作符，结合了投影和过滤
+import org.apache.calcite.rel.core.Filter; // 导入：过滤操作符，用于过滤数据行
+import org.apache.calcite.rel.core.Join; // 导入：连接操作符，用于连接两个关系
+import org.apache.calcite.rel.core.JoinRelType; // 导入：连接类型枚举（内连接、左连接、右连接等）
+import org.apache.calcite.rel.core.Match; // 导入：模式匹配操作符，用于行模式识别
+import org.apache.calcite.rel.core.Project; // 导入：投影操作符，用于选择和计算列
+import org.apache.calcite.rel.core.Sort; // 导入：排序操作符，用于对数据进行排序
+import org.apache.calcite.rel.core.SortExchange; // 导入：排序交换操作符，用于分布式排序
+import org.apache.calcite.rel.core.TableModify; // 导入：表修改操作符，用于INSERT/UPDATE/DELETE操作
+import org.apache.calcite.rel.core.TableScan; // 导入：表扫描操作符，用于从表中读取数据
+import org.apache.calcite.rel.core.Values; // 导入：常量值操作符，用于生成常量行
+import org.apache.calcite.rel.core.Window; // 导入：窗口操作符，用于窗口函数计算
+import org.apache.calcite.rel.type.RelDataType; // 导入：关系数据类型接口
+import org.apache.calcite.rex.RexCall; // 导入：表达式调用，表示函数或操作符调用
+import org.apache.calcite.rex.RexCallBinding; // 导入：表达式调用绑定，用于类型检查和单调性推断
+import org.apache.calcite.rex.RexInputRef; // 导入：输入引用表达式，引用输入行的某个字段
+import org.apache.calcite.rex.RexLiteral; // 导入：字面量表达式，表示常量值
+import org.apache.calcite.rex.RexNode; // 导入：表达式节点基类
+import org.apache.calcite.rex.RexProgram; // 导入：表达式程序，包含投影和过滤的表达式集合
+import org.apache.calcite.sql.validate.SqlMonotonicity; // 导入：SQL单调性，描述表达式的单调性属性
+import org.apache.calcite.util.ImmutableBitSet; // 导入：不可变位集合，用于表示字段索引集合
+import org.apache.calcite.util.ImmutableIntList; // 导入：不可变整数列表，用于存储字段索引
+import org.apache.calcite.util.Pair; // 导入：键值对工具类
+import org.apache.calcite.util.Util; // 导入：通用工具类
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
+import com.google.common.collect.ImmutableList; // 导入：Google Guava不可变列表
+import com.google.common.collect.LinkedListMultimap; // 导入：Google Guava链表多重映射
+import com.google.common.collect.Multimap; // 导入：Google Guava多重映射接口
+import com.google.common.collect.Ordering; // 导入：Google Guava排序工具类
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.Nullable; // 导入：可空性注解
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
+import java.util.ArrayList; // 导入：Java集合框架-动态数组列表
+import java.util.Collection; // 导入：Java集合框架-集合接口
+import java.util.HashMap; // 导入：Java集合框架-哈希映射
+import java.util.List; // 导入：Java集合框架-列表接口
+import java.util.Map; // 导入：Java集合框架-映射接口
+import java.util.NavigableSet; // 导入：Java集合框架-可导航集合
+import java.util.SortedSet; // 导入：Java集合框架-有序集合
+import java.util.TreeSet; // 导入：Java集合框架-树集合实现
+import java.util.stream.Collectors; // 导入：Java流API-收集器工具
 
-import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNull; // 导入：静态导入-对象工具方法的requireNonNull方法
 
 /**
  * RelMdCollation supplies a default implementation of
  * {@link org.apache.calcite.rel.metadata.RelMetadataQuery#collations}
  * for the standard logical algebra.
+ * RelMdCollation为标准逻辑代数提供了RelMetadataQuery#collations的默认实现
+ * 该类负责计算和推断各种关系操作符(RelNode)的排序属性(Collation)
+ * 排序属性描述了关系操作符输出的数据是否按照某些字段排序
+ * 这个信息对于查询优化器非常重要，可以避免不必要的排序操作
+ * 例如：如果输入已经按照某个字段排序，那么后续的ORDER BY操作就可以被优化掉
  */
 public class RelMdCollation
-    implements MetadataHandler<BuiltInMetadata.Collation> {
-  public static final RelMetadataProvider SOURCE =
-      ReflectiveRelMetadataProvider.reflectiveSource(
-          new RelMdCollation(), BuiltInMetadata.Collation.Handler.class);
+    implements MetadataHandler<BuiltInMetadata.Collation> { // 实现元数据处理器接口，处理Collation（排序）元数据
+  public static final RelMetadataProvider SOURCE = // 静态常量：元数据提供者，用于反射调用排序元数据方法
+      ReflectiveRelMetadataProvider.reflectiveSource( // 使用反射创建元数据提供者
+          new RelMdCollation(), BuiltInMetadata.Collation.Handler.class); // 传入RelMdCollation实例和处理器类
 
   //~ Constructors -----------------------------------------------------------
 
-  private RelMdCollation() {}
+  private RelMdCollation() {} // 私有构造函数：防止外部实例化，采用单例模式
 
   //~ Methods ----------------------------------------------------------------
 
-  @Override public MetadataDef<BuiltInMetadata.Collation> getDef() {
-    return BuiltInMetadata.Collation.DEF;
+  @Override public MetadataDef<BuiltInMetadata.Collation> getDef() { // 重写接口方法：获取元数据定义
+    return BuiltInMetadata.Collation.DEF; // 返回Collation元数据的定义
   }
 
   /** Catch-all implementation for
    * {@link BuiltInMetadata.Collation#collations()},
    * invoked using reflection, for any relational expression not
    * handled by a more specific method.
+   * 这是BuiltInMetadata.Collation#collations()的通用实现，
+   * 通过反射调用，用于处理没有更特定方法的关系表达式
    *
    * <p>{@link org.apache.calcite.rel.core.Union},
    * {@link org.apache.calcite.rel.core.Intersect},
@@ -109,191 +116,200 @@ public class RelMdCollation
    * {@link org.apache.calcite.rel.core.Correlate}
    * do not in general return sorted results
    * (but implementations using particular algorithms may).
+   * Union、Intersect、Minus、Join、Correlate等操作符通常不返回排序结果
+   * （但使用特定算法的实现可能会返回排序结果）
    *
-   * @param rel Relational expression
-   * @return Relational expression's collations
+   * @param rel Relational expression 关系表达式参数
+   * @return Relational expression's collations 返回关系表达式的排序属性列表
    *
    * @see org.apache.calcite.rel.metadata.RelMetadataQuery#collations(RelNode)
    */
-  public @Nullable ImmutableList<RelCollation> collations(RelNode rel,
-      RelMetadataQuery mq) {
-    return null;
+  public @Nullable ImmutableList<RelCollation> collations(RelNode rel, // 方法：获取任意关系节点的排序属性，返回null表示无排序
+      RelMetadataQuery mq) { // 参数：元数据查询对象，用于递归查询子节点的元数据
+    return null; // 返回null：表示默认情况下没有排序属性
   }
 
-  private static <E> @Nullable ImmutableList<E> copyOf(@Nullable Collection<? extends E> values) {
-    return values == null ? null : ImmutableList.copyOf(values);
+  private static <E> @Nullable ImmutableList<E> copyOf(@Nullable Collection<? extends E> values) { // 私有静态方法：将集合转换为不可变列表
+    return values == null ? null : ImmutableList.copyOf(values); // 如果集合为null返回null，否则返回不可变副本
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Window rel,
-      RelMetadataQuery mq) {
-    return copyOf(window(mq, rel.getInput(), rel.groups));
+  public @Nullable ImmutableList<RelCollation> collations(Window rel, // 方法：获取Window操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf(window(mq, rel.getInput(), rel.groups)); // 调用window辅助方法并复制结果，Window保持输入的排序
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Match rel,
-      RelMetadataQuery mq) {
-    return copyOf(
-        match(mq, rel.getInput(), rel.getRowType(), rel.getPattern(),
-            rel.isStrictStart(), rel.isStrictEnd(),
-            rel.getPatternDefinitions(), rel.getMeasures(), rel.getAfter(),
-            rel.getSubsets(), rel.isAllRows(), rel.getPartitionKeys(),
-            rel.getOrderKeys(), rel.getInterval()));
+  public @Nullable ImmutableList<RelCollation> collations(Match rel, // 方法：获取Match操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用match辅助方法并复制结果
+        match(mq, rel.getInput(), rel.getRowType(), rel.getPattern(), // 传入输入、行类型、模式等参数
+            rel.isStrictStart(), rel.isStrictEnd(), // 传入严格开始和严格结束标志
+            rel.getPatternDefinitions(), rel.getMeasures(), rel.getAfter(), // 传入模式定义、度量、after子句
+            rel.getSubsets(), rel.isAllRows(), rel.getPartitionKeys(), // 传入子集、所有行标志、分区键
+            rel.getOrderKeys(), rel.getInterval())); // 传入排序键和间隔
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Filter rel,
-      RelMetadataQuery mq) {
-    return mq.collations(rel.getInput());
+  public @Nullable ImmutableList<RelCollation> collations(Filter rel, // 方法：获取Filter操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return mq.collations(rel.getInput()); // 过滤操作不改变排序，直接返回输入的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(TableModify rel,
-      RelMetadataQuery mq) {
-    return mq.collations(rel.getInput());
+  public @Nullable ImmutableList<RelCollation> collations(TableModify rel, // 方法：获取TableModify操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return mq.collations(rel.getInput()); // 表修改操作不改变排序，直接返回输入的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(TableScan scan,
-      RelMetadataQuery mq) {
-    final BuiltInMetadata.Collation.Handler handler =
-        scan.getTable().unwrap(BuiltInMetadata.Collation.Handler.class);
-    if (handler != null) {
-      return handler.collations(scan, mq);
+  public @Nullable ImmutableList<RelCollation> collations(TableScan scan, // 方法：获取TableScan操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    final BuiltInMetadata.Collation.Handler handler = // 尝试从表中获取Collation处理器
+        scan.getTable().unwrap(BuiltInMetadata.Collation.Handler.class); // 解包表对象获取处理器
+    if (handler != null) { // 如果找到了自定义的Collation处理器
+      return handler.collations(scan, mq); // 使用自定义处理器获取排序属性
     }
-    return copyOf(table(scan.getTable()));
+    return copyOf(table(scan.getTable())); // 否则调用table辅助方法获取表的默认排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableMergeJoin join,
-      RelMetadataQuery mq) {
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableMergeJoin join, // 方法：获取EnumerableMergeJoin的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
     // In general a join is not sorted. But a merge join preserves the sort
     // order of the left and right sides.
-    return copyOf(
-        RelMdCollation.mergeJoin(mq, join.getLeft(), join.getRight(),
-            join.analyzeCondition().leftKeys, join.analyzeCondition().rightKeys,
-            join.getJoinType()));
+    // 通常连接不保证排序，但归并连接保持左右两侧的排序顺序
+    return copyOf( // 调用mergeJoin辅助方法并复制结果
+        RelMdCollation.mergeJoin(mq, join.getLeft(), join.getRight(), // 传入左右输入节点
+            join.analyzeCondition().leftKeys, join.analyzeCondition().rightKeys, // 传入连接条件分析的左右键
+            join.getJoinType())); // 传入连接类型
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableHashJoin join,
-      RelMetadataQuery mq) {
-    return copyOf(
-        RelMdCollation.enumerableHashJoin(mq, join.getLeft(), join.getRight(), join.getJoinType()));
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableHashJoin join, // 方法：获取EnumerableHashJoin的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用enumerableHashJoin辅助方法并复制结果
+        RelMdCollation.enumerableHashJoin(mq, join.getLeft(), join.getRight(), join.getJoinType())); // 传入左右输入和连接类型
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableNestedLoopJoin join,
-      RelMetadataQuery mq) {
-    return copyOf(
-        RelMdCollation.enumerableNestedLoopJoin(mq, join.getLeft(), join.getRight(),
-            join.getJoinType()));
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableNestedLoopJoin join, // 方法：获取EnumerableNestedLoopJoin的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用enumerableNestedLoopJoin辅助方法并复制结果
+        RelMdCollation.enumerableNestedLoopJoin(mq, join.getLeft(), join.getRight(), // 传入左右输入节点
+            join.getJoinType())); // 传入连接类型
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableMergeUnion mergeUnion,
-      RelMetadataQuery mq) {
-    final RelCollation collation = mergeUnion.getTraitSet().getCollation();
-    if (collation == null) {
-      // should not happen
-      return null;
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableMergeUnion mergeUnion, // 方法：获取EnumerableMergeUnion的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    final RelCollation collation = mergeUnion.getTraitSet().getCollation(); // 从特征集中获取排序属性
+    if (collation == null) { // 如果排序属性为null
+      // should not happen 不应该发生
+      return null; // 返回null
     }
-    // MergeUnion guarantees order, like a sort
-    return copyOf(RelMdCollation.sort(collation));
+    // MergeUnion guarantees order, like a sort MergeUnion保证顺序，类似于排序
+    return copyOf(RelMdCollation.sort(collation)); // 调用sort辅助方法并复制结果
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableCorrelate join,
-      RelMetadataQuery mq) {
-    return copyOf(
-        RelMdCollation.enumerableCorrelate(mq, join.getLeft(), join.getRight(),
-            join.getJoinType()));
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableCorrelate join, // 方法：获取EnumerableCorrelate的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用enumerableCorrelate辅助方法并复制结果
+        RelMdCollation.enumerableCorrelate(mq, join.getLeft(), join.getRight(), // 传入左右输入节点
+            join.getJoinType())); // 传入连接类型
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(EnumerableLimit rel,
-      RelMetadataQuery mq) {
-    return mq.collations(rel.getInput());
+  public @Nullable ImmutableList<RelCollation> collations(EnumerableLimit rel, // 方法：获取EnumerableLimit的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return mq.collations(rel.getInput()); // 限制操作不改变排序，直接返回输入的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Sort sort,
-      RelMetadataQuery mq) {
-    return copyOf(
-        RelMdCollation.sort(sort.getCollation()));
+  public @Nullable ImmutableList<RelCollation> collations(Sort sort, // 方法：获取Sort操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用sort辅助方法并复制结果
+        RelMdCollation.sort(sort.getCollation())); // 传入Sort操作符的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(SortExchange sort,
-      RelMetadataQuery mq) {
-    return copyOf(
-        RelMdCollation.sort(sort.getCollation()));
+  public @Nullable ImmutableList<RelCollation> collations(SortExchange sort, // 方法：获取SortExchange操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用sort辅助方法并复制结果
+        RelMdCollation.sort(sort.getCollation())); // 传入SortExchange操作符的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Project project,
-      RelMetadataQuery mq) {
-    return copyOf(
-        project(mq, project.getInput(), project.getProjects()));
+  public @Nullable ImmutableList<RelCollation> collations(Project project, // 方法：获取Project操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用project辅助方法并复制结果
+        project(mq, project.getInput(), project.getProjects())); // 传入输入节点和投影表达式列表
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Calc calc,
-      RelMetadataQuery mq) {
-    return copyOf(calc(mq, calc.getInput(), calc.getProgram()));
+  public @Nullable ImmutableList<RelCollation> collations(Calc calc, // 方法：获取Calc操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf(calc(mq, calc.getInput(), calc.getProgram())); // 调用calc辅助方法并复制结果，传入输入和程序
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(Values values,
-      RelMetadataQuery mq) {
-    return copyOf(
-        values(mq, values.getRowType(), values.getTuples()));
+  public @Nullable ImmutableList<RelCollation> collations(Values values, // 方法：获取Values操作符的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 调用values辅助方法并复制结果
+        values(mq, values.getRowType(), values.getTuples())); // 传入行类型和元组列表
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(JdbcToEnumerableConverter rel,
-      RelMetadataQuery mq) {
-    return mq.collations(rel.getInput());
+  public @Nullable ImmutableList<RelCollation> collations(JdbcToEnumerableConverter rel, // 方法：获取JdbcToEnumerableConverter的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return mq.collations(rel.getInput()); // 转换操作不改变排序，直接返回输入的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(HepRelVertex rel,
-      RelMetadataQuery mq) {
-    return mq.collations(rel.stripped());
+  public @Nullable ImmutableList<RelCollation> collations(HepRelVertex rel, // 方法：获取HepRelVertex的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return mq.collations(rel.stripped()); // 获取剥离后的关系节点的排序属性
   }
 
-  public @Nullable ImmutableList<RelCollation> collations(RelSubset rel,
-      RelMetadataQuery mq) {
-    return copyOf(
-        requireNonNull(
-            rel.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE)));
+  public @Nullable ImmutableList<RelCollation> collations(RelSubset rel, // 方法：获取RelSubset的排序属性
+      RelMetadataQuery mq) { // 参数：元数据查询对象
+    return copyOf( // 复制结果
+        requireNonNull( // 确保不为null
+            rel.getTraitSet().getTraits(RelCollationTraitDef.INSTANCE))); // 从特征集中获取Collation特征
   }
 
-  // Helper methods
+  // Helper methods 辅助方法部分
 
   /** Helper method to determine a
-   * {@link org.apache.calcite.rel.core.TableScan}'s collation. */
-  public static @Nullable List<RelCollation> table(RelOptTable table) {
-    return table.getCollationList();
-  }
-
-  /** Helper method to determine a
-   * {@link org.apache.calcite.rel.core.Snapshot}'s collation. */
-  public static @Nullable List<RelCollation> snapshot(RelMetadataQuery mq, RelNode input) {
-    return mq.collations(input);
+   * {@link org.apache.calcite.rel.core.TableScan}'s collation.
+   * 辅助方法：确定TableScan的排序属性 */
+  public static @Nullable List<RelCollation> table(RelOptTable table) { // 方法：获取表的排序属性
+    return table.getCollationList(); // 返回表的排序属性列表
   }
 
   /** Helper method to determine a
-   * {@link org.apache.calcite.rel.core.Sort}'s collation. */
-  public static List<RelCollation> sort(RelCollation collation) {
-    return ImmutableList.of(collation);
+   * {@link org.apache.calcite.rel.core.Snapshot}'s collation.
+   * 辅助方法：确定Snapshot的排序属性 */
+  public static @Nullable List<RelCollation> snapshot(RelMetadataQuery mq, RelNode input) { // 方法：获取快照的排序属性
+    return mq.collations(input); // 快照保持输入的排序属性
   }
 
   /** Helper method to determine a
-   * {@link org.apache.calcite.rel.core.Filter}'s collation. */
-  public static @Nullable List<RelCollation> filter(RelMetadataQuery mq, RelNode input) {
-    return mq.collations(input);
+   * {@link org.apache.calcite.rel.core.Sort}'s collation.
+   * 辅助方法：确定Sort的排序属性 */
+  public static List<RelCollation> sort(RelCollation collation) { // 方法：获取排序操作符的排序属性
+    return ImmutableList.of(collation); // 返回包含单个排序属性的不可变列表
   }
 
   /** Helper method to determine a
-   * limit's collation. */
-  public static @Nullable List<RelCollation> limit(RelMetadataQuery mq, RelNode input) {
-    return mq.collations(input);
+   * {@link org.apache.calcite.rel.core.Filter}'s collation.
+   * 辅助方法：确定Filter的排序属性 */
+  public static @Nullable List<RelCollation> filter(RelMetadataQuery mq, RelNode input) { // 方法：获取过滤操作符的排序属性
+    return mq.collations(input); // 过滤保持输入的排序属性
   }
 
   /** Helper method to determine a
-   * {@link org.apache.calcite.rel.core.Calc}'s collation. */
-  public static @Nullable List<RelCollation> calc(RelMetadataQuery mq, RelNode input,
-      RexProgram program) {
-    final List<RexNode> projects =
+   * limit's collation.
+   * 辅助方法：确定limit的排序属性 */
+  public static @Nullable List<RelCollation> limit(RelMetadataQuery mq, RelNode input) { // 方法：获取限制操作符的排序属性
+    return mq.collations(input); // 限制保持输入的排序属性
+  }
+
+  /** Helper method to determine a
+   * {@link org.apache.calcite.rel.core.Calc}'s collation.
+   * 辅助方法：确定Calc的排序属性 */
+  public static @Nullable List<RelCollation> calc(RelMetadataQuery mq, RelNode input, // 方法：获取Calc操作符的排序属性
+      RexProgram program) { // 参数：Rex程序，包含投影和过滤表达式
+    final List<RexNode> projects = // 获取投影表达式列表
         program
-            .getProjectList()
-            .stream()
-            .map(program::expandLocalRef)
-            .collect(Collectors.toList());
-    return project(mq, input, projects);
+            .getProjectList() // 获取程序中的投影列表
+            .stream() // 转换为流
+            .map(program::expandLocalRef) // 展开局部引用为完整表达式
+            .collect(Collectors.toList()); // 收集为列表
+    return project(mq, input, projects); // 调用project辅助方法处理投影
   }
 
   /** Helper method to determine a {@link Project}'s collation. */
