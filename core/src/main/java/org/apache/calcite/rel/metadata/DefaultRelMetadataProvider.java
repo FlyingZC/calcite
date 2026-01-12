@@ -186,6 +186,7 @@ public class DefaultRelMetadataProvider extends ChainedRelMetadataProvider {
   // 描述关系表达式输出的排序属性
   // 用于消除不必要的排序操作和选择最优的连接算法
   // 注意：这个SOURCE是列表中的最后一个，表示最低优先级
+  }
 }
 }
 // 类定义结束

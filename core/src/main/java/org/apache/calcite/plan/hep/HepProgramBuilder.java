@@ -33,6 +33,7 @@ import static com.google.common.base.Preconditions.checkArgument; // 参数检�
  * HepProgramBuilder采用建造者模式，提供链式调用的API来构建优化程序
  * 支持的功能包括：添加规则类、规则集合、规则实例、规则组、转换规则、公共子表达式规则、匹配顺序控制、匹配限制控制、子程序等
  */
+public class HepProgramBuilder {
   //~ Instance fields --------------------------------------------------------
 public class HepProgramBuilder {
   //~ Instance fields --------------------------------------------------------
