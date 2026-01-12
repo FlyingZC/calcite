@@ -35,8 +35,6 @@ import static com.google.common.base.Preconditions.checkArgument; // 参数检�
  */
 public class HepProgramBuilder {
   //~ Instance fields --------------------------------------------------------
-public class HepProgramBuilder {
-  //~ Instance fields --------------------------------------------------------
 
   private final List<HepInstruction> instructions = new ArrayList<>(); // 存储优化程序的所有指令列表，每个指令代表一个优化操作，如添加规则、设置匹配顺序等
 

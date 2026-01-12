@@ -188,7 +188,6 @@ public class DefaultRelMetadataProvider extends ChainedRelMetadataProvider {
   // 注意：这个SOURCE是列表中的最后一个，表示最低优先级
   }
 }
-}
 // 类定义结束
 // DefaultRelMetadataProvider作为Calcite元数据系统的核心，提供了所有标准元数据的默认实现
 // 这些元数据处理器通过链式模式组织，允许系统灵活地扩展和覆盖默认行为
