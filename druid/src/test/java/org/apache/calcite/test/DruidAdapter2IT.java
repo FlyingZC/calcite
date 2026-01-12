@@ -49,213 +49,236 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Tests for the {@code org.apache.calcite.adapter.druid} package.
- *
- * <p>Druid must be up and running with foodmart and wikipedia datasets loaded. Follow the
- * instructions on <a href="https://github.com/zabetak/calcite-druid-dataset">calcite-druid-dataset
- * </a> to setup Druid before launching these tests.
- *
- * <p>Features not yet implemented:
+ * Druid适配器集成测试类 - 用于测试Apache Calcite与Druid数据库的集成功能
+ * 
+ * <p>本类专门测试org.apache.calcite.adapter.druid包中的Druid适配器功能,验证SQL查询到Druid查询的正确转换和执行
+ * 
+ * <p>测试前提要求:
+ * - Druid服务必须已启动并运行
+ * - 需要加载foodmart和wikipedia测试数据集
+ * - 参考https://github.com/zabetak/calcite-druid-dataset了解如何设置Druid测试环境
+ * 
+ * <p>尚未实现的功能特性:
  * <ul>
- *   <li>push LIMIT into "select" query</li>
- *   <li>push SORT and/or LIMIT into "groupBy" query</li>
- *   <li>push HAVING into "groupBy" query</li>
+ *   <li>将LIMIT下推到Druid的"select"查询中</li>
+ *   <li>将SORT和/或LIMIT下推到Druid的"groupBy"查询中</li>
+ *   <li>将HAVING条件下推到Druid的"groupBy"查询中</li>
  * </ul>
- *
- * <p>These tests use TIMESTAMP type for the Druid timestamp column, instead
- * of TIMESTAMP WITH LOCAL TIME ZONE type as {@link DruidAdapterIT}.
+ * 
+ * <p>本测试与DruidAdapterIT的区别:
+ * - 本测试使用TIMESTAMP类型作为Druid时间戳列
+ * - DruidAdapterIT使用TIMESTAMP WITH LOCAL TIME ZONE类型
+ * 
+ * <p>主要测试内容:
+ * - 各种SQL查询语句到Druid查询的转换
+ * - 聚合函数的下推和执行
+ * - 过滤条件的下推
+ * - 时间函数和表达式处理
+ * - 虚拟列和后聚合
+ * - 复杂表达式的处理
  */
 public class DruidAdapter2IT {
-  /** URL of the "druid-foodmart" model. */
+  /** Druid foodmart数据集模型的URL配置文件路径,包含Druid数据源的连接和映射配置 */
   public static final URL FOODMART =
-      DruidAdapter2IT.class.getResource("/druid-foodmart-model-timestamp.json");
+      DruidAdapter2IT.class.getResource("/druid-foodmart-model-timestamp.json"); // 通过类加载器获取Druid foodmart模型配置文件的URL
 
   private static final String VARCHAR_TYPE =
-      "VARCHAR";
+      "VARCHAR"; // 定义VARCHAR类型常量,用于类型比较和验证
 
-  private static final String FOODMART_TABLE = "\"foodmart\"";
+  private static final String FOODMART_TABLE = "\"foodmart\""; // foodmart表的引用名称,带引号以保留大小写
 
-  /** Whether to run this test. */
+  /** 检查是否启用Druid测试的静态方法,通过系统属性控制测试的执行 */
   private static boolean enabled() {
-    return CalciteSystemProperty.TEST_DRUID.value();
+    return CalciteSystemProperty.TEST_DRUID.value(); // 返回系统属性calcite.test.druid的值,决定是否运行Druid测试
   }
 
+  /** 在所有测试方法执行前的初始化方法,检查Druid测试是否启用 */
   @BeforeAll
   public static void assumeDruidTestsEnabled() {
-    assumeTrue(enabled(), "Druid tests disabled. Add -Dcalcite.test.druid to enable it");
+    assumeTrue(enabled(), "Druid tests disabled. Add -Dcalcite.test.druid to enable it"); // 如果Druid测试未启用则跳过所有测试
   }
 
-  /** Creates a query against FOODMART with approximate parameters. */
-  private CalciteAssert.AssertQuery foodmartApprox(String sql) {
-    return fixture()
-        .with(CalciteConnectionProperty.APPROXIMATE_DISTINCT_COUNT.camelName(), true)
-        .with(CalciteConnectionProperty.APPROXIMATE_TOP_N.camelName(), true)
-        .with(CalciteConnectionProperty.APPROXIMATE_DECIMAL.camelName(), true)
-        .query(sql);
+  /** 创建一个使用近似参数的FOODMART查询,用于测试近似计算功能 */
+  private CalciteAssert.AssertQuery foodmartApprox(String sql) { // sql参数:要执行的SQL查询语句
+    return fixture() // 获取测试fixture对象
+        .with(CalciteConnectionProperty.APPROXIMATE_DISTINCT_COUNT.camelName(), true) // 启用近似去重计数功能
+        .with(CalciteConnectionProperty.APPROXIMATE_TOP_N.camelName(), true) // 启用近似TopN查询功能
+        .with(CalciteConnectionProperty.APPROXIMATE_DECIMAL.camelName(), true) // 启用近似小数计算功能
+        .query(sql); // 执行指定的SQL查询
   }
 
-  /** Creates a fixture against the {@link #FOODMART} data set. */
+  /** 创建一个针对FOODMART数据集的测试fixture,用于配置测试环境 */
   public static CalciteAssert.AssertThat fixture() {
-    return CalciteAssert.that()
-        .enable(enabled())
-        .withModel(FOODMART);
+    return CalciteAssert.that() // 创建Calcite断言构建器
+        .enable(enabled()) // 设置测试是否启用
+        .withModel(FOODMART); // 加载Druid foodmart模型配置
   }
 
-  /** Creates a query against the {@link #FOODMART} data set. */
-  public static CalciteAssert.AssertQuery sql(String sql) {
-    return fixture()
-        .query(sql);
+  /** 创建一个针对FOODMART数据集的查询对象,用于执行和验证SQL查询 */
+  public static CalciteAssert.AssertQuery sql(String sql) { // sql参数:要执行的SQL查询语句
+    return fixture() // 获取测试fixture对象
+        .query(sql); // 执行指定的SQL查询并返回查询断言对象
   }
 
+  /** 测试foodmart表的元数据列信息,验证列的数量和类型是否正确 */
   @Test void testMetadataColumns() {
-    sql("values 1")
-        .withConnection(c -> {
+    sql("values 1") // 执行一个简单的查询来连接数据库
+        .withConnection(c -> { // 在数据库连接上执行操作
           try {
-            final DatabaseMetaData metaData = c.getMetaData();
+            final DatabaseMetaData metaData = c.getMetaData(); // 获取数据库元数据对象
             final ResultSet r =
-                metaData.getColumns(null, null, "foodmart", null);
-            Multimap<String, Boolean> map = ArrayListMultimap.create();
-            while (r.next()) {
-              map.put(r.getString("TYPE_NAME"), true);
+                metaData.getColumns(null, null, "foodmart", null); // 获取foodmart表的所有列信息
+            Multimap<String, Boolean> map = ArrayListMultimap.create(); // 创建多重映射用于统计列类型
+            while (r.next()) { // 遍历结果集中的每一列
+              map.put(r.getString("TYPE_NAME"), true); // 将列类型名称添加到映射中
             }
-            if (CalciteSystemProperty.DEBUG.value()) {
-              System.out.println(map);
+            if (CalciteSystemProperty.DEBUG.value()) { // 如果启用调试模式
+              System.out.println(map); // 打印列类型映射信息
             }
-            // 1 timestamp, 2 float measure, 1 int measure, 88 dimensions
-            assertThat(map.keySet(), hasSize(4));
-            assertThat(map.values(), hasSize(92));
-            assertThat(map.get("TIMESTAMP(0) NOT NULL"), hasSize(1));
-            assertThat(map.get("DOUBLE"), hasSize(2));
-            assertThat(map.get("BIGINT"), hasSize(1));
-            assertThat(map.get(VARCHAR_TYPE), hasSize(88));
-          } catch (SQLException e) {
-            throw TestUtil.rethrow(e);
+            // 验证列的数量和类型: 1个时间戳列, 2个浮点度量列, 1个整数度量列, 88个维度列
+            assertThat(map.keySet(), hasSize(4)); // 验证有4种不同的数据类型
+            assertThat(map.values(), hasSize(92)); // 验证总共有92列
+            assertThat(map.get("TIMESTAMP(0) NOT NULL"), hasSize(1)); // 验证有1个时间戳列
+            assertThat(map.get("DOUBLE"), hasSize(2)); // 验证有2个DOUBLE类型的度量列
+            assertThat(map.get("BIGINT"), hasSize(1)); // 验证有1个BIGINT类型的度量列
+            assertThat(map.get(VARCHAR_TYPE), hasSize(88)); // 验证有88个VARCHAR类型的维度列
+          } catch (SQLException e) { // 捕获SQL异常
+            throw TestUtil.rethrow(e); // 重新抛出异常
           }
         });
   }
 
+  /** 测试SELECT DISTINCT查询,验证去重查询能否正确转换为Druid的groupBy查询 */
   @Test void testSelectDistinct() {
-    final String explain = "PLAN="
-        + "EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$30]], groups=[{0}], aggs=[[]])";
-    final String sql = "select distinct \"state_province\" from \"foodmart\"";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all',"
-        + "'dimensions':[{'type':'default','dimension':'state_province','outputName':'state_province'"
-        + ",'outputType':'STRING'}],'limitSpec':{'type':'default'},"
-        + "'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql)
-        .returnsUnordered("state_province=CA",
-            "state_province=OR",
-            "state_province=WA")
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery));
+    final String explain = "PLAN=" // 定义预期的执行计划字符串
+        + "EnumerableInterpreter\n" // 可枚举解释器节点
+        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$30]], groups=[{0}], aggs=[[]])"; // Druid查询节点,包含表名、时间间隔、投影列、分组和聚合
+    final String sql = "select distinct \"state_province\" from \"foodmart\""; // 要测试的SQL查询语句,查询不同的州/省
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all'," // 预期的Druid查询JSON字符串
+        + "'dimensions':[{'type':'default','dimension':'state_province','outputName':'state_province'" // 维度配置,使用默认提取器
+        + ",'outputType':'STRING'}],'limitSpec':{'type':'default'}," // 限制配置,使用默认类型
+        + "'aggregations':[]," // 聚合函数列表为空
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 查询时间间隔
+    sql(sql) // 执行SQL查询
+        .returnsUnordered("state_province=CA", // 验证返回结果包含CA州
+            "state_province=OR", // 验证返回结果包含OR州
+            "state_province=WA") // 验证返回结果包含WA州
+        .explainContains(explain) // 验证执行计划包含预期的Druid查询
+        .queryContains(new DruidChecker(druidQuery)); // 验证生成的Druid查询与预期一致
   }
 
+  /** 测试GROUP BY和SUM聚合函数,验证分组聚合能否正确转换为Druid查询 */
   @Test void testSelectGroupBySum() {
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], "
-        + "projects=[[$30, CAST($89):INTEGER]], groups=[{0}], aggs=[[SUM($1)]])";
-    final String sql = "select \"state_province\", sum(cast(\"unit_sales\" as integer)) as u\n"
-        + "from \"foodmart\"\n"
-        + "group by \"state_province\"";
-    sql(sql)
-        .returnsUnordered("state_province=CA; U=74748",
-            "state_province=OR; U=67659",
-            "state_province=WA; U=124366")
-        .explainContains(explain);
+    final String explain = "PLAN=EnumerableInterpreter\n" // 定义预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], " // 查询时间间隔
+        + "projects=[[$30, CAST($89):INTEGER]], groups=[{0}], aggs=[[SUM($1)]])"; // 投影州省列和转换后的单位销量列,按州省分组,求和聚合
+    final String sql = "select \"state_province\", sum(cast(\"unit_sales\" as integer)) as u\n" // SQL查询:按州省分组,计算单位销售量的总和
+        + "from \"foodmart\"\n" // 从foodmart表查询
+        + "group by \"state_province\""; // 按州省分组
+    sql(sql) // 执行SQL查询
+        .returnsUnordered("state_province=CA; U=74748", // 验证CA州的总销量为74748
+            "state_province=OR; U=67659", // 验证OR州的总销量为67659
+            "state_province=WA; U=124366") // 验证WA州的总销量为124366
+        .explainContains(explain); // 验证执行计划包含预期的Druid查询
   }
 
+  /** 测试按度量列分组,验证能否将度量列作为分组维度使用 */
   @Test void testGroupbyMetric() {
-    final String sql = "select  \"store_sales\" ,\"product_id\" from \"foodmart\" "
-        + "where \"product_id\" = 1020" + "group by \"store_sales\" ,\"product_id\" ";
-    final String plan = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], "
-        + "filter=[=(CAST($1):INTEGER, 1020)],"
-        + " projects=[[$90, $1]], groups=[{0, 1}], aggs=[[]])";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all',"
-        + "'dimensions':[{'type':'default','dimension':'store_sales',\"outputName\":\"store_sales\","
-        + "'outputType':'DOUBLE'},{'type':'default','dimension':'product_id','outputName':"
-        + "'product_id','outputType':'STRING'}],'limitSpec':{'type':'default'},"
-        + "'filter':{'type':'bound','dimension':'product_id','lower':'1020','lowerStrict':false,"
-        + "'upper':'1020','upperStrict':false,'ordering':'numeric'},'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql)
-        .explainContains(plan)
-        .queryContains(new DruidChecker(druidQuery))
-        .returnsUnordered("store_sales=0.51; product_id=1020",
+    final String sql = "select  \"store_sales\" ,\"product_id\" from \"foodmart\" " // SQL查询:选择商店销量和产品ID
+        + "where \"product_id\" = 1020" + "group by \"store_sales\" ,\"product_id\" "; // 按产品ID过滤,然后按商店销量和产品ID分组
+    final String plan = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], " // 时间间隔
+        + "filter=[=(CAST($1):INTEGER, 1020)]," // 过滤条件:产品ID等于1020
+        + " projects=[[$90, $1]], groups=[{0, 1}], aggs=[[]])"; // 投影商店销量和产品ID列,按这两列分组,无聚合
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all'," // 预期的Druid查询
+        + "'dimensions':[{'type':'default','dimension':'store_sales',\"outputName\":\"store_sales\"," // 维度1:商店销量
+        + "'outputType':'DOUBLE'},{'type':'default','dimension':'product_id','outputName':" // 维度2:产品ID
+        + "'product_id','outputType':'STRING'}],'limitSpec':{'type':'default'}," // 限制配置
+        + "'filter':{'type':'bound','dimension':'product_id','lower':'1020','lowerStrict':false," // 过滤条件
+        + "'upper':'1020','upperStrict':false,'ordering':'numeric'},'aggregations':[]," // 无聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    sql(sql) // 执行SQL查询
+        .explainContains(plan) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)) // 验证Druid查询
+        .returnsUnordered("store_sales=0.51; product_id=1020", // 验证返回结果
             "store_sales=1.02; product_id=1020",
             "store_sales=1.53; product_id=1020",
             "store_sales=2.04; product_id=1020",
             "store_sales=2.55; product_id=1020");
   }
 
+  /** 测试简单的GROUP BY下推,验证基本的分组查询能否正确转换为Druid查询 */
   @Test void testPushSimpleGroupBy() {
-    final String sql = "select \"product_id\" from \"foodmart\" where "
-        + "\"product_id\" = 1020 group by \"product_id\"";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart',"
-        + "'granularity':'all','dimensions':[{'type':'default',"
-        + "'dimension':'product_id','outputName':'product_id','outputType':'STRING'}],"
-        + "'limitSpec':{'type':'default'},'filter':{'type':'bound','dimension':'product_id',"
-        + "'lower':'1020','lowerStrict':false,'upper':'1020','upperStrict':false,"
-        + "'ordering':'numeric'},'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql).returnsUnordered("product_id=1020").queryContains(new DruidChecker(druidQuery));
+    final String sql = "select \"product_id\" from \"foodmart\" where " // SQL查询:选择产品ID
+        + "\"product_id\" = 1020 group by \"product_id\""; // 过滤产品ID为1020,然后按产品ID分组
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart'," // 预期的Druid查询
+        + "'granularity':'all','dimensions':[{'type':'default'," // 使用全部粒度
+        + "'dimension':'product_id','outputName':'product_id','outputType':'STRING'}]," // 产品ID维度
+        + "'limitSpec':{'type':'default'},'filter':{'type':'bound','dimension':'product_id'," // 过滤条件
+        + "'lower':'1020','lowerStrict':false,'upper':'1020','upperStrict':false," // 边界条件
+        + "'ordering':'numeric'},'aggregations':[]," // 无聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    sql(sql).returnsUnordered("product_id=1020").queryContains(new DruidChecker(druidQuery)); // 执行并验证
   }
 
+  /** 测试复杂的GROUP BY下推,验证嵌套查询中的分组能否正确转换 */
   @Test void testComplexPushGroupBy() {
-    final String innerQuery = "select \"product_id\" as \"id\" from \"foodmart\" where "
-        + "\"product_id\" = 1020";
-    final String sql = "select \"id\" from (" + innerQuery + ") group by \"id\"";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart',"
-        + "'granularity':'all',"
-        + "'dimensions':[{'type':'default','dimension':'product_id','outputName':'product_id',"
-        + "'outputType':'STRING'}],'limitSpec':{'type':'default'},"
-        + "'filter':{'type':'bound','dimension':'product_id','lower':'1020','lowerStrict':false,"
-        + "'upper':'1020','upperStrict':false,'ordering':'numeric'},'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql)
-        .returnsUnordered("id=1020")
-        .queryContains(new DruidChecker(druidQuery));
+    final String innerQuery = "select \"product_id\" as \"id\" from \"foodmart\" where " // 内层查询:选择产品ID并重命名为id
+        + "\"product_id\" = 1020"; // 过滤产品ID为1020
+    final String sql = "select \"id\" from (" + innerQuery + ") group by \"id\""; // 外层查询:从内层查询结果中选择id并分组
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart'," // 预期的Druid查询
+        + "'granularity':'all'," // 使用全部粒度
+        + "'dimensions':[{'type':'default','dimension':'product_id','outputName':'product_id'," // 产品ID维度
+        + "'outputType':'STRING'}],'limitSpec':{'type':'default'}," // 限制配置
+        + "'filter':{'type':'bound','dimension':'product_id','lower':'1020','lowerStrict':false," // 过滤条件
+        + "'upper':'1020','upperStrict':false,'ordering':'numeric'},'aggregations':[]," // 无聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    sql(sql) // 执行SQL查询
+        .returnsUnordered("id=1020") // 验证返回结果
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-1281">[CALCITE-1281]
-   * Druid adapter wrongly returns all numeric values as int or float</a>. */
+  /** 测试COUNT(*)聚合函数,验证Druid适配器能否正确返回数值类型
+   * 
+   * 测试用例对应JIRA问题:CALCITE-1281
+   * 问题:Druid适配器错误地将所有数值返回为int或float类型
+   * 验证:COUNT(*)应该能正确返回为int、long和string类型
+   */
   @Test void testSelectCount() {
-    final String sql = "select count(*) as c from \"foodmart\"";
-    sql(sql)
-        .returns(input -> {
+    final String sql = "select count(*) as c from \"foodmart\""; // SQL查询:统计foodmart表的总行数
+    sql(sql) // 执行SQL查询
+        .returns(input -> { // 验证返回结果
           try {
-            assertThat(input.next(), is(true));
-            assertThat(input.getInt(1), is(86829));
-            assertThat(input.getLong(1), is(86829L));
-            assertThat(input.getString(1), is("86829"));
-            assertThat(input.wasNull(), is(false));
-            assertThat(input.next(), is(false));
-          } catch (SQLException e) {
-            throw TestUtil.rethrow(e);
+            assertThat(input.next(), is(true)); // 验证有第一行结果
+            assertThat(input.getInt(1), is(86829)); // 验证getInt返回86829
+            assertThat(input.getLong(1), is(86829L)); // 验证getLong返回86829
+            assertThat(input.getString(1), is("86829")); // 验证getString返回"86829"
+            assertThat(input.wasNull(), is(false)); // 验证值不为null
+            assertThat(input.next(), is(false)); // 验证只有一行结果
+          } catch (SQLException e) { // 捕获SQL异常
+            throw TestUtil.rethrow(e); // 重新抛出异常
           }
         });
   }
 
+  /** 测试ORDER BY排序功能,验证多列排序能否正确转换为Druid查询 */
   @Test void testSort() {
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], "
-        + "groups=[{0, 1}], aggs=[[]], sort0=[1], sort1=[0], dir0=[ASC], dir1=[DESC])";
-    final String sql = "select distinct \"gender\", \"state_province\"\n"
-        + "from \"foodmart\" order by 2, 1 desc";
-    sql(sql)
-        .returnsOrdered("gender=M; state_province=CA",
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], " // 时间间隔和投影列
+        + "groups=[{0, 1}], aggs=[[]], sort0=[1], sort1=[0], dir0=[ASC], dir1=[DESC])"; // 按性别和州省分组,按州省升序、性别降序排序
+    final String sql = "select distinct \"gender\", \"state_province\"\n" // SQL查询:选择不同的性别和州省
+        + "from \"foodmart\" order by 2, 1 desc"; // 按第2列(州省)升序,第1列(性别)降序排序
+    sql(sql) // 执行SQL查询
+        .returnsOrdered("gender=M; state_province=CA", // 验证排序后的结果
             "gender=F; state_province=CA",
             "gender=M; state_province=OR",
             "gender=F; state_province=OR",
             "gender=M; state_province=WA",
             "gender=F; state_province=WA")
-        .queryContains(
+        .queryContains( // 验证Druid查询包含正确的排序配置
             new DruidChecker("{'queryType':'groupBy','dataSource':'foodmart','granularity':'all',"
                 + "'dimensions':[{'type':'default','dimension':'gender','outputName':'gender',"
                 + "'outputType':'STRING'},{'type':'default','dimension':'state_province',"
@@ -264,148 +287,166 @@ public class DruidAdapter2IT {
                 + ",'dimensionOrder':'lexicographic'},{'dimension':'gender','direction':'descending',"
                 + "'dimensionOrder':'lexicographic'}]},'aggregations':[],"
                 + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"))
-        .explainContains(explain);
+        .explainContains(explain); // 验证执行计划
   }
 
+  /** 测试ORDER BY with OFFSET和LIMIT,验证分页查询能否正确处理 */
   @Test void testSortLimit() {
-    final String explain = "PLAN=EnumerableLimit(offset=[2], fetch=[3])\n"
+    final String explain = "PLAN=EnumerableLimit(offset=[2], fetch=[3])\n" // 预期的执行计划:限制节点,偏移2行,取3行
         + "  EnumerableInterpreter\n"
-        + "    DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], "
-        + "groups=[{0, 1}], aggs=[[]], sort0=[1], sort1=[0], dir0=[ASC], dir1=[DESC])";
-    final String sql = "select distinct \"gender\", \"state_province\"\n"
+        + "    DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], " // 时间间隔和投影列
+        + "groups=[{0, 1}], aggs=[[]], sort0=[1], sort1=[0], dir0=[ASC], dir1=[DESC])"; // 分组和排序配置
+    final String sql = "select distinct \"gender\", \"state_province\"\n" // SQL查询:选择不同的性别和州省
         + "from \"foodmart\"\n"
-        + "order by 2, 1 desc offset 2 rows fetch next 3 rows only";
-    sql(sql)
-        .returnsOrdered("gender=M; state_province=OR",
+        + "order by 2, 1 desc offset 2 rows fetch next 3 rows only"; // 排序后跳过前2行,取接下来的3行
+    sql(sql) // 执行SQL查询
+        .returnsOrdered("gender=M; state_province=OR", // 验证返回结果
             "gender=F; state_province=OR",
             "gender=M; state_province=WA")
-        .explainContains(explain);
+        .explainContains(explain); // 验证执行计划
   }
 
+  /** 测试OFFSET和LIMIT,验证偏移和限制能否正确处理
+   * 
+   * 注意:目前还未将LIMIT下推到Druid的"select"查询作为"threshold"
+   * 不可能将OFFSET下推到Druid的"select"查询
+   */
   @Test void testOffsetLimit() {
-    // We do not yet push LIMIT into a Druid "select" query as a "threshold".
-    // It is not possible to push OFFSET into Druid "select" query.
-    final String sql = "select \"state_province\", \"product_name\"\n"
+    // 我们还没有将LIMIT下推到Druid的"select"查询作为"threshold"
+    // 不可能将OFFSET下推到Druid的"select"查询
+    final String sql = "select \"state_province\", \"product_name\"\n" // SQL查询:选择州省和产品名称
         + "from \"foodmart\"\n"
-        + "offset 2 fetch next 3 rows only";
-    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'columns':['state_province','product_name'],"
-        + "'resultFormat':'compactedList'}";
-    sql(sql)
-        .runs()
-        .queryContains(new DruidChecker(druidQuery));
+        + "offset 2 fetch next 3 rows only"; // 跳过前2行,取接下来的3行
+    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart'," // 预期的Druid查询:扫描类型
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'columns':['state_province','product_name']," // 要查询的列
+        + "'resultFormat':'compactedList'}"; // 结果格式为压缩列表
+    sql(sql) // 执行SQL查询
+        .runs() // 运行查询
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
+  /** 测试LIMIT限制,验证只返回指定数量的行 */
   @Test void testLimit() {
-    final String sql = "select \"gender\", \"state_province\"\n"
-        + "from \"foodmart\" fetch next 3 rows only";
-    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'columns':['gender','state_province'],"
-        + "'resultFormat':'compactedList','limit':3";
-    sql(sql)
-        .runs()
-        .queryContains(new DruidChecker(druidQuery));
+    final String sql = "select \"gender\", \"state_province\"\n" // SQL查询:选择性别和州省
+        + "from \"foodmart\" fetch next 3 rows only"; // 只返回前3行
+    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart'," // 预期的Druid查询:扫描类型
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'columns':['gender','state_province']," // 要查询的列
+        + "'resultFormat':'compactedList','limit':3"; // 结果格式和限制行数
+    sql(sql) // 执行SQL查询
+        .runs() // 运行查询
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询包含limit参数
   }
 
+  /** 测试DISTINCT与LIMIT的组合,验证去重后限制行数的功能 */
   @Test void testDistinctLimit() {
-    final String sql = "select distinct \"gender\", \"state_province\"\n"
-        + "from \"foodmart\" fetch next 3 rows only";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart',"
-        + "'granularity':'all','dimensions':[{'type':'default','dimension':'gender',"
-        + "'outputName':'gender','outputType':'STRING'},"
-        + "{'type':'default','dimension':'state_province','outputName':'state_province',"
-        + "'outputType':'STRING'}],'limitSpec':{'type':'default',"
-        + "'limit':3,'columns':[]},"
-        + "'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], "
-        + "groups=[{0, 1}], aggs=[[]], fetch=[3])";
-    sql(sql)
-        .runs()
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery))
-        .returnsUnordered("gender=F; state_province=CA", "gender=F; state_province=OR",
+    final String sql = "select distinct \"gender\", \"state_province\"\n" // SQL查询:选择不同的性别和州省
+        + "from \"foodmart\" fetch next 3 rows only"; // 只返回前3条不同的记录
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart'," // 预期的Druid查询:分组查询类型
+        + "'granularity':'all','dimensions':[{'type':'default','dimension':'gender'," // 使用全部粒度,性别维度
+        + "'outputName':'gender','outputType':'STRING'}," // 性别维度配置
+        + "{'type':'default','dimension':'state_province','outputName':'state_province'," // 州省维度配置
+        + "'outputType':'STRING'}],'limitSpec':{'type':'default'," // 限制配置
+        + "'limit':3,'columns':[]}," // 限制3行,无排序列
+        + "'aggregations':[]," // 无聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$39, $30]], " // 时间间隔和投影列
+        + "groups=[{0, 1}], aggs=[[]], fetch=[3])"; // 按性别和州省分组,无聚合,取前3行
+    sql(sql) // 执行SQL查询
+        .runs() // 运行查询
+        .explainContains(explain) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)) // 验证Druid查询
+        .returnsUnordered("gender=F; state_province=CA", "gender=F; state_province=OR", // 验证返回结果
             "gender=F; state_province=WA");
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-1578">[CALCITE-1578]
-   * Druid adapter: wrong semantics of topN query limit with granularity</a>. */
+  /** 测试GROUP BY with ORDER BY and LIMIT,验证分组聚合后的排序和限制功能
+   * 
+   * 测试用例对应JIRA问题:CALCITE-1578
+   * 问题:Druid适配器中topN查询的limit与粒度语义错误
+   * 验证:确保分组聚合后按度量值排序并限制行数能正确执行
+   */
   @Test void testGroupBySortLimit() {
-    final String sql = "select \"brand_name\", \"gender\", sum(\"unit_sales\") as s\n"
+    final String sql = "select \"brand_name\", \"gender\", sum(\"unit_sales\") as s\n" // SQL查询:选择品牌、性别和单位销量总和
         + "from \"foodmart\"\n"
-        + "group by \"brand_name\", \"gender\"\n"
-        + "order by s desc limit 3";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart',"
-        + "'granularity':'all','dimensions':[{'type':'default',"
-        + "'dimension':'brand_name','outputName':'brand_name','outputType':'STRING'},"
-        + "{'type':'default','dimension':'gender','outputName':'gender','outputType':'STRING'}],"
-        + "'limitSpec':{'type':'default','limit':3,'columns':[{'dimension':'S',"
-        + "'direction':'descending','dimensionOrder':'numeric'}]},"
-        + "'aggregations':[{'type':'longSum','name':'S','fieldName':'unit_sales'}],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/"
-        + "2992-01-10T00:00:00.000Z]], projects=[[$2, $39, $89]], groups=[{0, 1}], "
-        + "aggs=[[SUM($2)]], sort0=[2], dir0=[DESC], fetch=[3])";
-    sql(sql)
-        .runs()
-        .returnsOrdered("brand_name=Hermanos; gender=M; S=4286",
+        + "group by \"brand_name\", \"gender\"\n" // 按品牌和性别分组
+        + "order by s desc limit 3"; // 按销量降序排序,取前3条
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart'," // 预期的Druid查询
+        + "'granularity':'all','dimensions':[{'type':'default'," // 使用全部粒度
+        + "'dimension':'brand_name','outputName':'brand_name','outputType':'STRING'}," // 品牌维度
+        + "{'type':'default','dimension':'gender','outputName':'gender','outputType':'STRING'}]," // 性别维度
+        + "'limitSpec':{'type':'default','limit':3,'columns':[{'dimension':'S'," // 限制3行,按S列降序排序
+        + "'direction':'descending','dimensionOrder':'numeric'}]}," // 排序配置
+        + "'aggregations':[{'type':'longSum','name':'S','fieldName':'unit_sales'}]," // 聚合函数:长整型求和
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/" // Druid查询节点
+        + "2992-01-10T00:00:00.000Z]], projects=[[$2, $39, $89]], groups=[{0, 1}], " // 投影和分组
+        + "aggs=[[SUM($2)]], sort0=[2], dir0=[DESC], fetch=[3])"; // 聚合、排序和限制
+    sql(sql) // 执行SQL查询
+        .runs() // 运行查询
+        .returnsOrdered("brand_name=Hermanos; gender=M; S=4286", // 验证返回结果
             "brand_name=Hermanos; gender=F; S=4183",
             "brand_name=Tell Tale; gender=F; S=4033")
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery));
+        .explainContains(explain) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-1587">[CALCITE-1587]
-   * Druid adapter: topN returns approximate results</a>. */
+  /** 测试单列分组的排序和限制,验证精确结果模式
+   * 
+   * 测试用例对应JIRA问题:CALCITE-1587
+   * 问题:Druid适配器中topN返回近似结果
+   * 验证:确保单列分组排序限制能返回精确结果
+   */
   @Test void testGroupBySingleSortLimit() {
-    checkGroupBySingleSortLimit(false);
+    checkGroupBySingleSortLimit(false); // 调用检查方法,使用精确模式
   }
 
-  /** As {@link #testGroupBySingleSortLimit}, but allowing approximate results
-   * due to {@link CalciteConnectionConfig#approximateDistinctCount()}.
-   * Therefore we send a "topN" query to Druid. */
+  /** 测试单列分组的排序和限制,验证近似结果模式
+   * 
+   * 与testGroupBySingleSortLimit类似,但允许由于CalciteConnectionConfig#approximateDistinctCount()产生的近似结果
+   * 因此向Druid发送"topN"查询
+   */
   @Test void testGroupBySingleSortLimitApprox() {
-    checkGroupBySingleSortLimit(true);
+    checkGroupBySingleSortLimit(true); // 调用检查方法,使用近似模式
   }
 
-  private void checkGroupBySingleSortLimit(boolean approx) {
-    final String sql = "select \"brand_name\", sum(\"unit_sales\") as s\n"
+  /** 检查单列分组排序限制的实际实现方法
+   * @param approx 是否使用近似模式,true表示使用topN查询,false表示使用精确的groupBy查询 */
+  private void checkGroupBySingleSortLimit(boolean approx) { // approx参数:是否启用近似计算
+    final String sql = "select \"brand_name\", sum(\"unit_sales\") as s\n" // SQL查询:选择品牌和单位销量总和
         + "from \"foodmart\"\n"
-        + "group by \"brand_name\"\n"
-        + "order by s desc limit 3";
-    final String approxDruid = "{'queryType':'topN','dataSource':'foodmart','granularity':'all',"
-        + "'dimension':{'type':'default','dimension':'brand_name','outputName':'brand_name','outputType':'STRING'},'metric':'S',"
-        + "'aggregations':[{'type':'longSum','name':'S','fieldName':'unit_sales'}],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'threshold':3}";
-    final String exactDruid = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all',"
-        + "'dimensions':[{'type':'default','dimension':'brand_name','outputName':'brand_name',"
-        + "'outputType':'STRING'}],'limitSpec':{'type':'default','limit':3,'columns':"
-        + "[{'dimension':'S','direction':'descending','dimensionOrder':'numeric'}]},'aggregations':"
-        + "[{'type':'longSum','name':'S','fieldName':'unit_sales'}],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    final String druidQuery = approx ? approxDruid : exactDruid;
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/"
-        + "2992-01-10T00:00:00.000Z]], projects=[[$2, $89]], groups=[{0}], "
-        + "aggs=[[SUM($1)]], sort0=[1], dir0=[DESC], fetch=[3])";
-    fixture()
-        .with(CalciteConnectionProperty.APPROXIMATE_TOP_N.name(), approx)
-        .query(sql)
-        .runs()
-        .returnsOrdered("brand_name=Hermanos; S=8469",
+        + "group by \"brand_name\"\n" // 按品牌分组
+        + "order by s desc limit 3"; // 按销量降序排序,取前3条
+    final String approxDruid = "{'queryType':'topN','dataSource':'foodmart','granularity':'all'," // 近似模式的Druid查询:topN类型
+        + "'dimension':{'type':'default','dimension':'brand_name','outputName':'brand_name','outputType':'STRING'},'metric':'S'," // 维度和度量配置
+        + "'aggregations':[{'type':'longSum','name':'S','fieldName':'unit_sales'}]," // 聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'threshold':3}"; // 阈值:3
+    final String exactDruid = "{'queryType':'groupBy','dataSource':'foodmart','granularity':'all'," // 精确模式的Druid查询:groupBy类型
+        + "'dimensions':[{'type':'default','dimension':'brand_name','outputName':'brand_name'," // 品牌维度
+        + "'outputType':'STRING'}],'limitSpec':{'type':'default','limit':3,'columns':" // 限制配置
+        + "[{'dimension':'S','direction':'descending','dimensionOrder':'numeric'}]},'aggregations':" // 排序配置
+        + "[{'type':'longSum','name':'S','fieldName':'unit_sales'}]," // 聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    final String druidQuery = approx ? approxDruid : exactDruid; // 根据approx参数选择Druid查询类型
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/" // Druid查询节点
+        + "2992-01-10T00:00:00.000Z]], projects=[[$2, $89]], groups=[{0}], " // 投影和分组
+        + "aggs=[[SUM($1)]], sort0=[1], dir0=[DESC], fetch=[3])"; // 聚合、排序和限制
+    fixture() // 获取测试fixture
+        .with(CalciteConnectionProperty.APPROXIMATE_TOP_N.name(), approx) // 设置近似TopN属性
+        .query(sql) // 执行SQL查询
+        .runs() // 运行查询
+        .returnsOrdered("brand_name=Hermanos; S=8469", // 验证返回结果
             "brand_name=Tell Tale; S=7877",
             "brand_name=Ebony; S=7438")
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery));
+        .explainContains(explain) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
   /** Test case for
@@ -500,79 +541,81 @@ public class DruidAdapter2IT {
         .queryContains(new DruidChecker(subDruidQuery));
   }
 
-  /** Tests a query that contains no GROUP BY and is therefore executed as a
-   * Druid "select" query. */
+  /** 测试过滤和排序功能,验证不带GROUP BY的查询能否正确转换为Druid的scan查询 */
   @Test void testFilterSortDesc() {
-    final String sql = "select \"product_name\" from \"foodmart\"\n"
-        + "where \"product_id\" BETWEEN '1500' AND '1502'\n"
-        + "order by \"state_province\" desc, \"product_id\"";
-    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'filter':{'type':'and','fields':["
-        + "{'type':'bound','dimension':'product_id','lower':'1500','lowerStrict':false,'ordering':'lexicographic'},"
-        + "{'type':'bound','dimension':'product_id','upper':'1502','upperStrict':false,'ordering':'lexicographic'}]},"
-        + "'columns':['product_name','state_province','product_id'],"
-        + "'resultFormat':'compactedList'";
-    sql(sql)
-        .limit(4)
-        .returns(resultSet -> {
+    final String sql = "select \"product_name\" from \"foodmart\"\n" // SQL查询:选择产品名称
+        + "where \"product_id\" BETWEEN '1500' AND '1502'\n" // 过滤条件:产品ID在1500到1502之间(字符串比较)
+        + "order by \"state_province\" desc, \"product_id\""; // 按州省降序和产品ID排序
+    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart'," // 预期的Druid查询:扫描类型
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'filter':{'type':'and','fields':[" // 过滤条件:AND逻辑
+        + "{'type':'bound','dimension':'product_id','lower':'1500','lowerStrict':false,'ordering':'lexicographic'}," // 下界条件
+        + "{'type':'bound','dimension':'product_id','upper':'1502','upperStrict':false,'ordering':'lexicographic'}]}," // 上界条件
+        + "'columns':['product_name','state_province','product_id']," // 要查询的列
+        + "'resultFormat':'compactedList'}"; // 结果格式为压缩列表
+    sql(sql) // 执行SQL查询
+        .limit(4) // 限制返回4行
+        .returns(resultSet -> { // 验证返回结果
           try {
-            for (int i = 0; i < 4; i++) {
-              assertTrue(resultSet.next());
-              assertThat(resultSet.getString("product_name"),
+            for (int i = 0; i < 4; i++) { // 遍历前4行
+              assertTrue(resultSet.next()); // 验证有下一行
+              assertThat(resultSet.getString("product_name"), // 验证产品名称
                   is("Fort West Dried Apricots"));
             }
-            assertFalse(resultSet.next());
-          } catch (SQLException e) {
-            throw TestUtil.rethrow(e);
+            assertFalse(resultSet.next()); // 验证只有4行
+          } catch (SQLException e) { // 捕获SQL异常
+            throw TestUtil.rethrow(e); // 重新抛出异常
           }
         })
-        .queryContains(new DruidChecker(druidQuery));
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
-  /** As {@link #testFilterSortDesc()} but the bounds are numeric. */
+  /** 测试过滤和排序功能,验证数值类型的边界条件能否正确处理
+   * 
+   * 与testFilterSortDesc类似,但边界条件是数值类型而非字符串类型
+   */
   @Test void testFilterSortDescNumeric() {
-    final String sql = "select \"product_name\" from \"foodmart\"\n"
-        + "where \"product_id\" BETWEEN 1500 AND 1502\n"
-        + "order by \"state_province\" desc, \"product_id\"";
-    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'filter':{'type':'and','fields':["
-        + "{'type':'bound','dimension':'product_id','lower':'1500','lowerStrict':false,'ordering':'numeric'},"
-        + "{'type':'bound','dimension':'product_id','upper':'1502','upperStrict':false,'ordering':'numeric'}]},"
-        + "'columns':['product_name','state_province','product_id'],"
-        + "'resultFormat':'compactedList'";
-    sql(sql)
-        .limit(4)
-        .returns(resultSet -> {
+    final String sql = "select \"product_name\" from \"foodmart\"\n" // SQL查询:选择产品名称
+        + "where \"product_id\" BETWEEN 1500 AND 1502\n" // 过滤条件:产品ID在1500到1502之间(数值比较)
+        + "order by \"state_province\" desc, \"product_id\""; // 按州省降序和产品ID排序
+    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart'," // 预期的Druid查询:扫描类型
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'filter':{'type':'and','fields':[" // 过滤条件:AND逻辑
+        + "{'type':'bound','dimension':'product_id','lower':'1500','lowerStrict':false,'ordering':'numeric'}," // 下界条件(数值排序)
+        + "{'type':'bound','dimension':'product_id','upper':'1502','upperStrict':false,'ordering':'numeric'}]}," // 上界条件(数值排序)
+        + "'columns':['product_name','state_province','product_id']," // 要查询的列
+        + "'resultFormat':'compactedList'}"; // 结果格式为压缩列表
+    sql(sql) // 执行SQL查询
+        .limit(4) // 限制返回4行
+        .returns(resultSet -> { // 验证返回结果
           try {
-            for (int i = 0; i < 4; i++) {
-              assertTrue(resultSet.next());
-              assertThat(resultSet.getString("product_name"),
+            for (int i = 0; i < 4; i++) { // 遍历前4行
+              assertTrue(resultSet.next()); // 验证有下一行
+              assertThat(resultSet.getString("product_name"), // 验证产品名称
                   is("Fort West Dried Apricots"));
             }
-            assertFalse(resultSet.next());
-          } catch (SQLException e) {
-            throw TestUtil.rethrow(e);
+            assertFalse(resultSet.next()); // 验证只有4行
+          } catch (SQLException e) { // 捕获SQL异常
+            throw TestUtil.rethrow(e); // 重新抛出异常
           }
         })
-        .queryContains(new DruidChecker(druidQuery));
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
-  /** Tests a query whose filter removes all rows. */
+  /** 测试过滤条件过滤掉所有行的情况,验证空结果集的正确处理 */
   @Test void testFilterOutEverything() {
-    final String sql = "select \"product_name\" from \"foodmart\"\n"
-        + "where \"product_id\" = -1";
-    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'filter':{'type':'bound','dimension':'product_id','lower':'-1','lowerStrict':false,"
-        + "'upper':'-1','upperStrict':false,'ordering':'numeric'},"
-        + "'columns':['product_name'],"
-        + "'resultFormat':'compactedList'}";
-    sql(sql)
-        .limit(4)
-        .returnsUnordered()
-        .queryContains(new DruidChecker(druidQuery));
+    final String sql = "select \"product_name\" from \"foodmart\"\n" // SQL查询:选择产品名称
+        + "where \"product_id\" = -1"; // 过滤条件:产品ID等于-1(不存在的值)
+    final String druidQuery = "{'queryType':'scan','dataSource':'foodmart'," // 预期的Druid查询:扫描类型
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'filter':{'type':'bound','dimension':'product_id','lower':'-1','lowerStrict':false," // 过滤条件
+        + "'upper':'-1','upperStrict':false,'ordering':'numeric'}," // 边界条件
+        + "'columns':['product_name']," // 要查询的列
+        + "'resultFormat':'compactedList'}"; // 结果格式为压缩列表
+    sql(sql) // 执行SQL查询
+        .limit(4) // 限制返回4行
+        .returnsUnordered() // 验证返回空结果集
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
   /** As {@link #testFilterSortDescNumeric()} but with a filter that cannot
@@ -966,84 +1009,90 @@ public class DruidAdapter2IT {
         .explainContains(explain);
   }
 
-  /** Tests that distinct-count is pushed down to Druid and evaluated using
-   * "cardinality". The result is approximate, but gives the correct result in
-   * this example when rounded down using FLOOR. */
+  /** 测试COUNT DISTINCT去重计数功能,验证去重计数能否正确处理
+   * 
+   * 注意:去重计数被下推到Druid并使用"cardinality"进行评估
+   * 结果是近似的,但在这个例子中使用FLOOR向下取整后得到正确结果
+   */
   @Test void testDistinctCount() {
-    final String sql = "select \"state_province\",\n"
-        + " floor(count(distinct \"city\")) as cdc\n"
+    final String sql = "select \"state_province\",\n" // SQL查询:选择州省和不同城市的数量(向下取整)
+        + " floor(count(distinct \"city\")) as cdc\n" // 统计每个州省的不同城市数量并向下取整
         + "from \"foodmart\"\n"
-        + "group by \"state_province\"\n"
-        + "order by 2 desc limit 2";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  BindableSort(sort0=[$1], dir0=[DESC], fetch=[2])\n"
-        + "    BindableProject(state_province=[$0], CDC=[FLOOR($1)])\n"
-        + "      BindableAggregate(group=[{0}], agg#0=[COUNT($1)])\n"
-        + "        DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$30, $29]], groups=[{0, 1}], aggs=[[]])";
-    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart',"
-        + "'granularity':'all','dimensions':["
-        + "{'type':'default','dimension':'state_province','outputName':'state_province','outputType':'STRING'},"
-        + "{'type':'default','dimension':'city','outputName':'city','outputType':'STRING'}],"
-        + "'limitSpec':{'type':'default'},'aggregations':[],"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}";
-    sql(sql)
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery))
-        .returnsUnordered("state_province=CA; CDC=45",
-            "state_province=WA; CDC=22");
+        + "group by \"state_province\"\n" // 按州省分组
+        + "order by 2 desc limit 2"; // 按第2列降序排序,取前2条
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  BindableSort(sort0=[$1], dir0=[DESC], fetch=[2])\n" // 可绑定排序节点
+        + "    BindableProject(state_province=[$0], CDC=[FLOOR($1)])\n" // 可绑定投影节点,向下取整
+        + "      BindableAggregate(group=[{0}], agg#0=[COUNT($1)])\n" // 可绑定聚合节点,计数
+        + "        DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$30, $29]], groups=[{0, 1}], aggs=[[]])"; // Druid查询节点
+    final String druidQuery = "{'queryType':'groupBy','dataSource':'foodmart'," // 预期的Druid查询
+        + "'granularity':'all','dimensions':[" // 使用全部粒度
+        + "{'type':'default','dimension':'state_province','outputName':'state_province','outputType':'STRING'}," // 州省维度
+        + "{'type':'default','dimension':'city','outputName':'city','outputType':'STRING'}]," // 城市维度
+        + "'limitSpec':{'type':'default'},'aggregations':[]," // 无聚合函数
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']}"; // 时间间隔
+    sql(sql) // 执行SQL查询
+        .explainContains(explain) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)) // 验证Druid查询
+        .returnsUnordered("state_province=CA; CDC=45", // 验证返回结果:CA州有45个不同城市
+            "state_province=WA; CDC=22"); // WA州有22个不同城市
   }
 
-  /** Tests that projections of columns are pushed into the DruidQuery, and
-   * projections of expressions that Druid cannot handle (in this case, a
-   * literal 0) stay up. */
+  /** 测试投影功能,验证列投影能否正确下推到Druid查询
+   * 
+   * 测试内容:
+   * - 列的投影被下推到DruidQuery
+   * - Druid不能处理的表达式(在本例中是字面量0)保持在Calcite层处理
+   */
   @Test void testProject() {
-    final String sql = "select \"product_name\", 0 as zero\n"
+    final String sql = "select \"product_name\", 0 as zero\n" // SQL查询:选择产品名称和常量0
         + "from \"foodmart\"\n"
-        + "order by \"product_name\"";
-    final String explain = "PLAN="
-        + "EnumerableSort(sort0=[$0], dir0=[ASC])\n"
-        + "  EnumerableInterpreter\n"
-        + "    DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$3, 0]])";
-    sql(sql)
-        .limit(2)
-        .returnsUnordered("product_name=ADJ Rosy Sunglasses; ZERO=0",
+        + "order by \"product_name\""; // 按产品名称排序
+    final String explain = "PLAN=" // 预期的执行计划
+        + "EnumerableSort(sort0=[$0], dir0=[ASC])\n" // 可枚举排序节点
+        + "  EnumerableInterpreter\n" // 可枚举解释器节点
+        + "    DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], projects=[[$3, 0]])"; // Druid查询节点,投影产品名称列和常量0
+    sql(sql) // 执行SQL查询
+        .limit(2) // 限制返回2行
+        .returnsUnordered("product_name=ADJ Rosy Sunglasses; ZERO=0", // 验证返回结果
             "product_name=ADJ Rosy Sunglasses; ZERO=0")
-        .explainContains(explain);
+        .explainContains(explain); // 验证执行计划
   }
 
+  /** 测试过滤和DISTINCT的组合,验证复杂过滤条件和去重能否正确处理 */
   @Test void testFilterDistinct() {
-    final String sql = "select distinct \"state_province\", \"city\",\n"
+    final String sql = "select distinct \"state_province\", \"city\",\n" // SQL查询:选择不同的州省、城市和产品名称
         + "  \"product_name\"\n"
         + "from \"foodmart\"\n"
-        + "where \"product_name\" = 'High Top Dried Mushrooms'\n"
-        + "and \"quarter\" in ('Q2', 'Q3')\n"
-        + "and \"state_province\" = 'WA'";
-    final String druidQuery1 = "{\"queryType\":\"groupBy\","
-        + "\"dataSource\":\"foodmart\",\"granularity\":\"all\"";
-    final String druidQuery2 = "\"filter\":{\"type\":\"and\",\"fields\":[{\"type\":"
-        + "\"selector\",\"dimension\":\"product_name\",\"value\":\"High Top Dried Mushrooms\"},"
-        + "{\"type\":\"or\",\"fields\":[{\"type\":\"selector\",\"dimension\":"
-        + "\"quarter\",\"value\":\"Q2\"},{\"type\":\"selector\",\"dimension\":\"quarter\","
-        + "\"value\":\"Q3\"}]},{\"type\":\"selector\",\"dimension\":"
-        + "\"state_province\",\"value\":\"WA\"}]},\"aggregations\":[],"
-        + "\"postAggregations\":[{\"type\":\"expression\","
-        + "\"name\":\"state_province\",\"expression\":\"'WA'\"},{\"type\":\"expression\","
-        + "\"name\":\"product_name\",\"expression\":\"'High Top Dried Mushrooms'\"}],"
-        + "\"intervals\":[\"1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z\"]}";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], "
-        + "filter=[AND("
-        + "=($3, 'High Top Dried Mushrooms'), "
-        + "SEARCH($87, Sarg['Q2':VARCHAR, 'Q3':VARCHAR]:VARCHAR), "
-        + "=($30, 'WA'))], "
-        + "projects=[[$29]], groups=[{0}], aggs=[[]], "
-        + "post_projects=[[CAST('WA':VARCHAR):VARCHAR, $0, "
-        + "CAST('High Top Dried Mushrooms':VARCHAR):VARCHAR]])\n";
-    sql(sql)
-        .queryContains(new DruidChecker(false, druidQuery1, druidQuery2))
-        .explainContains(explain)
-        .returnsUnordered(
+        + "where \"product_name\" = 'High Top Dried Mushrooms'\n" // 过滤条件1:产品名称等于指定值
+        + "and \"quarter\" in ('Q2', 'Q3')\n" // 过滤条件2:季度在Q2或Q3
+        + "and \"state_province\" = 'WA'"; // 过滤条件3:州省等于WA
+    final String druidQuery1 = "{\"queryType\":\"groupBy\"," // Druid查询的第一部分
+        + "\"dataSource\":\"foodmart\",\"granularity\":\"all\""; // 数据源和粒度
+    final String druidQuery2 = "\"filter\":{\"type\":\"and\",\"fields\":[{\"type':" // Druid查询的第二部分:过滤条件
+        + "\"selector\",\"dimension\":\"product_name\",\"value\":\"High Top Dried Mushrooms\"}," // 产品名称选择器
+        + "{\"type\":\"or\",\"fields\":[{\"type\":\"selector\",\"dimension\":" // OR逻辑
+        + "\"quarter\",\"value\":\"Q2\"},{\"type\":\"selector\",\"dimension\":\"quarter\"," // 季度选择器
+        + "\"value\":\"Q3\"}]},{\"type\":\"selector\",\"dimension\":" // 季度选择器
+        + "\"state_province\",\"value\":\"WA\"}]},\"aggregations\":[]," // 州省选择器
+        + "\"postAggregations\":[{\"type\":\"expression\"," // 后聚合配置
+        + "\"name\":\"state_province\",\"expression\":\"'WA'\"},{\"type\":\"expression\"," // 州省后聚合
+        + "\"name\":\"product_name\",\"expression\":\"'High Top Dried Mushrooms'\"}]," // 产品名称后聚合
+        + "\"intervals\":[\"1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z\"]}"; // 时间间隔
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], " // 时间间隔
+        + "filter=[AND(" // 过滤条件:AND逻辑
+        + "=($3, 'High Top Dried Mushrooms'), " // 产品名称等于条件
+        + "SEARCH($87, Sarg['Q2':VARCHAR, 'Q3':VARCHAR]:VARCHAR), " // 季度IN条件
+        + "=($30, 'WA'))], " // 州省等于条件
+        + "projects=[[$29]], groups=[{0}], aggs=[[]], " // 投影城市列,按城市分组,无聚合
+        + "post_projects=[[CAST('WA':VARCHAR):VARCHAR, $0, " // 后投影:添加州省和产品名称常量
+        + "CAST('High Top Dried Mushrooms':VARCHAR):VARCHAR]])\n"; // 产品名称常量
+    sql(sql) // 执行SQL查询
+        .queryContains(new DruidChecker(false, druidQuery1, druidQuery2)) // 验证Druid查询
+        .explainContains(explain) // 验证执行计划
+        .returnsUnordered( // 验证返回结果
             "state_province=WA; city=Bremerton; product_name=High Top Dried Mushrooms",
             "state_province=WA; city=Everett; product_name=High Top Dried Mushrooms",
             "state_province=WA; city=Kirkland; product_name=High Top Dried Mushrooms",
@@ -1056,36 +1105,37 @@ public class DruidAdapter2IT {
             "state_province=WA; city=Yakima; product_name=High Top Dried Mushrooms");
   }
 
+  /** 测试过滤功能,验证复杂过滤条件能否正确转换为Druid查询 */
   @Test void testFilter() {
-    final String sql = "select \"state_province\", \"city\",\n"
+    final String sql = "select \"state_province\", \"city\",\n" // SQL查询:选择州省、城市和产品名称
         + "  \"product_name\"\n"
         + "from \"foodmart\"\n"
-        + "where \"product_name\" = 'High Top Dried Mushrooms'\n"
-        + "and \"quarter\" in ('Q2', 'Q3')\n"
-        + "and \"state_province\" = 'WA'";
-    final String druidQuery = "{'queryType':'scan',"
-        + "'dataSource':'foodmart',"
-        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z'],"
-        + "'filter':{'type':'and','fields':["
-        + "{'type':'selector','dimension':'product_name','value':'High Top Dried Mushrooms'},"
-        + "{'type':'or','fields':["
-        + "{'type':'selector','dimension':'quarter','value':'Q2'},"
-        + "{'type':'selector','dimension':'quarter','value':'Q3'}]},"
-        + "{'type':'selector','dimension':'state_province','value':'WA'}]},"
-        + "'columns':['state_province','city','product_name'],"
-        + "'resultFormat':'compactedList'}";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], "
-        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], "
-        + "filter=[AND("
-        + "=($3, 'High Top Dried Mushrooms'), "
-        + "SEARCH($87, Sarg['Q2':VARCHAR, 'Q3':VARCHAR]:VARCHAR), "
-        + "=($30, 'WA'))], "
-        + "projects=[[$30, $29, $3]])\n";
-    sql(sql)
-        .queryContains(new DruidChecker(druidQuery))
-        .explainContains(explain)
-        .returnsUnordered(
+        + "where \"product_name\" = 'High Top Dried Mushrooms'\n" // 过滤条件1:产品名称等于指定值
+        + "and \"quarter\" in ('Q2', 'Q3')\n" // 过滤条件2:季度在Q2或Q3
+        + "and \"state_province\" = 'WA'"; // 过滤条件3:州省等于WA
+    final String druidQuery = "{'queryType':'scan'," // 预期的Druid查询:扫描类型
+        + "'dataSource':'foodmart'," // 数据源
+        + "'intervals':['1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z']," // 时间间隔
+        + "'filter':{'type':'and','fields':[" // 过滤条件:AND逻辑
+        + "{'type':'selector','dimension':'product_name','value':'High Top Dried Mushrooms'}," // 产品名称选择器
+        + "{'type':'or','fields':[" // OR逻辑
+        + "{'type':'selector','dimension':'quarter','value':'Q2'}," // 季度Q2选择器
+        + "{'type':'selector','dimension':'quarter','value':'Q3'}]}," // 季度Q3选择器
+        + "{'type':'selector','dimension':'state_province','value':'WA'}]}," // 州省选择器
+        + "'columns':['state_province','city','product_name']," // 要查询的列
+        + "'resultFormat':'compactedList'}"; // 结果格式为压缩列表
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], " // Druid查询节点
+        + "intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], " // 时间间隔
+        + "filter=[AND(" // 过滤条件:AND逻辑
+        + "=($3, 'High Top Dried Mushrooms'), " // 产品名称等于条件
+        + "SEARCH($87, Sarg['Q2':VARCHAR, 'Q3':VARCHAR]:VARCHAR), " // 季度IN条件
+        + "=($30, 'WA'))], " // 州省等于条件
+        + "projects=[[$30, $29, $3]])\n"; // 投影州省、城市和产品名称列
+    sql(sql) // 执行SQL查询
+        .queryContains(new DruidChecker(druidQuery)) // 验证Druid查询
+        .explainContains(explain) // 验证执行计划
+        .returnsUnordered( // 验证返回结果
             "state_province=WA; city=Bremerton; product_name=High Top Dried Mushrooms",
             "state_province=WA; city=Everett; product_name=High Top Dried Mushrooms",
             "state_province=WA; city=Kirkland; product_name=High Top Dried Mushrooms",
@@ -1103,55 +1153,62 @@ public class DruidAdapter2IT {
             "state_province=WA; city=Yakima; product_name=High Top Dried Mushrooms");
   }
 
-  /** Tests that conditions applied to time units extracted via the EXTRACT
-   * function become ranges on the timestamp column
-   *
-   * <p>Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-1334">[CALCITE-1334]
-   * Convert predicates on EXTRACT function calls into date ranges</a>. */
+  /** 测试EXTRACT函数提取时间单位的过滤条件能否转换为时间戳列的范围条件
+   * 
+   * 测试内容:
+   * - 验证EXTRACT函数提取的年月条件能转换为时间戳范围
+   * - 例如:extract(year from timestamp) = 1997 and extract(month from timestamp) in (4, 6)
+   *   应转换为时间戳范围:[1997-04-01/1997-05-01, 1997-06-01/1997-07-01]
+   * 
+   * 测试用例对应JIRA问题:CALCITE-1334
+   * 问题:将EXTRACT函数调用上的谓词转换为日期范围
+   */
   @Test void testFilterTimestamp() {
-    String sql = "select count(*) as c\n"
+    String sql = "select count(*) as c\n" // SQL查询:统计行数
         + "from \"foodmart\"\n"
-        + "where extract(year from \"timestamp\") = 1997\n"
-        + "and extract(month from \"timestamp\") in (4, 6)\n";
-    final String explain = "PLAN=EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1997-04-01T00:00:00.000Z/"
-        + "1997-05-01T00:00:00.000Z, 1997-06-01T00:00:00.000Z/1997-07-01T00:00:00.000Z]],"
-        + " projects=[[0]], groups=[{}], aggs=[[COUNT()]])";
-    CalciteAssert.AssertQuery q = sql(sql)
-        .returnsUnordered("C=13500");
-    Assumptions.assumeTrue(Bug.CALCITE_4213_FIXED, "CALCITE-4213");
-    q.explainContains(explain);
+        + "where extract(year from \"timestamp\") = 1997\n" // 过滤条件1:年份等于1997
+        + "and extract(month from \"timestamp\") in (4, 6)\n"; // 过滤条件2:月份在4月或6月
+    final String explain = "PLAN=EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1997-04-01T00:00:00.000Z/" // Druid查询节点,时间间隔为两个范围
+        + "1997-05-01T00:00:00.000Z, 1997-06-01T00:00:00.000Z/1997-07-01T00:00:00.000Z]]," // 4月和6月的时间范围
+        + " projects=[[0]], groups=[{}], aggs=[[COUNT()]])"; // 投影、分组和聚合
+    CalciteAssert.AssertQuery q = sql(sql) // 执行SQL查询
+        .returnsUnordered("C=13500"); // 验证返回结果:13500行
+    Assumptions.assumeTrue(Bug.CALCITE_4213_FIXED, "CALCITE-4213"); // 假设CALCITE-4213已修复
+    q.explainContains(explain); // 验证执行计划
   }
 
+  /** 测试过滤条件中操作数位置互换的情况,验证等式左右互换能否正确处理 */
   @Test void testFilterSwapped() {
-    String sql = "select \"state_province\"\n"
+    String sql = "select \"state_province\"\n" // SQL查询:选择州省
         + "from \"foodmart\"\n"
-        + "where 'High Top Dried Mushrooms' = \"product_name\"";
-    final String explain = "EnumerableInterpreter\n"
-        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], filter=[=('High Top Dried Mushrooms', $3)], projects=[[$30]])";
-    final String druidQuery = "'filter':{'type':'selector','dimension':'product_name',"
-        + "'value':'High Top Dried Mushrooms'}";
-    sql(sql)
-        .explainContains(explain)
-        .queryContains(new DruidChecker(druidQuery));
+        + "where 'High Top Dried Mushrooms' = \"product_name\""; // 过滤条件:字面量在左,列在右(通常相反)
+    final String explain = "EnumerableInterpreter\n" // 预期的执行计划
+        + "  DruidQuery(table=[[foodmart, foodmart]], intervals=[[1900-01-09T00:00:00.000Z/2992-01-10T00:00:00.000Z]], filter=[=('High Top Dried Mushrooms', $3)], projects=[[$30]])"; // Druid查询节点,过滤条件
+    final String druidQuery = "'filter':{'type':'selector','dimension':'product_name'," // 预期的Druid查询过滤条件
+        + "'value':'High Top Dried Mushrooms'}"; // 选择器类型
+    sql(sql) // 执行SQL查询
+        .explainContains(explain) // 验证执行计划
+        .queryContains(new DruidChecker(druidQuery)); // 验证Druid查询
   }
 
+  /** 测试按度量列和时间提取分组,验证度量列和时间提取的组合分组能否正确处理 */
   @Test void testGroupByMetricAndExtractTime() {
-    final String sql =
+    final String sql = // SQL查询:选择行数、按天取整的时间戳和商店销量
         "SELECT count(*), floor(\"timestamp\" to DAY), \"store_sales\" "
             + "FROM \"foodmart\"\n"
-            + "GROUP BY \"store_sales\", floor(\"timestamp\" to DAY)\n ORDER BY \"store_sales\" DESC\n"
-            + "LIMIT 10\n";
-    sql(sql).queryContains(new DruidChecker("{\"queryType\":\"groupBy\""));
+            + "GROUP BY \"store_sales\", floor(\"timestamp\" to DAY)\n ORDER BY \"store_sales\" DESC\n" // 按商店销量和按天取整的时间戳分组,按商店销量降序排序
+            + "LIMIT 10\n"; // 限制返回10条
+    sql(sql).queryContains(new DruidChecker("{\"queryType\":\"groupBy\"")); // 验证Druid查询为groupBy类型
   }
 
+  /** 测试DOUBLE类型的过滤条件,验证类型转换和边界条件的正确处理 */
   @Test void testFilterOnDouble() {
-    String sql = "select \"product_id\" from \"foodmart\"\n"
-        + "where cast(\"product_id\" as double) < 0.41024 and \"product_id\" < 12223";
-    sql(sql).queryContains(
-        new DruidChecker("'type':'bound','dimension':'product_id','upper':'0.41024'",
-            "'upper':'12223'"));
+    String sql = "select \"product_id\" from \"foodmart\"\n" // SQL查询:选择产品ID
+        + "where cast(\"product_id\" as double) < 0.41024 and \"product_id\" < 12223"; // 过滤条件:产品ID转换为double后小于0.41024且产品ID小于12223
+    sql(sql).queryContains( // 验证Druid查询包含正确的边界条件
+        new DruidChecker("'type':'bound','dimension':'product_id','upper':'0.41024'", // 上界条件1
+            "'upper':'12223'")); // 上界条件2
   }
 
   @Test void testPushAggregateOnTime() {
