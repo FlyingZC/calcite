@@ -90,7 +90,7 @@ public class AggregateFilterTransposeRule
     if (unique != null && unique) {
       // The input is already unique on the grouping columns, so there's little
       // advantage of aggregating again. More important, without this check,
-      // the rule fires forever: A-F => A-F-A => A-A-F-A => A-A-A-F-A => ...
+      // the rule fires forever: A-F -> A-F-A -> A-A-F-A -> A-A-A-F-A -> ...
       return;
     }
     final boolean allColumnsInAggregate =

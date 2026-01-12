@@ -130,8 +130,7 @@ class EnumerableMergeJoinRule extends ConverterRule {
     // 创建新的输入节点列表，用于存储转换后的左右子节点
     final List<RelNode> newInputs = new ArrayList<>();
     // 创建排序规范列表，用于存储左右子节点所需的排序规范
-    final RelTraitSet traitSet = join.getTraitSet()
-        .replace(EnumerableConvention.INSTANCE);
+    final List<RelCollation> collations = new ArrayList<>();
     // offset变量：用于计算字段索引偏移量，因为右表的字段索引需要加上左表的字段数
     int offset = 0;
     // 遍历连接节点的所有输入（左表和右表）

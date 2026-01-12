@@ -233,7 +233,7 @@ public class RelMdColumnUniqueness
     // LogicalProject maps a set of rows to a different set;
     // Without knowledge of the mapping function(whether it
     // preserves uniqueness), it is only safe to derive uniqueness
-    // info from the child of a project when the mapping is f(a) => a.
+    // info from the child of a project when the mapping is f(a) -> a.
     //
     // Also need to map the input column set to the corresponding child
     // references

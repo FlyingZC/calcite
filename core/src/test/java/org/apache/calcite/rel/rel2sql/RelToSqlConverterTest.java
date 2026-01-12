@@ -16,100 +16,100 @@
  */
 package org.apache.calcite.rel.rel2sql;
 
-import org.apache.calcite.config.NullCollation;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.plan.hep.HepPlanner;
-import org.apache.calcite.plan.hep.HepProgramBuilder;
-import org.apache.calcite.rel.RelCollations;
-import org.apache.calcite.rel.RelFieldCollation;
-import org.apache.calcite.rel.RelFieldCollation.Direction;
-import org.apache.calcite.rel.RelFieldCollation.NullDirection;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.hint.HintPredicates;
-import org.apache.calcite.rel.hint.HintStrategyTable;
-import org.apache.calcite.rel.hint.RelHint;
-import org.apache.calcite.rel.logical.LogicalAggregate;
-import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rel.rules.AggregateJoinTransposeRule;
-import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
-import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.calcite.rel.rules.FilterJoinRule;
-import org.apache.calcite.rel.rules.ProjectOverSumToSum0Rule;
-import org.apache.calcite.rel.rules.ProjectToWindowRule;
-import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.rel.type.RelDataTypeSystemImpl;
-import org.apache.calcite.runtime.FlatLists;
-import org.apache.calcite.runtime.Hook;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlDialect.DatabaseProduct;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlSelect;
-import org.apache.calcite.sql.SqlWriter;
-import org.apache.calcite.sql.SqlWriterConfig;
-import org.apache.calcite.sql.dialect.AnsiSqlDialect;
-import org.apache.calcite.sql.dialect.BigQuerySqlDialect;
-import org.apache.calcite.sql.dialect.CalciteSqlDialect;
-import org.apache.calcite.sql.dialect.ClickHouseSqlDialect;
-import org.apache.calcite.sql.dialect.DuckDBSqlDialect;
-import org.apache.calcite.sql.dialect.HiveSqlDialect;
-import org.apache.calcite.sql.dialect.JethroDataSqlDialect;
-import org.apache.calcite.sql.dialect.MssqlSqlDialect;
-import org.apache.calcite.sql.dialect.MysqlSqlDialect;
-import org.apache.calcite.sql.dialect.OracleSqlDialect;
-import org.apache.calcite.sql.dialect.PhoenixSqlDialect;
-import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
-import org.apache.calcite.sql.dialect.PrestoSqlDialect;
-import org.apache.calcite.sql.dialect.SqliteSqlDialect;
-import org.apache.calcite.sql.fun.SqlLibrary;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.type.SqlTypeFactoryImpl;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.SqlShuttle;
-import org.apache.calcite.sql.validate.SqlConformance;
-import org.apache.calcite.sql.validate.SqlConformanceEnum;
-import org.apache.calcite.sql2rel.SqlToRelConverter;
-import org.apache.calcite.test.CalciteAssert;
-import org.apache.calcite.test.MockSqlOperatorTable;
-import org.apache.calcite.test.RelBuilderTest;
-import org.apache.calcite.tools.FrameworkConfig;
-import org.apache.calcite.tools.Frameworks;
-import org.apache.calcite.tools.Planner;
-import org.apache.calcite.tools.Program;
-import org.apache.calcite.tools.Programs;
-import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.tools.RuleSet;
-import org.apache.calcite.tools.RuleSets;
-import org.apache.calcite.util.ConversionUtil;
-import org.apache.calcite.util.ImmutableBitSet;
-import org.apache.calcite.util.TestUtil;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.config.NullCollation; // 空值排序规则配置
+import org.apache.calcite.plan.RelOptPlanner; // 关系代数优化器接口
+import org.apache.calcite.plan.RelOptRule; // 关系代数优化规则接口
+import org.apache.calcite.plan.RelTraitDef; // 关系特征定义
+import org.apache.calcite.plan.hep.HepPlanner; // Hep启发式规划器
+import org.apache.calcite.plan.hep.HepProgramBuilder; // Hep规划器构建器
+import org.apache.calcite.rel.RelCollations; // 关系排序集合工具类
+import org.apache.calcite.rel.RelFieldCollation; // 关系字段排序
+import org.apache.calcite.rel.RelFieldCollation.Direction; // 排序方向枚举(ASC/DESC)
+import org.apache.calcite.rel.RelFieldCollation.NullDirection; // 空值排序方向枚举(NULLS FIRST/LAST)
+import org.apache.calcite.rel.RelNode; // 关系节点基类,表示关系代数树中的一个节点
+import org.apache.calcite.rel.core.JoinRelType; // 连接关系类型(INNER/LEFT/RIGHT/FULL等)
+import org.apache.calcite.rel.hint.HintPredicates; // 提示谓词工具类
+import org.apache.calcite.rel.hint.HintStrategyTable; // 提示策略表
+import org.apache.calcite.rel.hint.RelHint; // 关系提示接口
+import org.apache.calcite.rel.logical.LogicalAggregate; // 逻辑聚合节点
+import org.apache.calcite.rel.logical.LogicalFilter; // 逻辑过滤节点
+import org.apache.calcite.rel.rules.AggregateJoinTransposeRule; // 聚合连接转置规则
+import org.apache.calcite.rel.rules.AggregateProjectMergeRule; // 聚合投影合并规则
+import org.apache.calcite.rel.rules.CoreRules; // 核心规则集合
+import org.apache.calcite.rel.rules.FilterJoinRule; // 过滤连接规则
+import org.apache.calcite.rel.rules.ProjectOverSumToSum0Rule; // 投影SUM转SUM0规则
+import org.apache.calcite.rel.rules.ProjectToWindowRule; // 投影转窗口规则
+import org.apache.calcite.rel.rules.PruneEmptyRules; // 剪枝空规则
+import org.apache.calcite.rel.type.RelDataType; // 关系数据类型接口
+import org.apache.calcite.rel.type.RelDataTypeFactory; // 关系数据类型工厂
+import org.apache.calcite.rel.type.RelDataTypeSystem; // 关系数据类型系统接口
+import org.apache.calcite.rel.type.RelDataTypeSystemImpl; // 关系数据类型系统默认实现
+import org.apache.calcite.runtime.FlatLists; // 扁平列表工具类,用于创建不可变列表
+import org.apache.calcite.runtime.Hook; // 钩子机制,用于在特定点插入自定义逻辑
+import org.apache.calcite.schema.SchemaPlus; // 模式扩展接口,用于添加表和函数
+import org.apache.calcite.sql.SqlCall; // SQL调用表达式
+import org.apache.calcite.sql.SqlDialect; // SQL方言基类,用于生成特定数据库的SQL
+import org.apache.calcite.sql.SqlDialect.DatabaseProduct; // 数据库产品枚举,代表各种数据库
+import org.apache.calcite.sql.SqlNode; // SQL节点基类,表示SQL语法树的节点
+import org.apache.calcite.sql.SqlSelect; // SQL SELECT语句节点
+import org.apache.calcite.sql.SqlWriter; // SQL写入器,用于将SQL节点转换为字符串
+import org.apache.calcite.sql.SqlWriterConfig; // SQL写入器配置
+import org.apache.calcite.sql.dialect.AnsiSqlDialect; // ANSI标准SQL方言
+import org.apache.calcite.sql.dialect.BigQuerySqlDialect; // Google BigQuery SQL方言
+import org.apache.calcite.sql.dialect.CalciteSqlDialect; // Calcite默认SQL方言
+import org.apache.calcite.sql.dialect.ClickHouseSqlDialect; // ClickHouse SQL方言
+import org.apache.calcite.sql.dialect.DuckDBSqlDialect; // DuckDB SQL方言
+import org.apache.calcite.sql.dialect.HiveSqlDialect; // Apache Hive SQL方言
+import org.apache.calcite.sql.dialect.JethroDataSqlDialect; // JethroData SQL方言
+import org.apache.calcite.sql.dialect.MssqlSqlDialect; // Microsoft SQL Server SQL方言
+import org.apache.calcite.sql.dialect.MysqlSqlDialect; // MySQL SQL方言
+import org.apache.calcite.sql.dialect.OracleSqlDialect; // Oracle SQL方言
+import org.apache.calcite.sql.dialect.PhoenixSqlDialect; // Apache Phoenix SQL方言
+import org.apache.calcite.sql.dialect.PostgresqlSqlDialect; // PostgreSQL SQL方言
+import org.apache.calcite.sql.dialect.PrestoSqlDialect; // Presto SQL方言
+import org.apache.calcite.sql.dialect.SqliteSqlDialect; // SQLite SQL方言
+import org.apache.calcite.sql.fun.SqlLibrary; // SQL函数库枚举,定义各种SQL函数库
+import org.apache.calcite.sql.fun.SqlStdOperatorTable; // 标准SQL操作符表,定义所有标准SQL操作符
+import org.apache.calcite.sql.parser.SqlParser; // SQL解析器,用于将SQL字符串解析为SQL语法树
+import org.apache.calcite.sql.type.SqlTypeFactoryImpl; // SQL类型工厂默认实现
+import org.apache.calcite.sql.type.SqlTypeName; // SQL类型名称枚举,定义所有SQL数据类型
+import org.apache.calcite.sql.util.SqlShuttle; // SQL遍历器,用于遍历和修改SQL语法树
+import org.apache.calcite.sql.validate.SqlConformance; // SQL一致性接口,定义SQL标准符合性
+import org.apache.calcite.sql.validate.SqlConformanceEnum; // SQL一致性枚举实现
+import org.apache.calcite.sql2rel.SqlToRelConverter; // SQL到关系代数转换器,将SQL解析为关系代数树
+import org.apache.calcite.test.CalciteAssert; // Calcite断言工具类,用于测试SQL到关系代数的转换
+import org.apache.calcite.test.MockSqlOperatorTable; // 模拟SQL操作符表,用于测试
+import org.apache.calcite.test.RelBuilderTest; // RelBuilder测试工具类
+import org.apache.calcite.tools.FrameworkConfig; // 框架配置类,用于配置Calcite框架
+import org.apache.calcite.tools.Frameworks; // 框架工具类,用于创建规划器和RelBuilder
+import org.apache.calcite.tools.Planner; // 规划器接口,用于SQL解析和优化
+import org.apache.calcite.tools.Program; // 程序接口,用于执行优化规则
+import org.apache.calcite.tools.Programs; // 程序工具类,包含常用优化程序
+import org.apache.calcite.tools.RelBuilder; // 关系构建器,用于构建关系代数树
+import org.apache.calcite.tools.RuleSet; // 规则集合接口,包含一组优化规则
+import org.apache.calcite.tools.RuleSets; // 规则集合工具类,用于创建规则集
+import org.apache.calcite.util.ConversionUtil; // 转换工具类,处理字符编码转换
+import org.apache.calcite.util.ImmutableBitSet; // 不可变位集合,用于表示字段索引集合
+import org.apache.calcite.util.TestUtil; // 测试工具类,提供测试辅助方法
+import org.apache.calcite.util.Util; // 通用工具类,提供各种实用方法
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList; // 不可变列表实现
+import com.google.common.collect.ImmutableMap; // 不可变Map实现
+import com.google.common.collect.ImmutableSet; // 不可变Set实现
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.junit.jupiter.api.Test;
+import org.checkerframework.checker.nullness.qual.Nullable; // 可空注解,标记参数或返回值可能为null
+import org.junit.jupiter.api.Test; // JUnit 5测试方法注解,标记测试方法
 
-import java.math.BigDecimal;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.math.BigDecimal; // 大十进制数类,用于精确的十进制计算
+import java.util.Collection; // 集合接口
+import java.util.List; // 列表接口
+import java.util.Map; // Map接口
+import java.util.Set; // Set接口
+import java.util.function.Consumer; // 消费者函数式接口
+import java.util.function.Function; // 函数式接口
+import java.util.function.UnaryOperator; // 一元操作符函数式接口
+import java.util.stream.Collectors; // 流收集器工具类
+import java.util.stream.IntStream; // 整数流工具类
 
 import static org.apache.calcite.test.Matchers.isLinux;
 
@@ -123,7 +123,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for {@link RelToSqlConverter}.
  */
-class RelToSqlConverterTest {
+class RelToSqlConverterTest { // RelToSqlConverter的测试类
 
   private Sql fixture() {
     return new Sql(CalciteAssert.SchemaSpec.JDBC_FOODMART, "?",

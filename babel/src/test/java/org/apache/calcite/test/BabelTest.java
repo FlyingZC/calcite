@@ -53,16 +53,16 @@ import static org.hamcrest.MatcherAssert.assertThat;  // 导入断言工具类�
 /**
  * Unit tests for Babel framework.
  * Babel框架的单元测试类
- * 
+ *
  * 这个测试类专门用于测试Calcite的Babel框架，Babel框架是Calcite中用于支持多种SQL方言的解析和验证框架
  * 主要测试内容包括：
  * 1. PostgreSQL风格的中缀类型转换语法（如 x::integer）
  * 2. POSIX正则表达式操作符（如 ~, ~*, !~, !~*）
  * 3. 不同SQL方言的解析器功能（如MySQL、PostgreSQL、MSSQL等）
  * 4. 自定义时间帧支持（DATEADD、DATEDIFF、DATEPART、DATE_PART函数）
- * 5. MySQL的空值安全比较操作符（<=>）
+ * 5. MySQL的空值安全比较操作符（<->）
  * 6. Spark风格的LEFT SEMI JOIN和LEFT ANTI JOIN语法
- * 
+ *
  * 该类使用JUnit 5测试框架，通过CalciteAssert工具类来执行SQL语句并验证结果
  */
 class BabelTest {  // 定义BabelTest测试类，用于测试Babel框架的各种功能
@@ -280,33 +280,33 @@ class BabelTest {  // 定义BabelTest测试类，用于测试Babel框架的各�
         .ok();  // 应该成功
   }  // 测试方法结束
 
-  // 测试方法：测试MySQL的空值安全比较操作符<=>
-  // <=>操作符的特点是：如果两个操作数都为NULL，则返回true；如果只有一个为NULL，则返回false
+  // 测试方法：测试MySQL的空值安全比较操作符<->
+  // <->操作符的特点是：如果两个操作数都为NULL，则返回true；如果只有一个为NULL，则返回false
   // 这与普通的=操作符不同，=操作符在遇到NULL时返回NULL而不是true或false
   @Test void testNullSafeEqual() {  // 定义测试方法，测试空值安全比较操作符
-    // x <=> y
+    // x <-> y
     // 注释说明：测试基本的空值安全比较
-    checkSqlResult("mysql", "SELECT 1 <=> NULL", "EXPR$0=false\n");  // 测试1 <=> NULL，应该返回false
-    checkSqlResult("mysql", "SELECT NULL <=> NULL", "EXPR$0=true\n");  // 测试NULL <=> NULL，应该返回true
-    // (a, b) <=> (x, y)
+    checkSqlResult("mysql", "SELECT 1 <-> NULL", "EXPR$0=false\n");  // 测试1 <-> NULL，应该返回false
+    checkSqlResult("mysql", "SELECT NULL <-> NULL", "EXPR$0=true\n");  // 测试NULL <-> NULL，应该返回true
+    // (a, b) <-> (x, y)
     // 注释说明：测试元组的空值安全比较
     checkSqlResult("mysql",  // 测试元组比较，一个元组有NULL，另一个元组有NULL但位置不同
-        "SELECT (CAST(NULL AS Integer), 1) <=> (1, CAST(NULL AS Integer))",  // 元组1有NULL在第一个位置，元组2有NULL在第二个位置
+        "SELECT (CAST(NULL AS Integer), 1) <-> (1, CAST(NULL AS Integer))",  // 元组1有NULL在第一个位置，元组2有NULL在第二个位置
         "EXPR$0=false\n");  // 应该返回false，因为NULL的位置不同
     checkSqlResult("mysql",  // 测试两个元组都有NULL且位置相同
         "SELECT (CAST(NULL AS Integer), CAST(NULL AS Integer))\n"  // 元组1的两个元素都是NULL
-            + "<=> (CAST(NULL AS Integer), CAST(NULL AS Integer))",  // 元组2的两个元素也都是NULL
+            + "<-> (CAST(NULL AS Integer), CAST(NULL AS Integer))",  // 元组2的两个元素也都是NULL
         "EXPR$0=true\n");  // 应该返回true，因为两个元组完全相同
     // the higher precedence
     // 注释说明：测试<= >操作符的较高优先级
-    checkSqlResult("mysql",  // 测试<=>的优先级高于+
-        "SELECT x <=> 1 + 3 FROM (VALUES (1, 2)) as tbl(x,y)",  // 查询中x <=> (1 + 3)，因为<=>优先级高于+
-        "EXPR$0=false\n");  // x=1，1+3=4，1<=>4返回false
+    checkSqlResult("mysql",  // 测试<->的优先级高于+
+        "SELECT x <-> 1 + 3 FROM (VALUES (1, 2)) as tbl(x,y)",  // 查询中x <-> (1 + 3)，因为<->优先级高于+
+        "EXPR$0=false\n");  // x=1，1+3=4，1<->4返回false
     // the lower precedence
-    // 注释说明：测试<=>操作符的较低优先级
-    checkSqlResult("mysql",  // 测试<=>的优先级低于NOT
-        "SELECT NOT x <=> 1 FROM (VALUES (1, 2)) as tbl(x,y)",  // 查询中NOT (x <=> 1)，因为NOT优先级高于<=>（实际上是NOT结合更紧密）
-        "EXPR$0=false\n");  // x=1，1<=>1返回true，NOT true返回false
+    // 注释说明：测试<->操作符的较低优先级
+    checkSqlResult("mysql",  // 测试<->的优先级低于NOT
+        "SELECT NOT x <-> 1 FROM (VALUES (1, 2)) as tbl(x,y)",  // 查询中NOT (x <-> 1)，因为NOT优先级高于<->（实际上是NOT结合更紧密）
+        "EXPR$0=false\n");  // x=1，1<->1返回true，NOT true返回false
   }  // 测试方法结束
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6030">

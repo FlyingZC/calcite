@@ -180,7 +180,7 @@ public class AggregateCaseToFilterRule
     if (call.isDistinct()) {
       // Just one style supported:
       //   COUNT(DISTINCT CASE WHEN x = 'foo' THEN y END)
-      // =>
+      // ->
       //   COUNT(DISTINCT y) FILTER(WHERE x = 'foo')
 
       if (kind == SqlKind.COUNT
@@ -199,13 +199,13 @@ public class AggregateCaseToFilterRule
     // Four styles supported:
     //
     // A1: AGG(CASE WHEN x = 'foo' THEN expr END)
-    //   => AGG(expr) FILTER (x = 'foo')
+    //   -> AGG(expr) FILTER (x = 'foo')
     // A2: SUM0(CASE WHEN x = 'foo' THEN cnt ELSE 0 END)
-    //   => SUM0(cnt) FILTER (x = 'foo')
+    //   -> SUM0(cnt) FILTER (x = 'foo')
     // B: SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
-    //   => COUNT() FILTER (x = 'foo')
+    //   -> COUNT() FILTER (x = 'foo')
     // C: COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
-    //   => COUNT() FILTER (x = 'foo')
+    //   -> COUNT() FILTER (x = 'foo')
 
     final SqlParserPos pos = call.getParserPosition();
     if (kind == SqlKind.COUNT // Case C

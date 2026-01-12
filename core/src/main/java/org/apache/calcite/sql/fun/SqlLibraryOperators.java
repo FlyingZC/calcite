@@ -2690,11 +2690,11 @@ public abstract class SqlLibraryOperators {
       new SqlItemOperator("SAFE_ORDINAL", OperandTypes.ARRAY, 1, true);
 
   /** NULL-safe "&lt;=&gt;" equal operator used by MySQL, for example
-   * {@code 1<=>NULL}. */
+   * {@code 1<->NULL}. */
   @LibraryOperator(libraries = { MYSQL })
   public static final SqlOperator NULL_SAFE_EQUAL =
       new SqlBinaryOperator(
-          "<=>",
+          "<->",
           SqlKind.IS_NOT_DISTINCT_FROM,
           30,
           true,

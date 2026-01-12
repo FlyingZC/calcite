@@ -94,10 +94,10 @@ import static java.util.Objects.requireNonNull; // 导入Objects工具类的requ
  * Utilities for generating programs in the Enumerable (functional)
  * style.
  * 用于生成可枚举（函数式）风格程序的工具类。
- * 
+ *
  * 这个类提供了许多静态方法，用于在Calcite的Enumerable适配器中生成Java代码。
  * 它是Calcite将关系代数转换为可执行的Java代码的核心工具类之一。
- * 
+ *
  * 主要功能包括：
  * 1. 类型转换：在Calcite内部类型和Java类型之间进行转换
  * 2. 表达式生成：生成各种Java表达式，如方法调用、类型转换等
@@ -1041,4 +1041,545 @@ public class EnumUtils { // 类声明：EnumUtils工具类，提供生成可枚�
           // 继续尝试类型转换匹配
           final List<? extends Expression> typeMatchedArguments = // 尝试类型转换匹配
               matchMethodParameterTypes(varArgs, parameterTypes, arguments);
-          if (typeMatchedArguments != null) { // 如果匹配成功
+          if (typeMatchedArguments != null) {
+            return Expressions.call(targetExpression, method, typeMatchedArguments);
+          }
+        }
+      }
+      throw new RuntimeException("while resolving method '" + methodName
+          + Arrays.toString(argumentTypes) + "' in class " + clazz, e);
+    }
+  }
+
+  private static @Nullable List<? extends Expression> matchMethodParameterTypes(boolean varArgs,
+      Class<?>[] parameterTypes, List<? extends Expression> arguments) {
+    if ((varArgs  && arguments.size() < parameterTypes.length - 1)
+        || (!varArgs && arguments.size() != parameterTypes.length)) {
+      return null;
+    }
+    final List<Expression> typeMatchedArguments = new ArrayList<>();
+    for (int i = 0; i < arguments.size(); i++) {
+      Class<?> parameterType =
+          !varArgs || i < parameterTypes.length - 1
+              ? parameterTypes[i]
+              : Object.class;
+      final Expression typeMatchedArgument =
+          matchMethodParameterType(arguments.get(i), parameterType);
+      if (typeMatchedArgument == null) {
+        return null;
+      }
+      typeMatchedArguments.add(typeMatchedArgument);
+    }
+    return typeMatchedArguments;
+  }
+
+  /**
+   * Matches an argument expression to method parameter type with best effort.
+   *
+   * @param argument Argument Expression
+   * @param parameter Parameter type
+   * @return Converted argument expression that matches the parameter type.
+   *         Returns null if it is impossible to match.
+   */
+  private static @Nullable Expression matchMethodParameterType(
+      Expression argument, Class<?> parameter) {
+    Type argumentType = argument.getType();
+    if (Types.isAssignableFrom(parameter, argumentType)) {
+      return argument;
+    }
+    // Object.class is not assignable from primitive types,
+    // but the method with Object parameters can accept primitive types.
+    // E.g., "array(Object... args)" in SqlFunctions
+    if (parameter == Object.class
+        && Primitive.of(argumentType) != null) {
+      return argument;
+    }
+    // Convert argument with Object.class type to parameter explicitly
+    if (argumentType == Object.class
+        && Primitive.of(argumentType) == null) {
+      return convert(argument, parameter);
+    }
+    // assignable types that can be accepted with explicit conversion
+    if (parameter == BigDecimal.class
+        && Primitive.ofBoxOr(argumentType) != null) {
+      return convert(argument, parameter);
+    }
+    return null;
+  }
+
+  /** Transforms a JoinRelType to Linq4j JoinType. */
+  static JoinType toLinq4jJoinType(JoinRelType joinRelType) {
+    switch (joinRelType) {
+    case INNER:
+      return JoinType.INNER;
+    case LEFT:
+      return JoinType.LEFT;
+    case RIGHT:
+      return JoinType.RIGHT;
+    case FULL:
+      return JoinType.FULL;
+    case SEMI:
+      return JoinType.SEMI;
+    case ANTI:
+      return JoinType.ANTI;
+    case ASOF:
+      return JoinType.ASOF;
+    case LEFT_ASOF:
+      return JoinType.LEFT_ASOF;
+    default:
+      break;
+    }
+    throw new IllegalStateException(
+        "Unable to convert " + joinRelType + " to Linq4j JoinType");
+  }
+
+  /** Returns a predicate expression based on a join condition. */
+  static Expression generatePredicate(
+      EnumerableRelImplementor implementor,
+      RexBuilder rexBuilder,
+      RelNode left,
+      RelNode right,
+      PhysType leftPhysType,
+      PhysType rightPhysType,
+      RexNode condition) {
+    final BlockBuilder builder = new BlockBuilder();
+    final ParameterExpression left_ =
+        Expressions.parameter(leftPhysType.getJavaRowType(), "left");
+    final ParameterExpression right_ =
+        Expressions.parameter(rightPhysType.getJavaRowType(), "right");
+    final RexProgramBuilder program =
+        new RexProgramBuilder(
+            implementor.getTypeFactory().builder()
+                .addAll(left.getRowType().getFieldList())
+                .addAll(right.getRowType().getFieldList())
+                .build(),
+            rexBuilder);
+    program.addCondition(condition);
+    builder.add(
+        Expressions.return_(null,
+            RexToLixTranslator.translateCondition(program.getProgram(),
+                implementor.getTypeFactory(),
+                builder,
+                new RexToLixTranslator.InputGetterImpl(
+                    ImmutableMap.of(left_, leftPhysType,
+                        right_, rightPhysType)),
+                implementor.allCorrelateVariables,
+                implementor.getConformance())));
+    return Expressions.lambda(Predicate2.class, builder.toBlock(), left_, right_);
+  }
+
+  /**
+   * Generates a window selector which appends attribute of the window based on
+   * the parameters.
+   *
+   * <p>Note that it only works for batch scenario. E.g. all data is known and
+   * there is no late data.
+   */
+  static Expression tumblingWindowSelector(
+      PhysType inputPhysType,
+      PhysType outputPhysType,
+      Expression wmColExpr,
+      Expression windowSizeExpr,
+      Expression offsetExpr) {
+    // Generate all fields.
+    final List<Expression> expressions = new ArrayList<>();
+    // If input item is just a primitive, we do not generate specialized
+    // primitive apply override since it won't be called anyway
+    // Function<T> always operates on boxed arguments
+    final ParameterExpression parameter =
+        Expressions.parameter(Primitive.box(inputPhysType.getJavaRowType()), "_input");
+    final int fieldCount = inputPhysType.getRowType().getFieldCount();
+    for (int i = 0; i < fieldCount; i++) {
+      Expression expression =
+          inputPhysType.fieldReference(parameter, i,
+              outputPhysType.getJavaFieldType(expressions.size()));
+      expressions.add(expression);
+    }
+    final Expression wmColExprToLong = EnumUtils.convert(wmColExpr, long.class);
+
+    // Find the fixed window for a timestamp given a window size and an offset, and return the
+    // window start.
+    // wmColExprToLong - (wmColExprToLong + windowSizeMillis - offsetMillis) % windowSizeMillis
+    Expression windowStartExpr =
+        Expressions.subtract(wmColExprToLong,
+            Expressions.modulo(
+                Expressions.add(wmColExprToLong,
+                    Expressions.subtract(windowSizeExpr, offsetExpr)),
+                windowSizeExpr));
+
+    expressions.add(windowStartExpr);
+
+    // The window end equals to the window start plus window size.
+    // windowStartMillis + sizeMillis
+    Expression windowEndExpr =
+        Expressions.add(windowStartExpr, windowSizeExpr);
+
+    expressions.add(windowEndExpr);
+
+    return Expressions.lambda(Function1.class,
+        outputPhysType.record(expressions), parameter);
+  }
+
+  /**
+   * Creates enumerable implementation that applies sessionization to elements from the input
+   * enumerator based on a specified key. Elements are windowed into sessions separated by
+   * periods with no input for at least the duration specified by gap parameter.
+   */
+  public static Enumerable<@Nullable Object[]> sessionize(
+      Enumerator<@Nullable Object[]> inputEnumerator,
+      int indexOfWatermarkedColumn, int indexOfKeyColumn, long gap) {
+    return new AbstractEnumerable<@Nullable Object[]>() {
+      @Override public Enumerator<@Nullable Object[]> enumerator() {
+        return new SessionizationEnumerator(inputEnumerator,
+            indexOfWatermarkedColumn, indexOfKeyColumn, gap);
+      }
+    };
+  }
+
+  /** Enumerator that converts rows into sessions separated by gaps. */
+  private static class SessionizationEnumerator implements Enumerator<@Nullable Object[]> {
+    private final Enumerator<@Nullable Object[]> inputEnumerator;
+    private final int indexOfWatermarkedColumn;
+    private final int indexOfKeyColumn;
+    private final long gap;
+    private final Deque<@Nullable Object[]> list;
+    private boolean initialized;
+
+    /**
+     * Note that it only works for batch scenario. E.g. all data is known and there is no
+     * late data.
+     *
+     * @param inputEnumerator the enumerator to provide an array of objects as input
+     * @param indexOfWatermarkedColumn the index of timestamp column upon which a watermark is built
+     * @param indexOfKeyColumn the index of column that acts as grouping key
+     * @param gap gap parameter
+     */
+    SessionizationEnumerator(Enumerator<@Nullable Object[]> inputEnumerator,
+        int indexOfWatermarkedColumn, int indexOfKeyColumn, long gap) {
+      this.inputEnumerator = inputEnumerator;
+      this.indexOfWatermarkedColumn = indexOfWatermarkedColumn;
+      this.indexOfKeyColumn = indexOfKeyColumn;
+      this.gap = gap;
+      list = new ArrayDeque<>();
+      initialized = false;
+    }
+
+    @Override public @Nullable Object[] current() {
+      if (!initialized) {
+        initialize();
+        initialized = true;
+      }
+      return list.removeFirst();
+    }
+
+    @Override public boolean moveNext() {
+      return initialized ? !list.isEmpty() : inputEnumerator.moveNext();
+    }
+
+    @Override public void reset() {
+      list.clear();
+      inputEnumerator.reset();
+      initialized = false;
+    }
+
+    @Override public void close() {
+      list.clear();
+      inputEnumerator.close();
+      initialized = false;
+    }
+
+    private void initialize() {
+      List<@Nullable Object[]> elements = new ArrayList<>();
+      // initialize() will be called when inputEnumerator.moveNext() is true,
+      // thus firstly should take the current element.
+      elements.add(inputEnumerator.current());
+      // sessionization needs to see all data.
+      while (inputEnumerator.moveNext()) {
+        elements.add(inputEnumerator.current());
+      }
+
+      Map<@Nullable Object, SortedMultiMap<Pair<Long, Long>, @Nullable Object[]>> sessionKeyMap =
+          new HashMap<>();
+      for (@Nullable Object[] element : elements) {
+        SortedMultiMap<Pair<Long, Long>, @Nullable Object[]> session =
+            sessionKeyMap.computeIfAbsent(element[indexOfKeyColumn], k -> new SortedMultiMap<>());
+        Object watermark =
+            requireNonNull(element[indexOfWatermarkedColumn],
+                "element[indexOfWatermarkedColumn]");
+        Pair<Long, Long> initWindow =
+            computeInitWindow(SqlFunctions.toLong(watermark), gap);
+        session.putMulti(initWindow, element);
+      }
+
+      // merge per key session windows if there is any overlap between windows.
+      for (Map.Entry<@Nullable Object, SortedMultiMap<Pair<Long, Long>, @Nullable Object[]>>
+          perKeyEntry : sessionKeyMap.entrySet()) {
+        Map<Pair<Long, Long>, List<@Nullable Object[]>> finalWindowElementsMap = new HashMap<>();
+        Pair<Long, Long> currentWindow = null;
+        List<@Nullable Object[]> tempElementList = new ArrayList<>();
+        for (Map.Entry<Pair<Long, Long>, List<@Nullable Object[]>> sessionEntry
+            : perKeyEntry.getValue().entrySet()) {
+          // check the next window can be merged.
+          if (currentWindow == null || !isOverlapped(currentWindow, sessionEntry.getKey())) {
+            // cannot merge window as there is no overlap
+            if (currentWindow != null) {
+              finalWindowElementsMap.put(currentWindow, new ArrayList<>(tempElementList));
+            }
+
+            currentWindow = sessionEntry.getKey();
+            tempElementList.clear();
+            tempElementList.addAll(sessionEntry.getValue());
+          } else {
+            // merge windows.
+            currentWindow = mergeWindows(currentWindow, sessionEntry.getKey());
+            // merge elements in windows.
+            tempElementList.addAll(sessionEntry.getValue());
+          }
+        }
+
+        if (!tempElementList.isEmpty()) {
+          requireNonNull(currentWindow, "currentWindow is null");
+          finalWindowElementsMap.put(currentWindow, new ArrayList<>(tempElementList));
+        }
+
+        // construct final results from finalWindowElementsMap.
+        for (Map.Entry<Pair<Long, Long>, List<@Nullable Object[]>> finalWindowElementsEntry
+            : finalWindowElementsMap.entrySet()) {
+          for (@Nullable Object[] element : finalWindowElementsEntry.getValue()) {
+            @Nullable Object[] curWithWindow = new Object[element.length + 2];
+            System.arraycopy(element, 0, curWithWindow, 0, element.length);
+            curWithWindow[element.length] = finalWindowElementsEntry.getKey().left;
+            curWithWindow[element.length + 1] = finalWindowElementsEntry.getKey().right;
+            list.offer(curWithWindow);
+          }
+        }
+      }
+    }
+
+    private static boolean isOverlapped(Pair<Long, Long> a, Pair<Long, Long> b) {
+      return !(b.left >= a.right);
+    }
+
+    private static Pair<Long, Long> mergeWindows(Pair<Long, Long> a, Pair<Long, Long> b) {
+      return new Pair<>(a.left <= b.left ? a.left : b.left, a.right >= b.right ? a.right : b.right);
+    }
+
+    private static Pair<Long, Long> computeInitWindow(long ts, long gap) {
+      return new Pair<>(ts, ts + gap);
+    }
+  }
+
+  /**
+   * Create enumerable implementation that applies hopping on each element from the input
+   * enumerator and produces at least one element for each input element.
+   */
+  public static Enumerable<@Nullable Object[]> hopping(
+      Enumerator<@Nullable Object[]> inputEnumerator,
+      int indexOfWatermarkedColumn, long emitFrequency, long windowSize, long offset) {
+    return new AbstractEnumerable<@Nullable Object[]>() {
+      @Override public Enumerator<@Nullable Object[]> enumerator() {
+        return new HopEnumerator(inputEnumerator,
+            indexOfWatermarkedColumn, emitFrequency, windowSize, offset);
+      }
+    };
+  }
+
+  /** Enumerator that computes HOP. */
+  private static class HopEnumerator implements Enumerator<@Nullable Object[]> {
+    private final Enumerator<@Nullable Object[]> inputEnumerator;
+    private final int indexOfWatermarkedColumn;
+    private final long emitFrequency;
+    private final long windowSize;
+    private final long offset;
+    private final Deque<@Nullable Object[]> list;
+
+    /**
+     * Note that it only works for batch scenario. E.g. all data is known and there is no late data.
+     *
+     * @param inputEnumerator the enumerator to provide an array of objects as input
+     * @param indexOfWatermarkedColumn the index of timestamp column upon which a watermark is built
+     * @param slide sliding size
+     * @param windowSize window size
+     * @param offset indicates how much windows should off
+     */
+    HopEnumerator(Enumerator<@Nullable Object[]> inputEnumerator,
+        int indexOfWatermarkedColumn, long slide, long windowSize, long offset) {
+      this.inputEnumerator = inputEnumerator;
+      this.indexOfWatermarkedColumn = indexOfWatermarkedColumn;
+      this.emitFrequency = slide;
+      this.windowSize = windowSize;
+      this.offset = offset;
+      list = new ArrayDeque<>();
+    }
+
+    @Override public @Nullable Object[] current() {
+      if (!list.isEmpty()) {
+        return takeOne();
+      } else {
+        @Nullable Object[] current = inputEnumerator.current();
+        Object watermark =
+            requireNonNull(current[indexOfWatermarkedColumn],
+                "element[indexOfWatermarkedColumn]");
+        PairList<Long, Long> windows =
+            hopWindows(SqlFunctions.toLong(watermark), emitFrequency,
+                windowSize, offset);
+        windows.forEach((left, right) -> {
+          @Nullable Object[] curWithWindow = new Object[current.length + 2];
+          System.arraycopy(current, 0, curWithWindow, 0, current.length);
+          curWithWindow[current.length] = left;
+          curWithWindow[current.length + 1] = right;
+          list.offer(curWithWindow);
+        });
+        return takeOne();
+      }
+    }
+
+    @Override public boolean moveNext() {
+      return !list.isEmpty() || inputEnumerator.moveNext();
+    }
+
+    @Override public void reset() {
+      inputEnumerator.reset();
+      list.clear();
+    }
+
+    @Override public void close() {
+    }
+
+    private @Nullable Object[] takeOne() {
+      return requireNonNull(list.pollFirst(), "list.pollFirst()");
+    }
+  }
+
+  private static PairList<Long, Long> hopWindows(long tsMillis,
+      long periodMillis, long sizeMillis, long offsetMillis) {
+    PairList<Long, Long> ret =
+        PairList.withCapacity(Math.toIntExact(sizeMillis / periodMillis));
+    long lastStart =
+        tsMillis - ((tsMillis + periodMillis - offsetMillis) % periodMillis);
+    for (long start = lastStart;
+         start > tsMillis - sizeMillis;
+         start -= periodMillis) {
+      ret.add(start, start + sizeMillis);
+    }
+    return ret;
+  }
+
+  /**
+   * Apply tumbling per row from the enumerable input.
+   */
+  public static <TSource, TResult> Enumerable<TResult> tumbling(
+      Enumerable<TSource> inputEnumerable,
+      Function1<TSource, TResult> outSelector) {
+    return new AbstractEnumerable<TResult>() {
+      // Applies tumbling on each element from the input enumerator and produces
+      // exactly one element for each input element.
+      @Override public Enumerator<TResult> enumerator() {
+        return new Enumerator<TResult>() {
+          final Enumerator<TSource> inputs = inputEnumerable.enumerator();
+
+          @Override public TResult current() {
+            return outSelector.apply(inputs.current());
+          }
+
+          @Override public boolean moveNext() {
+            return inputs.moveNext();
+          }
+
+          @Override public void reset() {
+            inputs.reset();
+          }
+
+          @Override public void close() {
+            inputs.close();
+          }
+        };
+      }
+    };
+  }
+
+  public static @Nullable Expression generateCollatorExpression(@Nullable SqlCollation collation) {
+    if (collation == null) {
+      return null;
+    }
+    Collator collator = collation.getCollator();
+    if (collator == null) {
+      return null;
+    }
+
+    // Utilities.generateCollator(
+    //      new Locale(
+    //          collation.getLocale().getLanguage(),
+    //          collation.getLocale().getCountry(),
+    //          collation.getLocale().getVariant()),
+    //      collation.getCollator().getStrength());
+    final Locale locale = collation.getLocale();
+    final int strength = collator.getStrength();
+    return Expressions.call(
+        Utilities.class,
+        "generateCollator",
+        Expressions.new_(
+            Locale.class,
+            Expressions.constant(locale.getLanguage()),
+            Expressions.constant(locale.getCountry()),
+            Expressions.constant(locale.getVariant())),
+        Expressions.constant(strength));
+  }
+
+  /** Returns a function that converts an internal value to an external
+   * value.
+   *
+   * <p>Datetime values' internal representations have no time zone,
+   * and their external values are moments (relative to UTC epoch),
+   * so the {@code timeZone} parameter supplies the implicit time zone of
+   * the internal representation. If you specify the local time zone of the
+   * JVM, then {@link Timestamp#toString}, {@link Date#toString()}, and
+   * {@link Time#toString()} on the external values will give a value
+   * consistent with the internal values. */
+  public static Function<Object, Object> toExternal(RelDataType type,
+      TimeZone timeZone) {
+    switch (type.getSqlTypeName()) {
+    case DATE:
+      return o -> {
+        int d = (Integer) o;
+        long v = d * DateTimeUtils.MILLIS_PER_DAY;
+        v -= timeZone.getOffset(v);
+        return new Date(v);
+      };
+    case TIME:
+      return o -> {
+        long v = (Integer) o;
+        v -= timeZone.getOffset(v);
+        return new Time(v % DateTimeUtils.MILLIS_PER_DAY);
+      };
+    case TIMESTAMP:
+      return o -> {
+        long v = (Long) o;
+        v -= timeZone.getOffset(v);
+        return new Timestamp(v);
+      };
+    default:
+      return Function.identity();
+    }
+  }
+
+  /** Returns a function that converts an array of internal values to
+   * a list of external values. */
+  @SuppressWarnings("unchecked")
+  public static Function<@Nullable Object[], List<@Nullable Object>> toExternal(
+      List<RelDataType> types, TimeZone timeZone) {
+    final Function<Object, Object>[] functions = new Function[types.size()];
+    for (int i = 0; i < types.size(); i++) {
+      functions[i] = toExternal(types.get(i), timeZone);
+    }
+    final @Nullable Object[] objects = new @Nullable Object[types.size()];
+    return values -> {
+      for (int i = 0; i < values.length; i++) {
+        objects[i] = values[i] == null
+            ? null
+            : functions[i].apply(values[i]);
+      }
+      return Arrays.asList(objects.clone());
+    };
+  }
+}

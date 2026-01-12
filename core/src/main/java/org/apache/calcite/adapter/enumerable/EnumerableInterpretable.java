@@ -398,21 +398,21 @@ public class EnumerableInterpretable extends ConverterImpl
   }
 
   // 静态方法:将标量值的Bindable转换为数组形式的ArrayBindable
-  *
-  * 转换说明:
-  * 1. Bindable:每行返回单个标量值(当只有1个字段时)
-  * 2. ArrayBindable:每行返回Object[]数组(包含所有字段)
-  *
-  * 转换策略:
-  * - 如果输入已经是ArrayBindable,直接返回(无需转换)
-  * - 如果输入是Bindable,包装为ArrayBindable,将每个标量值包装为单元素数组
-  *
-  * 使用场景:
-  * - 统一数据格式,简化后续处理
-  * - 解释器节点需要数组形式的数据
-  *
-  * 参数bindable:要转换的Bindable对象(可能返回标量值)
-  * 返回值:包装后的ArrayBindable对象(每行返回单元素数组)
+  // *
+  // * 转换说明:
+  // * 1. Bindable:每行返回单个标量值(当只有1个字段时)
+  // * 2. ArrayBindable:每行返回Object[]数组(包含所有字段)
+  // *
+  // * 转换策略:
+  // * - 如果输入已经是ArrayBindable,直接返回(无需转换)
+  // * - 如果输入是Bindable,包装为ArrayBindable,将每个标量值包装为单元素数组
+  // *
+  // * 使用场景:
+  // * - 统一数据格式,简化后续处理
+  // * - 解释器节点需要数组形式的数据
+  // *
+  // * 参数bindable:要转换的Bindable对象(可能返回标量值)
+  // * 返回值:包装后的ArrayBindable对象(每行返回单元素数组)
   static ArrayBindable box(final Bindable bindable) {
     // 如果输入已经是ArrayBindable,直接返回
     // 这避免了不必要的包装
@@ -467,26 +467,26 @@ public class EnumerableInterpretable extends ConverterImpl
   }
 
   // 私有静态内部类:解释器节点,从Enumerable读取数据
-  *
-  * <p>从解释器的角度来看,这是一个叶子节点,因为它直接从数据源读取数据,
-  * 不再委托给其他解释器节点。
-  *
-  * 节点职责:
-  * 1. 从Enumerable数据源枚举数据
-  * 2. 将每行数据转换为Row对象
-  * 3. 将Row对象发送到Sink接收器
-  *
-  * 执行流程:
-  * 1. 创建Enumerator遍历Enumerable
-  * 2. 循环调用moveNext()移动到下一行
-  * 3. 获取当前行数据并包装为Row对象
-  * 4. 通过sink.send()发送到接收器
-  * 5. 直到数据遍历完成
-  *
-  * 使用场景:
-  * - 解释器执行模式下的数据源节点
-  * - 连接Enumerable和解释器执行引擎
-  */
+  // *
+  // * <p>从解释器的角度来看,这是一个叶子节点,因为它直接从数据源读取数据,
+  // * 不再委托给其他解释器节点。
+  // *
+  // * 节点职责:
+  // * 1. 从Enumerable数据源枚举数据
+  // * 2. 将每行数据转换为Row对象
+  // * 3. 将Row对象发送到Sink接收器
+  // *
+  // * 执行流程:
+  // * 1. 创建Enumerator遍历Enumerable
+  // * 2. 循环调用moveNext()移动到下一行
+  // * 3. 获取当前行数据并包装为Row对象
+  // * 4. 通过sink.send()发送到接收器
+  // * 5. 直到数据遍历完成
+  // *
+  // * 使用场景:
+  // * - 解释器执行模式下的数据源节点
+  // * - 连接Enumerable和解释器执行引擎
+  // */
   private static class EnumerableNode implements Node {
     // 可枚举的数据源,包含Object[]数组形式的数据行
     private final Enumerable<@Nullable Object[]> enumerable;

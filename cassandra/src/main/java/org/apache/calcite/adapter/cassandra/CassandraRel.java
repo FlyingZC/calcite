@@ -32,14 +32,14 @@ import java.util.Map;  // 导入 Map 接口，表示键值对映射
 /**
  * Relational expression that uses Cassandra calling convention.
  * 这个接口定义了使用 Cassandra 调用约定的关系表达式
- * 
+ *
  * 【类的作用】：
  * CassandraRel 是一个接口，所有需要转换为 Cassandra CQL 查询的关系表达式都必须实现这个接口
  * 它继承自 RelNode（Calcite 中所有关系表达式的基类），并添加了 Cassandra 特定的实现方法
- * 
+ *
  * 【设计模式】：
  * 使用了访问者模式（Visitor Pattern），Implementor 作为访问者，遍历关系表达式树并构建 CQL 查询
- * 
+ *
  * 【核心概念】：
  * 1. 关系表达式树：SQL 查询会被解析成一棵关系表达式树，每个节点代表一个操作（如扫描、过滤、投影等）
  * 2. 调用约定（Convention）：定义了关系表达式如何被实现，Cassandra 使用自己的调用约定
@@ -56,7 +56,7 @@ public interface CassandraRel extends RelNode {  // 定义 CassandraRel 接口�
 
   /** Calling convention for relational operations that occur in Cassandra.
    *  这是 Cassandra 关系操作的调用约定常量
-   *  
+   *
    *  【成员变量作用】：定义了 Cassandra 适配器的调用约定标识
    *  【调用约定概念】：在 Calcite 中，调用约定（Convention）用于区分不同的数据源和实现方式
    *                    例如：Cassandra 的调用约定是 "CASSANDRA"，JDBC 的调用约定是 "JDBC"
@@ -68,7 +68,7 @@ public interface CassandraRel extends RelNode {  // 定义 CassandraRel 接口�
   /** Callback for the implementation process that converts a tree of
    * {@link CassandraRel} nodes into a CQL query.
    *  这是实现过程的回调类，用于将 CassandraRel 节点树转换为 CQL 查询
-   *  
+   *
    *  【类的作用】：Implementor 是一个访问者类，负责遍历关系表达式树并收集构建 CQL 查询所需的所有信息
    *  【设计模式】：访问者模式（Visitor Pattern），Implementor 访问每个 CassandraRel 节点，收集查询信息
    *  【核心功能】：
@@ -165,9 +165,9 @@ public interface CassandraRel extends RelNode {  // 定义 CassandraRel 接口�
     //   - input: 子节点关系表达式
     // 【实现细节】：
     //   1. 断言 ordinal 必须为 0，确保只处理第一个子节点
-    *   2. 将 input 强制转换为 CassandraRel 类型
-    *   3. 调用子节点的 implement 方法，传入当前实现器，实现递归遍历
-    * 【设计目的】：通过递归遍历关系表达式树，从叶子节点到根节点逐步构建查询
+    //*   2. 将 input 强制转换为 CassandraRel 类型
+    //*   3. 调用子节点的 implement 方法，传入当前实现器，实现递归遍历
+    //* 【设计目的】：通过递归遍历关系表达式树，从叶子节点到根节点逐步构建查询
     public void visitChild(int ordinal, RelNode input) {  // 定义 visitChild 方法，用于访问子节点
       assert ordinal == 0;  // 断言子节点序号必须为 0，确保只处理第一个子节点
       ((CassandraRel) input).implement(this);  // 将子节点转换为 CassandraRel 并调用其 implement 方法，传入当前实现器

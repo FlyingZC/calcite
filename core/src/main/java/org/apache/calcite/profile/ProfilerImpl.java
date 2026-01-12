@@ -68,20 +68,20 @@ import static java.util.Objects.requireNonNull; // 导入：Java 对象非空校
  * Implementation of {@link Profiler} that only investigates "interesting"
  * combinations of columns.
  * Profiler 接口的实现类，只分析"有趣的"列组合
- * 
+ *
  * 类作用：ProfilerImpl 是 Calcite 中用于分析表数据统计信息的核心实现类。它的主要功能是：
  * 1. 扫描表数据，分析列的分布情况（基数、NULL 值数量等）
  * 2. 识别列之间的函数依赖关系（如 A 列的值可以确定 B 列的值）
  * 3. 发现唯一键（候选键）和超键
  * 4. 评估列组合的"意外性"（surprise），即实际基数与预期基数的差异
  * 5. 使用 HyperLogLog 算法进行基数估计，减少内存消耗
- * 
+ *
  * 核心设计思想：
  * - 采用多轮扫描策略，每轮只分析部分列组合，避免内存溢出
  * - 使用优先队列选择最"有趣"的列组合进行深入分析
  * - 使用偏序集合维护列组合之间的包含关系
  * - 动态切换收集器策略：精确收集（TreeSet）vs 近似估计（HyperLogLog）
- * 
+ *
  * 使用场景：
  * - 查询优化器需要了解表数据分布来选择最优执行计划
  * - 物化视图选择需要识别高基数的列组合
@@ -91,7 +91,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   /** The number of combinations to consider per pass.
    * The number is determined by memory, but a value of 1,000 is typical.
    * You need 2KB memory per sketch, and one sketch for each combination.
-   * 
+   *
    * 成员变量作用：每轮扫描中考虑的列组合数量
    * - 由内存限制决定，典型值为 1000
    * - 每个组合大约需要 2KB 内存（用于 HyperLogLog sketch）
@@ -102,7 +102,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   /** The minimum number of combinations considered "interesting". After that,
    * a combination is only considered "interesting" if its surprise is greater
    * than the median surprise.
-   * 
+   *
    * 成员变量作用：被认为是"有趣"的列组合的最小数量
    * - 在达到这个数量之前，所有列组合都被视为有趣的
    * - 超过这个数量后，只有意外性（surprise）高于中位数的组合才被认为有趣
@@ -112,7 +112,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   private final int interestingCount; // 被认为有趣的列组合的最小数量阈值
 
   /** Whether a successor is considered interesting enough to analyze.
-   * 
+   *
    * 成员变量作用：判断后继列组合是否足够有趣以进行分析的谓词
    * - 这是一个函数式接口，接受一个 Pair<Space, Column> 参数
    * - Space 表示当前的列组合空间
@@ -155,7 +155,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** A run of the profiler.
-   * 
+   *
    * 内部类作用：Profiler 的一次运行会话
    * - 每个 Run 对象代表一次完整的分析过程
    * - 负责协调多轮扫描、管理列组合队列、收集统计信息
@@ -171,13 +171,13 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
     // - 用于检查一个列组合是否包含另一个键（超键检测）
     // - 用于查找某个列组合的父键和子键
     // - 帮助识别非最小键和函数依赖
-    
+
     final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>(); // 成员变量：列组合到分布信息的映射
     // distributions 作用：存储所有已分析的列组合的统计分布信息
     // - 键：列的索引集合（ImmutableBitSet）
     // - 值：分布信息（Distribution），包含基数、NULL 值数、意外性等
     // - 用于后续的基数估计和意外性计算
-    
+
     /** List of spaces that have one column.
      * 成员变量作用：单列空间的列表
      * - 列表的每个元素对应一个单列的 Space 对象
@@ -186,11 +186,11 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
      * - 用于快速查找单列的统计信息和依赖关系
      */
     final List<@Nullable Space> singletonSpaces; // 单列空间列表，索引对应列序号
-    
+
     /** Combinations of columns that we have computed but whose successors have
      * not yet been computed. We may add some of those successors to
      * {@link #spaceQueue}.
-     * 
+     *
      * 成员变量作用：已完成计算但后继尚未计算的列组合队列
      * - 这是一个优先队列（PriorityQueue），按"有趣性"排序
      * - 队列中的每个 Space 对象表示一个已分析的列组合
@@ -212,11 +212,11 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
           }
           return c; // 返回比较结果
         });
-    
+
     final SurpriseQueue surprises; // 成员变量：意外性队列，用于维护最有趣的 N 个意外值
 
     /** Combinations of columns that we will compute next pass.
-     * 
+     *
      * 成员变量作用：下一轮将要计算的列组合队列
      * - 这是一个双端队列（ArrayDeque），支持高效的入队和出队
      * - 队列中的每个元素是列索引集合（ImmutableBitSet）
@@ -225,14 +225,14 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
      * - 确保每个列组合只被分析一次（通过 resultSet 去重）
      */
     final Deque<ImmutableBitSet> spaceQueue = new ArrayDeque<>(); // 下一轮分析的列组合队列
-    
+
     final List<Unique> uniques = new ArrayList<>(); // 成员变量：唯一键列表，存储所有发现的唯一键
     final List<FunctionalDependency> functionalDependencies = new ArrayList<>(); // 成员变量：函数依赖列表，存储所有发现的函数依赖
-    
+
     /** Column ordinals that have ever been placed on {@link #spaceQueue}.
      * Ensures that we do not calculate the same combination more than once,
      * even though we generate a column set from multiple parents.
-     * 
+     *
      * 成员变量作用：曾经放入 spaceQueue 的列索引集合
      * - 这是一个集合（HashSet），用于去重
      * - 确保同一个列组合不会被多次分析
@@ -240,7 +240,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
      * - 在生成后继组合时，先检查是否已存在，避免重复计算
      */
     final Set<ImmutableBitSet> resultSet = new HashSet<>(); // 结果集合，用于去重
-    
+
     final PartiallyOrderedSet<Space> results = // 成员变量：结果的偏序集合
         new PartiallyOrderedSet<>((e1, e2) -> // 创建偏序集合，自定义比较器
             e2.columnOrdinals.contains(e1.columnOrdinals)); // 比较规则：e2 包含 e1 时，e1 <= e2
@@ -248,13 +248,13 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
     // - 用于查找某个 Space 的所有后代（超集）
     // - 帮助识别非最小键和函数依赖
     // - 支持高效的层级查询操作
-    
+
     private final List<ImmutableBitSet> keyOrdinalLists = // 成员变量：键的列索引列表
         new ArrayList<>(); // 存储所有发现的唯一键的列索引集合
     // keyOrdinalLists 作用：记录所有发现的唯一键
     // - 用于后续的函数依赖分析
     // - 帮助识别非最小键（包含其他键的超键）
-    
+
     private int rowCount; // 成员变量：总行数，在第一轮扫描后设置
 
     /**
@@ -334,13 +334,13 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
 
     /** Populates {@code spaces} with the next batch.
      * Returns an empty list if done.
-     * 
+     *
      * 方法作用：填充下一批要分析的列组合
      * - 从 spaceQueue 中取出组合，直到达到 combinationsPerPass 个
      * - 如果 spaceQueue 为空，则从 doneQueue 中取出已完成的组合，生成其后继
      * - 后继组合需要满足一定条件才被加入 spaceQueue
      * - 返回空列表表示所有组合都已分析完毕
-     * 
+     *
      * 算法流程：
      * 1. 从 spaceQueue 中取出组合，直到达到每轮最大数量
      * 2. 如果 spaceQueue 为空，从 doneQueue 中取出一个已完成组合
@@ -441,12 +441,12 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
       // Populate unique keys.
       // If [x, y] is a key,
       // then [x, y, z] is a non-minimal key (therefore not interesting),
-      // and [x, y] => [a] is a functional dependency but not interesting,
+      // and [x, y] -> [a] is a functional dependency but not interesting,
       // and [x, y, z] is not an interesting distribution.
       // 填充唯一键信息
       // 如果 [x, y] 是键，
       // 那么 [x, y, z] 是非最小键（因此不有趣），
-      // 并且 [x, y] => [a] 是函数依赖但不有趣，
+      // 并且 [x, y] -> [a] 是函数依赖但不有趣，
       // 并且 [x, y, z] 不是有趣的分布
       for (Space space : spaces) { // 遍历所有组合
         Collector collector = space.collector; // 获取收集器
@@ -550,12 +550,12 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
 
     /** Estimates the cardinality of a collection of columns represented by
      * {@code columnOrdinals}, drawing on existing distributions.
-     * 
+     *
      * 方法作用：估计列组合的基数
      * - 首先检查是否已有该组合的分布信息
      * - 如果有，直接返回实际基数
      * - 如果没有，调用 expectedCardinality 方法进行估计
-     * 
+     *
      * @param rowCount 总行数
      * @param columns 列索引集合
      * @return 估计的基数
@@ -572,18 +572,18 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
     /** Estimates the cardinality of a collection of columns represented by
      * {@code columnOrdinals}, drawing on existing distributions. Does not
      * look in the distribution map for this column set.
-     * 
+     *
      * 方法作用：估计列组合的预期基数（不查找分布映射）
      * - 根据列组合的基数使用不同的估计策略
      * - 0 列：返回 1（只有一行）
      * - 1 列：返回行数（假设每列最多有行数个不同值）
      * - 多列：使用父组合和子组合的信息进行估计
-     * 
+     *
      * 估计策略：
      * - 对于父组合（子集），使用独立性假设：cardinality(A,B) = cardinality(A) * cardinality(B) / rowCount
      * - 对于子组合（超集），基数不超过子组合的基数
      * - 取所有估计的最小值作为最终估计
-     * 
+     *
      * @param rowCount 总行数
      * @param columns 列索引集合
      * @return 估计的预期基数
@@ -636,13 +636,13 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Work space for a particular combination of columns.
-   * 
+   *
    * 内部类作用：特定列组合的工作空间
    * - 代表一个列组合及其统计信息
    * - 存储该组合的基数、NULL 值数、意外性等信息
    * - 维护该组合与其他组合的依赖关系
    * - 支持意外性计算和分布信息查询
-   * 
+   *
    * 核心字段：
    * - columnOrdinals: 列索引集合，唯一标识该组合
    * - columns: 列对象集合，用于显示和比较
@@ -688,11 +688,11 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
 
     /** Returns the distribution created from this space, or null if no
      * distribution has been registered yet.
-     * 
+     *
      * 方法作用：返回该组合的分布信息
      * - 从 Run 的 distributions 映射中查找
      * - 如果存在则返回，否则返回 null
-     * 
+     *
      * @return 分布信息对象，如果未注册则返回 null
      */
     public @Nullable Distribution distribution() { // 方法：获取该组合的分布信息
@@ -705,16 +705,16 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Builds a {@link org.apache.calcite.profile.ProfilerImpl}.
-   * 
+   *
    * 内部类作用：ProfilerImpl 的构建器
    * - 使用建造者模式创建 ProfilerImpl 实例
    * - 支持链式调用配置参数
    * - 提供合理的默认值
-   * 
+   *
    * 可配置参数：
    * - combinationsPerPass: 每轮最大组合数（默认 100）
    * - predicate: 有趣性判断谓词（默认接受所有）
-   * 
+   *
    * 默认配置：
    * - combinationsPerPass: 100
    * - interestingCount: 200
@@ -745,12 +745,12 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Collects values of a column or columns.
-   * 
+   *
    * 抽象类作用：收集列或列组合的值
    * - 定义了收集器的基本接口
    * - 支持单列和多列两种收集模式
    * - 提供工厂方法创建适当的收集器类型
-   * 
+   *
    * 两种收集策略：
    * 1. 精确收集：使用 TreeSet 存储所有不同的值
    *    - 优点：精确，可以获取所有不同的值
@@ -758,7 +758,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
    * 2. 近似收集：使用 HyperLogLog sketch 估计基数
    *    - 优点：内存消耗小，适合高基数列
    *    - 缺点：只能估计基数，无法获取具体的值
-   * 
+   *
    * 动态切换：
    * - 当不同值数量达到阈值（默认 1000）时，自动切换到 HyperLogLog 模式
    */
@@ -773,14 +773,14 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
     abstract void finish(); // 抽象方法：完成收集，计算统计信息
 
     /** Creates an initial collector of the appropriate kind.
-     * 
+     *
      * 方法作用：创建适当类型的收集器
      * - 根据列组合的列数选择收集器类型
      * - 单列：使用 SingletonCollector
      * - 多列：使用 CompositeCollector
      * - 所有收集器初始都使用精确收集模式
      * - 当达到阈值时会自动切换到 HyperLogLog 模式
-     * 
+     *
      * @param space 列组合的工作空间
      * @param sketchThreshold 切换到 HyperLogLog 的阈值
      * @return 新创建的收集器实例
@@ -798,22 +798,22 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Collector that collects values of a single column.
-   * 
+   *
    * 内部类作用：单列收集器
    * - 使用 NavigableSet（TreeSet）存储不同的值
    * - 当值数量达到阈值时，自动切换到 HllSingletonCollector
    * - 精确统计 NULL 值数量
-   * 
+   *
    * 工作流程：
    * 1. 使用 TreeSet 存储所有非 NULL 值
    * 2. 单独计数 NULL 值
    * 3. 当 TreeSet 大小达到阈值时，切换到 HyperLogLog 模式
    * 4. 完成收集后，计算基数和 NULL 值数
-   * 
+   *
    * 优点：
    * - 精确，可以获取所有不同的值
    * - 值自动排序，便于显示和比较
-   * 
+   *
    * 缺点：
    * - 内存消耗大，不适合高基数列
    */
@@ -855,27 +855,27 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Collector that collects two or more column values in a tree set.
-   * 
+   *
    * 内部类作用：多列收集器
    * - 使用 HashSet 存储 FlatLists.ComparableList（扁平列表）
    * - 当值数量达到阈值时，自动切换到 HllCompositeCollector
    * - 精确统计包含 NULL 或部分 NULL 的行数
-   * 
+   *
    * 工作流程：
    * 1. 从每行提取指定列的值，组成 ComparableList
    * 2. 使用 HashSet 存储，自动去重
    * 3. 统计包含 NULL 或部分 NULL 的行数
    * 4. 当 HashSet 大小达到阈值时，切换到 HyperLogLog 模式
    * 5. 完成收集后，计算基数和 NULL 值数
-   * 
+   *
    * 数据结构：
    * - FlatLists.ComparableList: 高效的不可变列表实现
    * - HashSet: 快速去重
-   * 
+   *
    * 优点：
    * - 精确，可以获取所有不同的组合
    * - 内存消耗比单列收集器更合理
-   * 
+   *
    * 缺点：
    * - 仍然不适合极高基数的列组合
    */
@@ -945,23 +945,23 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
 
   /** Collector that collects two or more column values into a HyperLogLog
    * sketch.
-   * 
+   *
    * 抽象类作用：使用 HyperLogLog 草图收集列值
    * - HyperLogLog 是一种概率算法，用于估计基数
    * - 内存消耗固定且很小（约 12KB）
    * - 适合高基数列或列组合
    * - 只能估计基数，无法获取具体的值
-   * 
+   *
    * HyperLogLog 原理：
    * - 使用哈希函数将值映射到随机位置
    * - 统计前导零的个数，估计基数
    * - 误差率约为 1.04/sqrt(m)，其中 m 是寄存器数量
-   * 
+   *
    * 优点：
    * - 内存消耗小且固定
    * - 适合高基数数据
    * - 计算速度快
-   * 
+   *
    * 缺点：
    * - 只能估计基数，有误差
    * - 无法获取具体的值
@@ -1003,12 +1003,12 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   }
 
   /** Collector that collects one column value into a HyperLogLog sketch.
-   * 
+   *
    * 内部类作用：单列 HyperLogLog 收集器
    * - 继承自 HllCollector
    * - 专门用于单列的基数估计
    * - 从行数据中提取指定列的值
-   * 
+   *
    * 工作流程：
    * 1. 从每行提取指定列的值
    * 2. 如果是 NULL，使用特殊哈希位
@@ -1036,19 +1036,19 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
 
   /** Collector that collects two or more column values into a HyperLogLog
    * sketch.
-   * 
+   *
    * 内部类作用：多列 HyperLogLog 收集器
    * - 继承自 HllCollector
    * - 专门用于多列组合的基数估计
    * - 将多列值序列化为字节数组后更新草图
-   * 
+   *
    * 工作流程：
    * 1. 从每行提取指定列的值
    * 2. 将值序列化为字节数组（使用 ByteBuffer）
    * 3. 每种类型使用不同的类型标识符
    * 4. 统计包含 NULL 或部分 NULL 的行数
    * 5. 将字节数组更新到草图
-   * 
+   *
    * 序列化格式：
    * - NULL: 0x00
    * - String: 0x01 + UTF-8 bytes
@@ -1059,7 +1059,7 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
    * - Boolean true: 0x06
    * - Boolean false: 0x07
    * - Other: 0x08 + UTF-8 bytes
-   * 
+   *
    * 优点：
    * - 可以处理任意类型的列值
    * - 内存消耗小
@@ -1112,25 +1112,25 @@ public class ProfilerImpl implements Profiler { // ProfilerImpl 类：Profiler �
   /** A priority queue of the last N surprise values. Accepts a new value if
    * the queue is not yet full, or if its value is greater than the median value
    * over the last N.
-   * 
+   *
    * 内部类作用：意外性优先队列
    * - 维护最后 N 个意外值
    * - 在预热阶段（warmUpCount），接受所有值
    * - 预热后，只接受大于当前最小值的意外值
    * - 使用优先队列和双端队列实现
-   * 
+   *
    * 工作原理：
    * - priorityQueue: 最小堆，存储所有意外值，快速获取最小值
    * - deque: 双端队列，维护插入顺序，用于移除最旧的值
    * - 在预热阶段，所有值都被接受
    * - 预热后，只有大于当前最小值的值才被接受
    * - 当队列满时，移除最旧的值
-   * 
+   *
    * 应用场景：
    * - 过滤不有趣的列组合
    * - 只保留最有趣的 N 个组合
    * - 动态调整有趣性阈值
-   * 
+   *
    * 优点：
    * - 内存消耗固定（只保存 N 个值）
    * - 可以动态调整阈值

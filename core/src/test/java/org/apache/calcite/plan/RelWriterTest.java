@@ -116,6 +116,15 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Unit test for {@link org.apache.calcite.rel.externalize.RelJson}.
+ * // RelJson的单元测试类，用于测试关系表达式树的JSON序列化和反序列化功能
+ * // 这个类主要测试：
+ * // 1. RelNode（关系表达式节点）的JSON序列化和反序列化
+ * // 2. RexNode（行表达式节点）的JSON序列化和反序列化
+ * // 3. RelDataType（关系数据类型）的JSON序列化和反序列化
+ * // 4. 各种特殊操作符和类型的序列化支持（如窗口函数、聚合函数、时间戳、UUID等）
+ * // 5. 不同格式的输出（TEXT、DOT、JSON）
+ * // 6. 表修改操作（INSERT、UPDATE、DELETE、MERGE）的序列化
+ * // 7. 分布式排序交换操作的序列化
  */
 @SuppressWarnings("ConcatenationWithEmptyString")
 class RelWriterTest {
@@ -194,7 +203,9 @@ class RelWriterTest {
       + "      ]\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // XX常量：包含一个简单关系表达式树的JSON字符串，用于测试序列化和反序列化
+         // 包含三个节点：LogicalTableScan（表扫描）、LogicalFilter（过滤）、LogicalAggregate（聚合）
+         // 聚合包含两个COUNT函数：一个DISTINCT COUNT和一个普通COUNT
 
   public static final String XXNULL = "{\n"
       + "  \"rels\": [\n"
@@ -211,7 +222,7 @@ class RelWriterTest {
       + "      \"id\": \"1\",\n"
       + "      \"relOp\": \"LogicalFilter\",\n"
       + "      \"condition\": {\n"
-      + "        \"op\": {"
+      + "        \"op\": {"  // XXNULL常量：包含NULL字面量的关系表达式树JSON字符串，用于测试NULL值的序列化和反序列化
       + "            \"name\": \"=\",\n"
       + "            \"kind\": \"EQUALS\",\n"
       + "            \"syntax\": \"BINARY\"\n"
@@ -386,7 +397,8 @@ class RelWriterTest {
       + "      ]\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // XX2常量：包含窗口函数（COUNT OVER和SUM OVER）的JSON字符串，用于测试窗口函数的序列化
+         // 包含两个窗口函数：一个ROWS窗口和一个RANGE窗口
 
   public static final String XX3 = "{\n"
       + "  \"rels\": [\n"
@@ -417,7 +429,8 @@ class RelWriterTest {
       + "      ]\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // XX3常量：包含排序交换（LogicalSortExchange）的JSON字符串，用于测试分布式排序操作的序列化
+         // 包含哈希分布和排序属性
 
   public static final String HASH_DIST_WITHOUT_KEYS = "{\n"
       + "  \"rels\": [\n"
@@ -445,39 +458,39 @@ class RelWriterTest {
       + "      ]\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // HASH_DIST_WITHOUT_KEYS常量：包含没有键的哈希分布的JSON字符串，用于测试无键哈希分布的序列化
 
-  static Stream<SqlExplainFormat> explainFormats() {
+  static Stream<SqlExplainFormat> explainFormats() {  // explainFormats方法：提供参数化测试的格式数据源，返回TEXT和DOT两种格式
     return Stream.of(SqlExplainFormat.TEXT, SqlExplainFormat.DOT);
   }
 
   /** Creates a fixture. */
-  private static Fixture relFn(Function<RelBuilder, RelNode> relFn) {
+  private static Fixture relFn(Function<RelBuilder, RelNode> relFn) {  // relFn方法：创建一个测试夹具（Fixture），用于构建和测试关系表达式
     return new Fixture(relFn, false, SqlExplainFormat.TEXT);
   }
 
   /** Unit test for {@link RelJson#toJson(Object)} for an object of type
    * {@link RelDataType}. */
-  @Test void testTypeJson() {
-    int i = Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
-      final RelDataTypeFactory typeFactory = cluster.getTypeFactory();
-      final RelDataType type = typeFactory.builder()
-          .add("i", typeFactory.createSqlType(SqlTypeName.INTEGER))
-          .nullable(false)
-          .add("v", typeFactory.createSqlType(SqlTypeName.VARCHAR, 9))
-          .nullable(true)
-          .add("r", typeFactory.builder()
-              .add("d", typeFactory.createSqlType(SqlTypeName.DATE))
-              .nullable(false)
+  @Test void testTypeJson() {  // testTypeJson方法：测试RelDataType（关系数据类型）的JSON序列化和反序列化
+    int i = Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器并执行测试逻辑
+      final RelDataTypeFactory typeFactory = cluster.getTypeFactory();  // 获取类型工厂，用于创建SQL类型
+      final RelDataType type = typeFactory.builder()  // 构建一个复杂的关系数据类型
+          .add("i", typeFactory.createSqlType(SqlTypeName.INTEGER))  // 添加INTEGER类型的字段"i"
+          .nullable(false)  // 设置该字段不可为空
+          .add("v", typeFactory.createSqlType(SqlTypeName.VARCHAR, 9))  // 添加VARCHAR(9)类型的字段"v"
+          .nullable(true)  // 设置该字段可为空
+          .add("r", typeFactory.builder()  // 添加嵌套的记录类型字段"r"
+              .add("d", typeFactory.createSqlType(SqlTypeName.DATE))  // 嵌套记录中包含DATE类型的字段"d"
+              .nullable(false)  // 嵌套字段不可为空
               .build())
-          .nullableRecord(false)
+          .nullableRecord(false)  // 整个记录类型不可为空
           .build();
-      final JsonBuilder jsonBuilder = new JsonBuilder();
-      final RelJson json = RelJson.create().withJsonBuilder(jsonBuilder);
-      final Object o = json.toJson(type);
-      assertThat(o, notNullValue());
-      final String s = jsonBuilder.toJsonString(o);
-      final String expectedJson = "{\n"
+      final JsonBuilder jsonBuilder = new JsonBuilder();  // 创建JSON构建器
+      final RelJson json = RelJson.create().withJsonBuilder(jsonBuilder);  // 创建RelJson实例并关联JSON构建器
+      final Object o = json.toJson(type);  // 将RelDataType对象序列化为JSON对象
+      assertThat(o, notNullValue());  // 断言JSON对象不为空
+      final String s = jsonBuilder.toJsonString(o);  // 将JSON对象转换为字符串
+      final String expectedJson = "{\n"  // 期望的JSON字符串
           + "  \"fields\": [\n"
           + "    {\n"
           + "      \"type\": \"INTEGER\",\n"
@@ -504,12 +517,12 @@ class RelWriterTest {
           + "  ],\n"
           + "  \"nullable\": false\n"
           + "}";
-      assertThat(s, is(expectedJson));
-      final RelDataType type2 = json.toType(typeFactory, o);
-      assertThat(type2, is(type));
-      return 0;
+      assertThat(s, is(expectedJson));  // 断言实际JSON字符串与期望值一致
+      final RelDataType type2 = json.toType(typeFactory, o);  // 将JSON对象反序列化为RelDataType对象
+      assertThat(type2, is(type));  // 断言反序列化后的类型与原始类型相同
+      return 0;  // 返回测试结果
     });
-    assertThat(i, is(0));
+    assertThat(i, is(0));  // 断言返回值为0
   }
 
   /**
@@ -517,46 +530,46 @@ class RelWriterTest {
    * a simple tree of relational expressions, consisting of a table and a
    * project including window expressions.
    */
-  @Test void testWriter() {
+  @Test void testWriter() {  // testWriter方法：测试RelJsonWriter对简单关系表达式树的JSON序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           rootSchema.add("hr",
-              new ReflectiveSchema(new HrSchema()));
+              new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelOptTable table =
               requireNonNull(
-                  relOptSchema.getTableForMember(Arrays.asList("hr", "emps")));
+                  relOptSchema.getTableForMember(Arrays.asList("hr", "emps")));  // 获取hr.emps表
           LogicalTableScan scan =
-              LogicalTableScan.create(cluster, table, ImmutableList.of());
-          final RexBuilder rexBuilder = cluster.getRexBuilder();
+              LogicalTableScan.create(cluster, table, ImmutableList.of());  // 创建表扫描节点
+          final RexBuilder rexBuilder = cluster.getRexBuilder();  // 获取Rex构建器
           LogicalFilter filter =
-              LogicalFilter.create(scan,
+              LogicalFilter.create(scan,  // 创建过滤节点，过滤条件为deptno=10
                   rexBuilder.makeCall(
                       SqlStdOperatorTable.EQUALS,
                       rexBuilder.makeFieldAccess(
                           rexBuilder.makeRangeReference(scan),
                           "deptno", true),
                       rexBuilder.makeExactLiteral(BigDecimal.TEN)));
-          final RelJsonWriter writer = new RelJsonWriter();
+          final RelJsonWriter writer = new RelJsonWriter();  // 创建JSON写入器
           final RelDataType bigIntType =
-              cluster.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+              cluster.getTypeFactory().createSqlType(SqlTypeName.BIGINT);  // 创建BIGINT类型
           LogicalAggregate aggregate =
-              LogicalAggregate.create(filter,
+              LogicalAggregate.create(filter,  // 创建聚合节点，按第0列分组，包含两个COUNT函数
                   ImmutableList.of(),
                   ImmutableBitSet.of(0),
                   null,
                   ImmutableList.of(
-                      AggregateCall.create(SqlStdOperatorTable.COUNT,
+                      AggregateCall.create(SqlStdOperatorTable.COUNT,  // 创建DISTINCT COUNT聚合调用
                           true, false, false, ImmutableList.of(),
                           ImmutableList.of(1), -1, null,
                           RelCollations.EMPTY, bigIntType, "c"),
-                      AggregateCall.create(SqlStdOperatorTable.COUNT,
+                      AggregateCall.create(SqlStdOperatorTable.COUNT,  // 创建普通COUNT聚合调用
                           false, false, false, ImmutableList.of(),
                           ImmutableList.of(), -1, null,
                           RelCollations.EMPTY, bigIntType, "d")));
-          aggregate.explain(writer);
-          return writer.asString();
+          aggregate.explain(writer);  // 将聚合节点序列化为JSON
+          return writer.asString();  // 返回JSON字符串
         });
-    assertThat(s, is(XX));
+    assertThat(s, is(XX));  // 断言JSON字符串与XX常量一致
   }
 
   static final String BINARY_LITERAL = "{\n"
@@ -587,21 +600,21 @@ class RelWriterTest {
       + "      \"inputs\": []\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // BINARY_LITERAL常量：包含二进制字面量的JSON字符串，用于测试BINARY类型的序列化
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6980">
    * [CALCITE 6980] RelJson cannot serialize binary literals</a>. */
-  @Test void testVarbinary() {
-    final Function<RelBuilder, RelNode> relFn = b -> {
-      RelDataType rowType = b.getTypeFactory().builder()
-          .add("a", SqlTypeName.INTEGER)
+  @Test void testVarbinary() {  // testVarbinary方法：测试二进制字面量的JSON序列化（修复CALCITE-6980）
+    final Function<RelBuilder, RelNode> relFn = b -> {  // 定义关系表达式构建函数
+      RelDataType rowType = b.getTypeFactory().builder()  // 构建行类型
+          .add("a", SqlTypeName.INTEGER)  // 添加INTEGER类型的字段"a"
           .build();
-      return b.values(rowType, 0)
-          .project(b.getRexBuilder().makeBinaryLiteral(new ByteString(new byte[]{0xA, 0x4B})))
-          .build();
+      return b.values(rowType, 0)  // 创建Values节点
+          .project(b.getRexBuilder().makeBinaryLiteral(new ByteString(new byte[]{0xA, 0x4B})))  // 投影二进制字面量0x0A4B
+          .build();  // 构建关系表达式
     };
     relFn(relFn)
-        .assertThatJson(isLinux(BINARY_LITERAL));
+        .assertThatJson(isLinux(BINARY_LITERAL));  // 断言JSON输出与BINARY_LITERAL常量一致
   }
 
   static final String UUID_LITERAL = "{\n"
@@ -630,22 +643,22 @@ class RelWriterTest {
       + "      \"inputs\": []\n"
       + "    }\n"
       + "  ]\n"
-      + "}";
+      + "}";  // UUID_LITERAL常量：包含UUID字面量的JSON字符串，用于测试UUID类型的序列化
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6992">
    * [CALCITE 6992] RelJson cannot serialize UUID literals</a>. */
-  @Test void testUuid() {
-    final Function<RelBuilder, RelNode> relFn = b -> {
-      RelDataType rowType = b.getTypeFactory().builder()
-          .add("a", SqlTypeName.INTEGER)
+  @Test void testUuid() {  // testUuid方法：测试UUID字面量的JSON序列化（修复CALCITE-6992）
+    final Function<RelBuilder, RelNode> relFn = b -> {  // 定义关系表达式构建函数
+      RelDataType rowType = b.getTypeFactory().builder()  // 构建行类型
+          .add("a", SqlTypeName.INTEGER)  // 添加INTEGER类型的字段"a"
           .build();
-      return b.values(rowType, 0).project(
-          b.getRexBuilder().makeUuidLiteral(
+      return b.values(rowType, 0).project(  // 创建Values节点并投影
+          b.getRexBuilder().makeUuidLiteral(  // 创建UUID字面量
               UUID.fromString("123e4567-e89b-12d3-a456-426655440000")))
-          .build();
+          .build();  // 构建关系表达式
     };
     relFn(relFn)
-        .assertThatJson(isLinux(UUID_LITERAL));
+        .assertThatJson(isLinux(UUID_LITERAL));  // 断言JSON输出与UUID_LITERAL常量一致
   }
 
   /**
@@ -653,168 +666,168 @@ class RelWriterTest {
    * a simple tree of relational expressions, consisting of a table, a filter
    * and an aggregate node.
    */
-  @Test void testWriter2() {
+  @Test void testWriter2() {  // testWriter2方法：测试RelJsonWriter对包含窗口函数的关系表达式树的JSON序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           rootSchema.add("hr",
-              new ReflectiveSchema(new HrSchema()));
+              new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelOptTable table =
               requireNonNull(
-                  relOptSchema.getTableForMember(Arrays.asList("hr", "emps")));
+                  relOptSchema.getTableForMember(Arrays.asList("hr", "emps")));  // 获取hr.emps表
           LogicalTableScan scan =
-              LogicalTableScan.create(cluster, table, ImmutableList.of());
-          final RexBuilder rexBuilder = cluster.getRexBuilder();
+              LogicalTableScan.create(cluster, table, ImmutableList.of());  // 创建表扫描节点
+          final RexBuilder rexBuilder = cluster.getRexBuilder();  // 获取Rex构建器
           final RelDataType bigIntType =
-              cluster.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+              cluster.getTypeFactory().createSqlType(SqlTypeName.BIGINT);  // 创建BIGINT类型
           LogicalProject project =
-              LogicalProject.create(scan,
+              LogicalProject.create(scan,  // 创建投影节点，包含两个窗口函数
                   ImmutableList.of(),
                   ImmutableList.of(
-                      rexBuilder.makeInputRef(scan, 0),
-                      rexBuilder.makeOver(bigIntType,
+                      rexBuilder.makeInputRef(scan, 0),  // 第0列：输入引用
+                      rexBuilder.makeOver(bigIntType,  // 第1列：COUNT OVER窗口函数
                           SqlStdOperatorTable.COUNT,
                           ImmutableList.of(rexBuilder.makeInputRef(scan, 0)),
-                          ImmutableList.of(rexBuilder.makeInputRef(scan, 2)),
+                          ImmutableList.of(rexBuilder.makeInputRef(scan, 2)),  // PARTITION BY $2
                           ImmutableList.of(
                               new RexFieldCollation(
-                                  rexBuilder.makeInputRef(scan, 1), ImmutableSet.of())),
-                          RexWindowBounds.UNBOUNDED_PRECEDING,
-                          RexWindowBounds.CURRENT_ROW,
+                                  rexBuilder.makeInputRef(scan, 1), ImmutableSet.of())),  // ORDER BY $1
+                          RexWindowBounds.UNBOUNDED_PRECEDING,  // ROWS BETWEEN UNBOUNDED PRECEDING
+                          RexWindowBounds.CURRENT_ROW,  // AND CURRENT ROW
                           true, true, false, false, false),
-                      rexBuilder.makeOver(bigIntType,
+                      rexBuilder.makeOver(bigIntType,  // 第2列：SUM OVER窗口函数
                           SqlStdOperatorTable.SUM,
                           ImmutableList.of(rexBuilder.makeInputRef(scan, 0)),
-                          ImmutableList.of(rexBuilder.makeInputRef(scan, 2)),
+                          ImmutableList.of(rexBuilder.makeInputRef(scan, 2)),  // PARTITION BY $2
                           ImmutableList.of(
                               new RexFieldCollation(
-                                  rexBuilder.makeInputRef(scan, 1), ImmutableSet.of())),
-                          RexWindowBounds.CURRENT_ROW,
+                                  rexBuilder.makeInputRef(scan, 1), ImmutableSet.of())),  // ORDER BY $1
+                          RexWindowBounds.CURRENT_ROW,  // RANGE BETWEEN CURRENT ROW
                           RexWindowBounds.following(
-                              rexBuilder.makeExactLiteral(BigDecimal.ONE)),
+                              rexBuilder.makeExactLiteral(BigDecimal.ONE)),  // AND 1 FOLLOWING
                           false, true, false, false, false)),
                   ImmutableList.of("field0", "field1", "field2"),
                   ImmutableSet.of());
-          final RelJsonWriter writer = new RelJsonWriter();
-          project.explain(writer);
-          return writer.asString();
+          final RelJsonWriter writer = new RelJsonWriter();  // 创建JSON写入器
+          project.explain(writer);  // 将投影节点序列化为JSON
+          return writer.asString();  // 返回JSON字符串
         });
-    assertThat(s, is(XX2));
+    assertThat(s, is(XX2));  // 断言JSON字符串与XX2常量一致
   }
 
-  @Test void testExchange() {
-    final Function<RelBuilder, RelNode> relFn = b ->
-        b.scan("EMP")
-            .exchange(RelDistributions.hash(ImmutableList.of(0, 1)))
-            .build();
-    final String expected = ""
+  @Test void testExchange() {  // testExchange方法：测试Exchange（数据交换）节点的序列化和反序列化
+    final Function<RelBuilder, RelNode> relFn = b ->  // 定义关系表达式构建函数
+        b.scan("EMP")  // 扫描EMP表
+            .exchange(RelDistributions.hash(ImmutableList.of(0, 1)))  // 创建哈希分布的交换节点，按第0和第1列哈希
+            .build();  // 构建关系表达式
+    final String expected = ""  // 期望的执行计划文本
         + "LogicalExchange(distribution=[hash[0, 1]])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     relFn(relFn)
-        .assertThatPlan(isLinux(expected));
+        .assertThatPlan(isLinux(expected));  // 断言执行计划与期望值一致
   }
 
-  @Test public void testExchangeWithDistributionTraitDef() {
-    final Function<RelBuilder, RelNode> relFn = b ->
-        b.scan("EMP")
-            .exchange(RelDistributions.hash(ImmutableList.of(0, 1)))
-            .build();
-    final String expected = ""
+  @Test public void testExchangeWithDistributionTraitDef() {  // testExchangeWithDistributionTraitDef方法：测试带有分布特征定义的Exchange节点
+    final Function<RelBuilder, RelNode> relFn = b ->  // 定义关系表达式构建函数
+        b.scan("EMP")  // 扫描EMP表
+            .exchange(RelDistributions.hash(ImmutableList.of(0, 1)))  // 创建哈希分布的交换节点
+            .build();  // 构建关系表达式
+    final String expected = ""  // 期望的执行计划文本
         + "LogicalExchange(distribution=[hash[0, 1]])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     relFn(relFn)
-        .withDistribution(true)
-        .assertThatPlan(isLinux(expected));
+        .withDistribution(true)  // 启用分布特征
+        .assertThatPlan(isLinux(expected));  // 断言执行计划与期望值一致
   }
 
   /**
    * Unit test for {@link org.apache.calcite.rel.externalize.RelJsonReader}.
    */
-  @Test void testReader() {
+  @Test void testReader() {  // testReader方法：测试RelJsonReader的JSON反序列化功能
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           SchemaPlus schema =
               rootSchema.add("hr",
-                  new ReflectiveSchema(new HrSchema()));
+                  new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelJsonReader reader =
-              new RelJsonReader(cluster, relOptSchema, schema);
+              new RelJsonReader(cluster, relOptSchema, schema);  // 创建JSON读取器
           RelNode node;
           try {
-            node = reader.read(XX);
+            node = reader.read(XX);  // 从JSON字符串读取关系表达式
           } catch (IOException e) {
-            throw TestUtil.rethrow(e);
+            throw TestUtil.rethrow(e);  // 抛出IO异常
           }
-          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,
+          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,  // 转储执行计划为文本格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         });
 
-    assertThat(s,
+    assertThat(s,  // 断言执行计划与期望值一致
         isLinux("LogicalAggregate(group=[{0}], c=[COUNT(DISTINCT $1)], d=[COUNT()])\n"
             + "  LogicalFilter(condition=[=($1, 10)])\n"
             + "    LogicalTableScan(table=[[hr, emps]])\n"));
   }
 
-  @Test void testReader1() {
+  @Test void testReader1() {  // testReader1方法：测试二进制字面量的JSON反序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           SchemaPlus schema =
               rootSchema.add("hr",
-                  new ReflectiveSchema(new HrSchema()));
+                  new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelJsonReader reader =
-              new RelJsonReader(cluster, relOptSchema, schema);
+              new RelJsonReader(cluster, relOptSchema, schema);  // 创建JSON读取器
           RelNode node;
           try {
-            node = reader.read(BINARY_LITERAL);
+            node = reader.read(BINARY_LITERAL);  // 从JSON字符串读取包含二进制字面量的关系表达式
           } catch (IOException e) {
-            throw TestUtil.rethrow(e);
+            throw TestUtil.rethrow(e);  // 抛出IO异常
           }
-          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,
+          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,  // 转储执行计划为文本格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         });
 
-    assertThat(s,
+    assertThat(s,  // 断言执行计划与期望值一致
         isLinux("LogicalValues(tuples=[[{ X'0a4b' }]])\n"));
   }
 
-  @Test void testReaderUuid() {
+  @Test void testReaderUuid() {  // testReaderUuid方法：测试UUID字面量的JSON反序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           SchemaPlus schema =
               rootSchema.add("hr",
-                  new ReflectiveSchema(new HrSchema()));
+                  new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelJsonReader reader =
-              new RelJsonReader(cluster, relOptSchema, schema);
+              new RelJsonReader(cluster, relOptSchema, schema);  // 创建JSON读取器
           RelNode node;
           try {
-            node = reader.read(UUID_LITERAL);
+            node = reader.read(UUID_LITERAL);  // 从JSON字符串读取包含UUID字面量的关系表达式
           } catch (IOException e) {
-            throw TestUtil.rethrow(e);
+            throw TestUtil.rethrow(e);  // 抛出IO异常
           }
-          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,
+          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,  // 转储执行计划为文本格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         });
 
-    assertThat(s,
+    assertThat(s,  // 断言执行计划与期望值一致
         isLinux("LogicalValues(tuples=[[{ 123e4567-e89b-12d3-a456-426655440000 }]])\n"));
   }
 
   /**
    * Unit test for {@link org.apache.calcite.rel.externalize.RelJsonReader}.
    */
-  @Test void testReader2() {
+  @Test void testReader2() {  // testReader2方法：测试包含窗口函数的关系表达式的JSON反序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           SchemaPlus schema =
               rootSchema.add("hr",
-                  new ReflectiveSchema(new HrSchema()));
+                  new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelJsonReader reader =
-              new RelJsonReader(cluster, relOptSchema, schema);
+              new RelJsonReader(cluster, relOptSchema, schema);  // 创建JSON读取器
           RelNode node;
           try {
-            node = reader.read(XX2);
+            node = reader.read(XX2);  // 从JSON字符串读取包含窗口函数的关系表达式
           } catch (IOException e) {
-            throw TestUtil.rethrow(e);
+            throw TestUtil.rethrow(e);  // 抛出IO异常
           }
-          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,
+          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,  // 转储执行计划为文本格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         });
 
@@ -830,25 +843,25 @@ class RelWriterTest {
   /**
    * Unit test for {@link org.apache.calcite.rel.externalize.RelJsonReader}.
    */
-  @Test void testReaderNull() {
+  @Test void testReaderNull() {  // testReaderNull方法：测试包含NULL字面量的关系表达式的JSON反序列化
     String s =
-        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
+        Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
           SchemaPlus schema =
               rootSchema.add("hr",
-                  new ReflectiveSchema(new HrSchema()));
+                  new ReflectiveSchema(new HrSchema()));  // 添加HR模式到根模式
           final RelJsonReader reader =
-              new RelJsonReader(cluster, relOptSchema, schema);
+              new RelJsonReader(cluster, relOptSchema, schema);  // 创建JSON读取器
           RelNode node;
           try {
-            node = reader.read(XXNULL);
+            node = reader.read(XXNULL);  // 从JSON字符串读取包含NULL值的关系表达式
           } catch (IOException e) {
-            throw TestUtil.rethrow(e);
+            throw TestUtil.rethrow(e);  // 抛出IO异常
           }
-          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,
+          return RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT,  // 转储执行计划为文本格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         });
 
-    assertThat(s,
+    assertThat(s,  // 断言执行计划与期望值一致
         isLinux("LogicalAggregate(group=[{0}], agg#0=[COUNT(DISTINCT $1)], agg#1=[COUNT()])\n"
             + "  LogicalFilter(condition=[=($1, null:INTEGER)])\n"
             + "    LogicalTableScan(table=[[hr, emps]])\n"));
@@ -858,26 +871,26 @@ class RelWriterTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4893">[CALCITE-4893]
    * JsonParseException happens when externalizing expressions with escape
    * character from JSON</a>. */
-  @Test void testEscapeCharacter() {
-    final Function<RelBuilder, RelNode> relFn = b -> b
-        .scan("EMP")
+  @Test void testEscapeCharacter() {  // testEscapeCharacter方法：测试转义字符的JSON序列化（修复CALCITE-4893）
+    final Function<RelBuilder, RelNode> relFn = b -> b  // 定义关系表达式构建函数
+        .scan("EMP")  // 扫描EMP表
         .project(
-            b.call(new MockSqlOperatorTable.SplitFunction(),
-                b.field("ENAME"), b.literal("\r")))
-        .build();
-    final String expected = ""
+            b.call(new MockSqlOperatorTable.SplitFunction(),  // 调用SPLIT函数
+                b.field("ENAME"), b.literal("\r")))  // 参数：ENAME字段和回车符字面量
+        .build();  // 构建关系表达式
+    final String expected = ""  // 期望的执行计划文本
         + "LogicalProject($f0=[SPLIT($1, '\r')])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     relFn(relFn)
-        .assertThatPlan(isLinux(expected));
+        .assertThatPlan(isLinux(expected));  // 断言执行计划与期望值一致
   }
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6703">[CALCITE-6703]
    * RelJson cannot handle timestamps prior to 1970-01-25 20:31:23.648</a>. */
-  @Test void testJsonToRexForTimestamp() {
+  @Test void testJsonToRexForTimestamp() {  // testJsonToRexForTimestamp方法：测试时间戳的JSON反序列化（修复CALCITE-6703）
     // Below Integer.MAX_VALUE
-    final String timestampRepresentedAsInt = "{\n"
+    final String timestampRepresentedAsInt = "{\n"  // 低于Integer.MAX_VALUE的时间戳
           + "  \"literal\": 2129400000,\n"
           + "  \"type\": {\n"
           + "    \"type\": \"TIMESTAMP\",\n"
@@ -885,7 +898,7 @@ class RelWriterTest {
           + "  }\n"
           + "}\n";
     // Above Integer.MAX_VALUE
-    final String timestampRepresentedAsLong = "{\n"
+    final String timestampRepresentedAsLong = "{\n"  // 高于Integer.MAX_VALUE的时间戳
           + "  \"literal\": 3129400000,\n"
           + "  \"type\": {\n"
           + "    \"type\": \"TIMESTAMP\",\n"
@@ -894,16 +907,16 @@ class RelWriterTest {
           + "}\n";
 
     // These timestamps were verified using BigQuery's UNIX_MILLIS function.
-    assertThatReadExpressionResult(timestampRepresentedAsInt, is("1970-01-25 15:30:00"));
-    assertThatReadExpressionResult(timestampRepresentedAsLong, is("1970-02-06 05:16:40"));
+    assertThatReadExpressionResult(timestampRepresentedAsInt, is("1970-01-25 15:30:00"));  // 断言时间戳正确解析
+    assertThatReadExpressionResult(timestampRepresentedAsLong, is("1970-02-06 05:16:40"));  // 断言时间戳正确解析
   }
 
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6703">[CALCITE-6703]
    * RelJson cannot handle timestamps prior to 1970-01-25 20:31:23.648</a>. */
-  @Test void testJsonToRexForTimestampWithLocalTimeZone() {
+  @Test void testJsonToRexForTimestampWithLocalTimeZone() {  // testJsonToRexForTimestampWithLocalTimeZone方法：测试带本地时区的时间戳的JSON反序列化
     // Below Integer.MAX_VALUE
-    final String timestampWithLocalTzRepresentedAsInt = "{\n"
+    final String timestampWithLocalTzRepresentedAsInt = "{\n"  // 低于Integer.MAX_VALUE的带本地时区的时间戳
           + "  \"literal\": 2129400000,\n"
           + "  \"type\": {\n"
           + "    \"type\": \"TIMESTAMP_WITH_LOCAL_TIME_ZONE\",\n"
@@ -911,7 +924,7 @@ class RelWriterTest {
           + "  }\n"
           + "}\n";
     // Above Integer.MAX_VALUE
-    final String timestampWithLocalTzRepresentedAsLong = "{\n"
+    final String timestampWithLocalTzRepresentedAsLong = "{\n"  // 高于Integer.MAX_VALUE的带本地时区的时间戳
           + "  \"literal\": 3129400000,\n"
           + "  \"type\": {\n"
           + "    \"type\": \"TIMESTAMP_WITH_LOCAL_TIME_ZONE\",\n"
@@ -921,13 +934,13 @@ class RelWriterTest {
 
     // These timestamps were verified using BigQuery's UNIX_MILLIS function.
     assertThatReadExpressionResult(timestampWithLocalTzRepresentedAsInt,
-          is("1970-01-25 15:30:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(0)"));
+          is("1970-01-25 15:30:00:TIMESTAMP_WITH_LOCAL_TIME_ZONE(0)"));  // 断言时间戳正确解析
     assertThatReadExpressionResult(timestampWithLocalTzRepresentedAsLong,
-          is("1970-02-06 05:16:40:TIMESTAMP_WITH_LOCAL_TIME_ZONE(0)"));
+          is("1970-02-06 05:16:40:TIMESTAMP_WITH_LOCAL_TIME_ZONE(0)"));  // 断言时间戳正确解析
   }
 
 
-  @Test void testJsonToRex() {
+  @Test void testJsonToRex() {  // testJsonToRex方法：测试RexNode（行表达式）的JSON反序列化
     // Test simple literal without inputs
     final String jsonString1 = "{\n"
         + "  \"literal\": 10,\n"
@@ -959,72 +972,72 @@ class RelWriterTest {
     assertThatReadExpressionResult(jsonString2, is("+(1001, 2)"));
   }
 
-  private void assertThatReadExpressionResult(String json, Matcher<String> matcher) {
-    final FrameworkConfig config = RelBuilderTest.config().build();
-    final RelBuilder builder = RelBuilder.create(config);
-    final RelOptCluster cluster = builder.getCluster();
-    final ObjectMapper mapper = new ObjectMapper();
+  private void assertThatReadExpressionResult(String json, Matcher<String> matcher) {  // assertThatReadExpressionResult方法：断言JSON表达式反序列化后的结果与匹配器一致
+    final FrameworkConfig config = RelBuilderTest.config().build();  // 构建框架配置
+    final RelBuilder builder = RelBuilder.create(config);  // 创建关系表达式构建器
+    final RelOptCluster cluster = builder.getCluster();  // 获取优化集群
+    final ObjectMapper mapper = new ObjectMapper();  // 创建Jackson对象映射器
     final TypeReference<LinkedHashMap<String, Object>> typeRef =
         new TypeReference<LinkedHashMap<String, Object>>() {
         };
     final Map<String, Object> o;
     try {
       o = mapper
-          .configure(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, true)
-          .readValue(json, typeRef);
+          .configure(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, true)  // 配置使用BigDecimal处理浮点数
+          .readValue(json, typeRef);  // 将JSON字符串解析为LinkedHashMap
     } catch (JsonProcessingException e) {
-      throw TestUtil.rethrow(e);
+      throw TestUtil.rethrow(e);  // 抛出JSON处理异常
     }
     final RelJson relJson = RelJson.create()
-        .withInputTranslator(RelWriterTest::translateInput)
-        .withLibraryOperatorTable();
-    final RexNode e = relJson.toRex(cluster, o);
-    assertThat(e, hasToString(matcher));
+        .withInputTranslator(RelWriterTest::translateInput)  // 配置输入翻译器
+        .withLibraryOperatorTable();  // 配置库操作符表
+    final RexNode e = relJson.toRex(cluster, o);  // 将JSON对象转换为RexNode
+    assertThat(e, hasToString(matcher));  // 断言RexNode的字符串表示与匹配器一致
   }
 
   /** Intended as an instance of {@link RelJson.InputTranslator},
    * translates input {@code input} into an INTEGER literal
    * "{@code 1000 + input}". */
-  private static RexNode translateInput(RelJson relJson, int input,
+  private static RexNode translateInput(RelJson relJson, int input,  // translateInput方法：将输入引用转换为字面量（1000+input），用于测试
       Map<String, @Nullable Object> map, RelInput relInput) {
-    final RexBuilder rexBuilder = relInput.getCluster().getRexBuilder();
-    return rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000 + input));
+    final RexBuilder rexBuilder = relInput.getCluster().getRexBuilder();  // 获取Rex构建器
+    return rexBuilder.makeExactLiteral(BigDecimal.valueOf(1000 + input));  // 返回值为1000+input的精确字面量
   }
 
-  @Test void testTrim() {
-    final Function<RelBuilder, RelNode> relFn = b ->
-        b.scan("EMP")
+  @Test void testTrim() {  // testTrim方法：测试TRIM函数的JSON序列化和反序列化
+    final Function<RelBuilder, RelNode> relFn = b ->  // 定义关系表达式构建函数
+        b.scan("EMP")  // 扫描EMP表
             .project(
                 b.alias(
-                    b.call(SqlStdOperatorTable.TRIM,
-                        b.literal(SqlTrimFunction.Flag.BOTH),
-                        b.literal(" "),
-                        b.field("ENAME")),
-                    "trimmed_ename"))
-            .build();
-    final String expected = ""
+                    b.call(SqlStdOperatorTable.TRIM,  // 调用TRIM函数
+                        b.literal(SqlTrimFunction.Flag.BOTH),  // BOTH标志：去除两端的空格
+                        b.literal(" "),  // 去除的字符：空格
+                        b.field("ENAME")),  // 要处理的字段：ENAME
+                    "trimmed_ename"))  // 别名：trimmed_ename
+            .build();  // 构建关系表达式
+    final String expected = ""  // 期望的执行计划文本
         + "LogicalProject(trimmed_ename=[TRIM(FLAG(BOTH), ' ', $1)])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     relFn(relFn)
-        .assertThatPlan(isLinux(expected));
+        .assertThatPlan(isLinux(expected));  // 断言执行计划与期望值一致
   }
 
-  @Test void testPlusOperator() {
-    final Function<RelBuilder, RelNode> relFn = b ->
-        b.scan("EMP")
+  @Test void testPlusOperator() {  // testPlusOperator方法：测试加法操作符的JSON序列化和反序列化
+    final Function<RelBuilder, RelNode> relFn = b ->  // 定义关系表达式构建函数
+        b.scan("EMP")  // 扫描EMP表
             .project(
-                b.call(SqlStdOperatorTable.PLUS,
-                    b.field("SAL"),
-                    b.literal(10)))
-            .build();
-    final String expected = ""
+                b.call(SqlStdOperatorTable.PLUS,  // 调用加法操作符
+                    b.field("SAL"),  // 第一个操作数：SAL字段
+                    b.literal(10)))  // 第二个操作数：字面量10
+            .build();  // 构建关系表达式
+    final String expected = ""  // 期望的执行计划文本
         + "LogicalProject($f0=[+($5, 10)])\n"
         + "  LogicalTableScan(table=[[scott, EMP]])\n";
     relFn(relFn)
-        .assertThatPlan(isLinux(expected));
+        .assertThatPlan(isLinux(expected));  // 断言执行计划与期望值一致
   }
 
-  @Test void testSearchOperator() {
+  @Test void testSearchOperator() {  // testSearchOperator方法：测试SEARCH操作符（BETWEEN、IN等）的JSON序列化和反序列化
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder b = RelBuilder.create(config);
     final RexBuilder rexBuilder = b.getRexBuilder();
@@ -1138,7 +1151,7 @@ class RelWriterTest {
 
   @ParameterizedTest
   @MethodSource("explainFormats")
-  void testAggregateWithAlias(SqlExplainFormat format) {
+  void testAggregateWithAlias(SqlExplainFormat format) {  // testAggregateWithAlias方法：测试带别名的聚合函数的JSON序列化和反序列化
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     // The rel node stands for sql: SELECT max(SAL) as max_sal from EMP group by JOB;
@@ -1185,7 +1198,7 @@ class RelWriterTest {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4804">[CALCITE-4804]
    * Support Snapshot operator serialization and deserialization</a>. */
-  @Test void testSnapshot() {
+  @Test void testSnapshot() {  // testSnapshot方法：测试SNAPSHOT操作符的JSON序列化和反序列化（修复CALCITE-4804）
     // Equivalent SQL:
     //   SELECT *
     //   FROM products_temporal FOR SYSTEM_TIME AS OF TIMESTAMP '2011-07-20 12:34:56'
@@ -1206,7 +1219,7 @@ class RelWriterTest {
     assertThat(s, isLinux(expected));
   }
 
-  @Test void testDeserializeInvalidOperatorName() {
+  @Test void testDeserializeInvalidOperatorName() {  // testDeserializeInvalidOperatorName方法：测试反序列化无效操作符名称时的异常处理
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     final RelNode rel = builder
@@ -1238,7 +1251,7 @@ class RelWriterTest {
    * fix, non-standard operators such as BigQuery's
    * {@link SqlLibraryOperators#CURRENT_DATETIME} would throw during
    * deserialization. */
-  @Test void testDeserializeNonStandardOperator() {
+  @Test void testDeserializeNonStandardOperator() {  // testDeserializeNonStandardOperator方法：测试非标准操作符（如BigQuery的CURRENT_DATETIME）的反序列化（修复CALCITE-5349）
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     final RelNode rel = builder
@@ -1261,7 +1274,7 @@ class RelWriterTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-5607">[CALCITE-5607]
    * Datetime MINUS throws ArrayIndexOutOfBounds error when serializing toRex</a>.
    */
-  @Test void testDeserializeMinusDateOperator() {
+  @Test void testDeserializeMinusDateOperator() {  // testDeserializeMinusDateOperator方法：测试日期减法操作符的反序列化（修复CALCITE-5607）
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     final RexBuilder rb = builder.getRexBuilder();
@@ -1298,7 +1311,7 @@ class RelWriterTest {
    *
    * <p>The solution is to add in 'type' when serializing to JSON.
    */
-  @Test void testDeserializeSafeCastOperator() {
+  @Test void testDeserializeSafeCastOperator() {  // testDeserializeSafeCastOperator方法：测试SAFE_CAST操作符的反序列化（修复CALCITE-6323）
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     final RexBuilder rb = builder.getRexBuilder();
@@ -1320,7 +1333,7 @@ class RelWriterTest {
     assertThat(result, isLinux(expected));
   }
 
-  @Test void testAggregateWithoutAlias() {
+  @Test void testAggregateWithoutAlias() {  // testAggregateWithoutAlias方法：测试不带别名的聚合函数的JSON序列化和反序列化
     final FrameworkConfig config = RelBuilderTest.config().build();
     final RelBuilder builder = RelBuilder.create(config);
     // The rel node stands for sql: SELECT max(SAL) from EMP group by JOB;
@@ -1348,7 +1361,7 @@ class RelWriterTest {
     assertThat(s, isLinux(expected));
   }
 
-  @Test void testCalc() {
+  @Test void testCalc() {  // testCalc方法：测试Calc（计算）节点的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .let(b2 -> {
@@ -1377,7 +1390,7 @@ class RelWriterTest {
 
   @ParameterizedTest
   @MethodSource("explainFormats")
-  void testCorrelateQuery(SqlExplainFormat format) {
+  void testCorrelateQuery(SqlExplainFormat format) {  // testCorrelateQuery方法：测试关联查询（Correlate）的JSON序列化和反序列化
     final Holder<RexCorrelVariable> v = Holder.empty();
     final Function<RelBuilder, RelNode> relFn = b -> b.scan("EMP")
         .variable(v::set)
@@ -1413,7 +1426,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testOverWithoutPartition() {
+  @Test void testOverWithoutPartition() {  // testOverWithoutPartition方法：测试不带分区的窗口函数的JSON序列化和反序列化
     // Equivalent SQL:
     //   SELECT count(*) OVER (ORDER BY deptno) FROM emp
     final Function<RelBuilder, RelNode> relFn = b ->
@@ -1425,7 +1438,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testProjectionWithCorrelationVariables() {
+  @Test void testProjectionWithCorrelationVariables() {  // testProjectionWithCorrelationVariables方法：测试带关联变量的投影的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b -> b.scan("EMP")
         .project(
             ImmutableList.of(b.field("ENAME")),
@@ -1440,7 +1453,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testOverWithoutOrderKey() {
+  @Test void testOverWithoutOrderKey() {  // testOverWithoutOrderKey方法：测试不带排序键的窗口函数的JSON序列化和反序列化
     // Equivalent SQL:
     //   SELECT count(*) OVER (PARTITION BY deptno) FROM emp
     final Function<RelBuilder, RelNode> relFn = b ->
@@ -1452,7 +1465,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testInterval() {
+  @Test void testInterval() {  // testInterval方法：测试间隔类型（INTERVAL）的JSON序列化和反序列化
     SqlIntervalQualifier sqlIntervalQualifier =
         new SqlIntervalQualifier(TimeUnit.DAY, TimeUnit.DAY, SqlParserPos.ZERO);
     BigDecimal value = new BigDecimal(86400000);
@@ -1470,7 +1483,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testUdf() {
+  @Test void testUdf() {  // testUdf方法：测试用户自定义函数（UDF）的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .project(
@@ -1486,7 +1499,7 @@ class RelWriterTest {
 
   @ParameterizedTest
   @MethodSource("explainFormats")
-  void testUDAF(SqlExplainFormat format) {
+  void testUDAF(SqlExplainFormat format) {  // testUDAF方法：测试用户自定义聚合函数（UDAF）的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .project(b.field("ENAME"), b.field("DEPTNO"))
@@ -1518,7 +1531,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testArrayType() {
+  @Test void testArrayType() {  // testArrayType方法：测试数组类型的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .project(
@@ -1532,7 +1545,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testMapType() {
+  @Test void testMapType() {  // testMapType方法：测试MAP类型的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .project(
@@ -1548,59 +1561,103 @@ class RelWriterTest {
 
   /** Returns the schema of a {@link org.apache.calcite.rel.core.TableScan}
    * in this plan, or null if there are no scans. */
-  private static RelOptSchema getSchema(RelNode rel) {
-    final Holder<@Nullable RelOptSchema> schemaHolder = Holder.empty();
+  private static RelOptSchema getSchema(RelNode rel) {  // getSchema方法：从关系表达式树中提取表扫描节点的模式
+    final Holder<@Nullable RelOptSchema> schemaHolder = Holder.empty();  // 创建模式持有器
     rel.accept(
-        new RelShuttleImpl() {
-          @Override public RelNode visit(TableScan scan) {
-            schemaHolder.set(scan.getTable().getRelOptSchema());
-            return super.visit(scan);
+        new RelShuttleImpl() {  // 创建关系表达式穿梭器
+          @Override public RelNode visit(TableScan scan) {  // 访问表扫描节点
+            schemaHolder.set(scan.getTable().getRelOptSchema());  // 设置模式
+            return super.visit(scan);  // 调用父类方法
           }
         });
-    return requireNonNull(schemaHolder.get());
+    return requireNonNull(schemaHolder.get());  // 返回模式
   }
 
   /**
-   * Deserialize a relnode from the json string by {@link RelJsonReader},
-   * and dump it to the given format.
-   */
-  private static String deserializeAndDump(RelOptSchema schema, String relJson,
-      SqlExplainFormat format) {
-    return Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {
-      final RelJsonReader reader =
-          new RelJsonReader(cluster, schema, rootSchema,
-              RelJson::withLibraryOperatorTable);
-      RelNode node;
-      try {
-        node = reader.read(relJson);
-      } catch (IOException e) {
-        throw TestUtil.rethrow(e);
-      }
-      return RelOptUtil.dumpPlan("", node, format,
-          SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-    });
-  }
 
-  private static String deserializeAndDump(RelOptCluster cluster,
-      RelOptSchema schema, String relJson, SqlExplainFormat format) {
-    final RelJsonReader reader = new RelJsonReader(cluster, schema, null);
-    RelNode node;
-    try {
-      node = reader.read(relJson);
-    } catch (IOException e) {
-      throw TestUtil.rethrow(e);
+     * Deserialize a relnode from the json string by {@link RelJsonReader},
+
+     * and dump it to the given format.
+
+     */
+
+  
+
+    private static String deserializeAndDump(RelOptSchema schema, String relJson,  // deserializeAndDump方法：从JSON字符串反序列化关系表达式并转储为指定格式
+
+        SqlExplainFormat format) {
+
+      return Frameworks.withPlanner((cluster, relOptSchema, rootSchema) -> {  // 使用框架创建规划器
+
+        final RelJsonReader reader =
+
+            new RelJsonReader(cluster, schema, rootSchema,  // 创建JSON读取器
+
+                RelJson::withLibraryOperatorTable);  // 配置库操作符表
+
+        RelNode node;
+
+        try {
+
+          node = reader.read(relJson);  // 从JSON字符串读取关系表达式
+
+        } catch (IOException e) {
+
+          throw TestUtil.rethrow(e);  // 抛出IO异常
+
+        }
+
+        return RelOptUtil.dumpPlan("", node, format,  // 转储执行计划为指定格式
+
+            SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+
+      });
+
     }
-    return RelOptUtil.dumpPlan("", node, format, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-  }
 
-  /**
-   * Deserialize a relnode from the json string by {@link RelJsonReader},
-   * and dump it to text format.
-   */
-  private static String deserializeAndDumpToTextFormat(RelOptSchema schema,
-      String relJson) {
-    return deserializeAndDump(schema, relJson, SqlExplainFormat.TEXT);
-  }
+  
+
+    private static String deserializeAndDump(RelOptCluster cluster,  // deserializeAndDump方法重载：使用指定集群反序列化关系表达式
+
+        RelOptSchema schema, String relJson, SqlExplainFormat format) {
+
+      final RelJsonReader reader = new RelJsonReader(cluster, schema, null);  // 创建JSON读取器
+
+      RelNode node;
+
+      try {
+
+        node = reader.read(relJson);  // 从JSON字符串读取关系表达式
+
+      } catch (IOException e) {
+
+        throw TestUtil.rethrow(e);  // 抛出IO异常
+
+      }
+
+      return RelOptUtil.dumpPlan("", node, format,  // 转储执行计划为指定格式
+
+          SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+
+    }
+
+  
+
+    /**
+
+     * Deserialize a relnode from the json string by {@link RelJsonReader},
+
+     * and dump it to text format.
+
+     */
+
+    private static String deserializeAndDumpToTextFormat(RelOptSchema schema,  // deserializeAndDumpToTextFormat方法：从JSON字符串反序列化关系表达式并转储为文本格式
+
+        String relJson) {
+
+      return deserializeAndDump(schema, relJson, SqlExplainFormat.TEXT);  // 调用重载方法，使用TEXT格式
+
+    }
 
   /**
    * Creates a mock {@link RelNode} that contains OVER. The SQL is as follows:
@@ -1616,34 +1673,34 @@ class RelWriterTest {
    * @param orderKeyNames Order by column names, may empty, can not be null
    * @return RelNode for the SQL
    */
-  private RelNode mockCountOver(RelBuilder builder, String table,
+  private RelNode mockCountOver(RelBuilder builder, String table,  // mockCountOver方法：创建包含窗口函数的模拟关系表达式
       List<String> partitionKeyNames, List<String> orderKeyNames) {
-    final RexBuilder rexBuilder = builder.getRexBuilder();
-    final RelDataType type = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
-    List<RexNode> partitionKeys = new ArrayList<>(partitionKeyNames.size());
-    builder.scan(table);
+    final RexBuilder rexBuilder = builder.getRexBuilder();  // 获取Rex构建器
+    final RelDataType type = rexBuilder.getTypeFactory().createSqlType(SqlTypeName.BIGINT);  // 创建BIGINT类型
+    List<RexNode> partitionKeys = new ArrayList<>(partitionKeyNames.size());  // 创建分区键列表
+    builder.scan(table);  // 扫描表
     for (String partitionkeyName : partitionKeyNames) {
-      partitionKeys.add(builder.field(partitionkeyName));
+      partitionKeys.add(builder.field(partitionkeyName));  // 添加分区键
     }
-    List<RexFieldCollation> orderKeys = new ArrayList<>(orderKeyNames.size());
+    List<RexFieldCollation> orderKeys = new ArrayList<>(orderKeyNames.size());  // 创建排序键列表
     for (String orderKeyName : orderKeyNames) {
-      orderKeys.add(new RexFieldCollation(builder.field(orderKeyName), ImmutableSet.of()));
+      orderKeys.add(new RexFieldCollation(builder.field(orderKeyName), ImmutableSet.of()));  // 添加排序键
     }
     return builder
         .project(
-            rexBuilder.makeOver(
-                type,
-                SqlStdOperatorTable.COUNT,
-                ImmutableList.of(),
-                partitionKeys,
-                ImmutableList.copyOf(orderKeys),
-                RexWindowBounds.UNBOUNDED_PRECEDING,
-                RexWindowBounds.CURRENT_ROW,
-                false, true, false, false, false))
-        .build();
+            rexBuilder.makeOver(  // 创建窗口函数
+                type,  // 返回类型
+                SqlStdOperatorTable.COUNT,  // COUNT函数
+                ImmutableList.of(),  // 操作数列表（空）
+                partitionKeys,  // 分区键
+                ImmutableList.copyOf(orderKeys),  // 排序键
+                RexWindowBounds.UNBOUNDED_PRECEDING,  // 窗口下界：无界前驱
+                RexWindowBounds.CURRENT_ROW,  // 窗口上界：当前行
+                false, true, false, false, false))  // 窗口标志
+        .build();  // 构建关系表达式
   }
 
-  @Test void testHashDistributionWithoutKeys() {
+  @Test void testHashDistributionWithoutKeys() {  // testHashDistributionWithoutKeys方法：测试无键哈希分布的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         createSortPlan(b, RelDistributions.hash(Collections.emptyList()));
     final String expected =
@@ -1657,7 +1714,7 @@ class RelWriterTest {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6200">[CALCITE-6200]
    * RelJson throw UnsupportedOperationException for RexDynamicParam</a>. */
-  @Test void testDynamicParam() {
+  @Test void testDynamicParam() {  // testDynamicParam方法：测试动态参数（RexDynamicParam）的JSON序列化和反序列化（修复CALCITE-6200）
     final Function<RelBuilder, RelNode> relFn = relBuilder -> {
       final RexBuilder rexBuilder = relBuilder.getRexBuilder();
       final RelDataTypeFactory typeFactory = relBuilder.getTypeFactory();
@@ -1701,7 +1758,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expectedPlan));
   }
 
-  @Test void testWriteSortExchangeWithHashDistribution() {
+  @Test void testWriteSortExchangeWithHashDistribution() {  // testWriteSortExchangeWithHashDistribution方法：测试带哈希分布的排序交换的JSON序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         createSortPlan(b, RelDistributions.hash(Lists.newArrayList(0)));
     final String expected = ""
@@ -1712,7 +1769,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testWriteSortExchangeWithRandomDistribution() {
+  @Test void testWriteSortExchangeWithRandomDistribution() {  // testWriteSortExchangeWithRandomDistribution方法：测试随机分布的排序交换的JSON序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         createSortPlan(b, RelDistributions.RANDOM_DISTRIBUTED);
     final String expected = ""
@@ -1722,7 +1779,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testTableModifyInsert() {
+  @Test void testTableModifyInsert() {  // testTableModifyInsert方法：测试表修改操作（INSERT）的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
         .project(b.fields(), ImmutableList.of(), true)
@@ -1753,7 +1810,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testTableModifyUpdate() {
+  @Test void testTableModifyUpdate() {  // testTableModifyUpdate方法：测试表修改操作（UPDATE）的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .filter(
@@ -1785,7 +1842,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testTableModifyDelete() {
+  @Test void testTableModifyDelete() {  // testTableModifyDelete方法：测试表修改操作（DELETE）的JSON序列化和反序列化
     final Function<RelBuilder, RelNode> relFn = b ->
         b.scan("EMP")
             .filter(b.equals(b.field("JOB"), b.literal("c")))
@@ -1815,7 +1872,7 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  @Test void testTableModifyMerge() {
+  @Test void testTableModifyMerge() {  // testTableModifyMerge方法：测试表修改操作（MERGE）的JSON序列化和反序列化
     final Holder<RelOptTable> emp = Holder.empty();
     final Holder<RelOptTable> dept = Holder.empty();
     final Function<RelBuilder, RelNode> relFn = b ->
@@ -1886,71 +1943,71 @@ class RelWriterTest {
         .assertThatPlan(isLinux(expected));
   }
 
-  private RelNode createSortPlan(RelBuilder builder, RelDistribution distribution) {
-    return builder.scan("EMP")
-            .sortExchange(distribution,
-                RelCollations.of(0))
-            .build();
+  private RelNode createSortPlan(RelBuilder builder, RelDistribution distribution) {  // createSortPlan方法：创建排序交换计划
+    return builder.scan("EMP")  // 扫描EMP表
+            .sortExchange(distribution,  // 创建排序交换节点，使用指定的分布策略
+                RelCollations.of(0))  // 按第0列排序
+            .build();  // 构建关系表达式
   }
 
   /** Test fixture. */
-  static class Fixture {
-    final Function<RelBuilder, RelNode> relFn;
-    final boolean distribution;
-    final SqlExplainFormat format;
+  static class Fixture {  // Fixture类：测试夹具类，用于构建和测试关系表达式
+    final Function<RelBuilder, RelNode> relFn;  // 关系表达式构建函数
+    final boolean distribution;  // 是否启用分布特征
+    final SqlExplainFormat format;  // 解释格式
 
-    Fixture(Function<RelBuilder, RelNode> relFn, boolean distribution,
+    Fixture(Function<RelBuilder, RelNode> relFn, boolean distribution,  // Fixture构造方法：创建测试夹具
         SqlExplainFormat format) {
-      this.relFn = relFn;
-      this.distribution = distribution;
-      this.format = format;
+      this.relFn = relFn;  // 初始化关系表达式构建函数
+      this.distribution = distribution;  // 初始化分布特征标志
+      this.format = format;  // 初始化解释格式
     }
 
-    Fixture withDistribution(boolean distribution) {
+    Fixture withDistribution(boolean distribution) {  // withDistribution方法：设置分布特征并返回新的夹具
       if (distribution == this.distribution) {
         return this;
       }
       return new Fixture(relFn, distribution, format);
     }
 
-    Fixture withFormat(SqlExplainFormat format) {
+    Fixture withFormat(SqlExplainFormat format) {  // withFormat方法：设置解释格式并返回新的夹具
       if (format == this.format) {
         return this;
       }
       return new Fixture(relFn, distribution, format);
     }
 
-    Fixture assertThatJson(Matcher<String> matcher) {
-      final FrameworkConfig config = RelBuilderTest.config().build();
-      final RelBuilder b = RelBuilder.create(config);
-      RelNode rel = relFn.apply(b);
+    Fixture assertThatJson(Matcher<String> matcher) {  // assertThatJson方法：断言JSON输出与匹配器一致
+      final FrameworkConfig config = RelBuilderTest.config().build();  // 构建框架配置
+      final RelBuilder b = RelBuilder.create(config);  // 创建关系表达式构建器
+      RelNode rel = relFn.apply(b);  // 应用构建函数创建关系表达式
       final String relJson =
-          RelOptUtil.dumpPlan("", rel, SqlExplainFormat.JSON,
+          RelOptUtil.dumpPlan("", rel, SqlExplainFormat.JSON,  // 转储执行计划为JSON格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-      assertThat(relJson, matcher);
-      return this;
+      assertThat(relJson, matcher);  // 断言JSON字符串与匹配器一致
+      return this;  // 返回当前夹具以支持链式调用
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    Fixture assertThatPlan(Matcher<String> matcher) {
-      final FrameworkConfig config = RelBuilderTest.config().build();
-      final RelBuilder b = RelBuilder.create(config);
-      RelNode rel = relFn.apply(b);
+    Fixture assertThatPlan(Matcher<String> matcher) {  // assertThatPlan方法：断言执行计划与匹配器一致
+      final FrameworkConfig config = RelBuilderTest.config().build();  // 构建框架配置
+      final RelBuilder b = RelBuilder.create(config);  // 创建关系表达式构建器
+      RelNode rel = relFn.apply(b);  // 应用构建函数创建关系表达式
       final String relJson =
-          RelOptUtil.dumpPlan("", rel, SqlExplainFormat.JSON,
+          RelOptUtil.dumpPlan("", rel, SqlExplainFormat.JSON,  // 转储执行计划为JSON格式
               SqlExplainLevel.EXPPLAN_ATTRIBUTES);
       final String plan;
-      if (distribution) {
-        VolcanoPlanner planner = new VolcanoPlanner();
-        planner.addRelTraitDef(RelDistributionTraitDef.INSTANCE);
+      if (distribution) {  // 如果启用分布特征
+        VolcanoPlanner planner = new VolcanoPlanner();  // 创建火山规划器
+        planner.addRelTraitDef(RelDistributionTraitDef.INSTANCE);  // 添加分布特征定义
         RelOptCluster cluster =
-            RelOptCluster.create(planner, b.getRexBuilder());
-        plan = deserializeAndDump(cluster, getSchema(rel), relJson, format);
+            RelOptCluster.create(planner, b.getRexBuilder());  // 创建优化集群
+        plan = deserializeAndDump(cluster, getSchema(rel), relJson, format);  // 使用集群反序列化并转储
       } else {
-        plan = deserializeAndDump(getSchema(rel), relJson, format);
+        plan = deserializeAndDump(getSchema(rel), relJson, format);  // 直接反序列化并转储
       }
-      assertThat(plan, matcher);
-      return this;
+      assertThat(plan, matcher);  // 断言执行计划与匹配器一致
+      return this;  // 返回当前夹具以支持链式调用
     }
   }
 }

@@ -52,7 +52,7 @@ class EnumerableCorrelateTest {
           planner.removeRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
           planner.removeRule(EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE);
         })
-        .explainContains(""
+        .explainContains("")
             + "EnumerableCalc(expr#0..4=[{inputs}], empid=[$t0], name=[$t2], dept=[$t4])\n"
             + "  EnumerableCorrelate(correlation=[$cor0], joinType=[left], requiredColumns=[{1}])\n"
             + "    EnumerableCalc(expr#0..4=[{inputs}], proj#0..2=[{exprs}])\n"
@@ -70,7 +70,7 @@ class EnumerableCorrelateTest {
     tester(true, new HrSchema())
         .query(
             "select empid, name from emps e where exists (select 1 from depts d where d.deptno=e.deptno)")
-        .explainContains(""
+        .explainContains("")
             + "EnumerableCalc(expr#0..2=[{inputs}], empid=[$t0], name=[$t2])\n"
             + "  EnumerableHashJoin(condition=[=($1, $3)], joinType=[semi])\n"
             + "    EnumerableCalc(expr#0..4=[{inputs}], proj#0..2=[{exprs}])\n"
@@ -96,7 +96,7 @@ class EnumerableCorrelateTest {
           planner.removeRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
           planner.removeRule(EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE);
         })
-        .explainContains(""
+        .explainContains("")
             + "EnumerableCalc(expr#0..3=[{inputs}], empid=[$t1], name=[$t3])\n"
             + "  EnumerableCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{0}])\n"
             + "    EnumerableAggregate(group=[{0}])\n"
@@ -126,7 +126,7 @@ class EnumerableCorrelateTest {
           planner.removeRule(EnumerableRules.ENUMERABLE_JOIN_RULE);
           planner.removeRule(EnumerableRules.ENUMERABLE_MERGE_JOIN_RULE);
         })
-        .explainContains(""
+        .explainContains("")
             + "EnumerableCalc(expr#0..3=[{inputs}], empid=[$t1], name=[$t3])\n"
             + "  EnumerableCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{0}])\n"
             + "    EnumerableAggregate(group=[{0}])\n"
@@ -142,7 +142,7 @@ class EnumerableCorrelateTest {
     tester(false, new HrSchema())
         .query(
             "select empid, name from emps e where exists (select 1 from depts d where d.deptno=e.deptno)")
-        .explainContains(""
+        .explainContains("")
             + "EnumerableCalc(expr#0..3=[{inputs}], empid=[$t0], name=[$t2])\n"
             + "  EnumerableCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{1}])\n"
             + "    EnumerableCalc(expr#0..4=[{inputs}], proj#0..2=[{exprs}])\n"

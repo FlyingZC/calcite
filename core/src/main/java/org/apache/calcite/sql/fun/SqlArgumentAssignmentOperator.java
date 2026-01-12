@@ -36,7 +36,7 @@ import org.apache.calcite.sql.type.ReturnTypes;
  */
 class SqlArgumentAssignmentOperator extends SqlAsOperator {
   SqlArgumentAssignmentOperator() {
-    super("=>", SqlKind.ARGUMENT_ASSIGNMENT, 20, true, ReturnTypes.ARG0,
+    super("->", SqlKind.ARGUMENT_ASSIGNMENT, 20, true, ReturnTypes.ARG0,
         InferTypes.RETURN_TYPE, OperandTypes.ANY_IGNORE);
   }
 

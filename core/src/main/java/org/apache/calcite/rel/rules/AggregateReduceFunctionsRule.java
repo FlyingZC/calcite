@@ -518,13 +518,13 @@ public class AggregateReduceFunctionsRule
       List<AggregateCall> newCalls,
       Map<AggregateCall, RexNode> aggCallMapping,
       List<RexNode> inputExprs) {
-    // stddev_pop(x) ==>
+    // stddev_pop(x) =->
     //   power(
     //     (sum(x * x) - sum(x) * sum(x) / count(x))
     //     / count(x),
     //     .5)
     //
-    // stddev_samp(x) ==>
+    // stddev_samp(x) =->
     //   power(
     //     (sum(x * x) - sum(x) * sum(x) / count(x))
     //     / nullif(count(x) - 1, 0),
@@ -729,7 +729,7 @@ public class AggregateReduceFunctionsRule
       int xIndex,
       int yIndex,
       int nullFilterIndex) {
-    // regr_sxx(x, y) ==>
+    // regr_sxx(x, y) =->
     //    sum(y * y, x) - sum(y, x) * sum(y, x) / regr_count(x, y)
     //
 
@@ -805,11 +805,11 @@ public class AggregateReduceFunctionsRule
       List<AggregateCall> newCalls,
       Map<AggregateCall, RexNode> aggCallMapping,
       List<RexNode> inputExprs) {
-    // covar_pop(x, y) ==>
+    // covar_pop(x, y) =->
     //     (sum(x * y) - sum(x) * sum(y) / regr_count(x, y))
     //     / regr_count(x, y)
     //
-    // covar_samp(x, y) ==>
+    // covar_samp(x, y) =->
     //     (sum(x * y) - sum(x) * sum(y) / regr_count(x, y))
     //     / regr_count(count(x, y) - 1, 0)
     final SqlParserPos pos = oldCall.getParserPosition();

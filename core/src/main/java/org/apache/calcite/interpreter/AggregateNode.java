@@ -109,11 +109,11 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * 解释器节点,用于实现 {@link org.apache.calcite.rel.core.Aggregate} 关系节点
- * 
+ *
  * 这个类是 Calcite 解释器模式的核心组件之一,负责在解释器模式下执行聚合操作。
  * 解释器模式是 Calcite 执行查询的一种方式,它通过解释器直接执行关系代数操作,
  * 而不是生成代码。这种方式适用于调试、测试以及某些特殊场景。
- * 
+ *
  * 聚合操作是 SQL 查询中最常见的操作之一,包括 GROUP BY、COUNT、SUM、AVG、MIN、MAX 等。
  * 这个类实现了完整的聚合功能,支持:
  * 1. 单级和多级分组(GROUP BY)
@@ -121,13 +121,13 @@ import static java.util.Objects.requireNonNull;
  * 3. 聚合函数的过滤(HAVING 子句)
  * 4. 用户定义聚合函数(UDAF)
  * 5. 分组集合(GROUPING SETS)
- * 
+ *
  * 工作原理:
  * 1. 接收上游节点产生的数据行
  * 2. 根据分组键将数据行分发到不同的分组
  * 3. 在每个分组中使用累加器(Accumulator)计算聚合值
  * 4. 当所有数据处理完成后,输出每个分组的聚合结果
- * 
+ *
  * 关键设计:
  * - 使用累加器模式:每个聚合函数都有一个对应的累加器,用于增量计算聚合值
  * - 支持多种累加器实现:内置函数使用优化的实现,用户定义函数使用反射调用
@@ -155,16 +155,16 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 构造函数,初始化聚合节点
-   * 
+   *
    * @param compiler 编译器对象,用于编译表达式和获取数据上下文
    * @param rel 聚合关系节点,包含聚合操作的元数据信息
-   * 
+   *
    * 构造函数的主要任务:
    * 1. 初始化父类和基本成员变量
    * 2. 创建所有分组集合对应的 Grouping 对象
    * 3. 计算所有分组的并集,确定输出结构
    * 4. 为每个聚合函数创建对应的累加器工厂
-   * 
+   *
    * 分组集合(GROUPING SETS)支持:
    * - 允许在单个查询中指定多个分组方式
    * - 例如: GROUP BY GROUPING SETS ((dept_id, emp_id), (dept_id), ())
@@ -219,20 +219,20 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 执行聚合操作的主方法
-   * 
+   *
    * 这个方法实现了聚合操作的两个阶段:
    * 1. 数据处理阶段:接收输入行并分发给各个分组进行累加
    * 2. 结果输出阶段:所有数据处理完成后,输出每个分组的聚合结果
-   * 
+   *
    * @throws InterruptedException 如果线程被中断
-   * 
+   *
    * 执行流程:
    * 1. 从上游节点(source)接收数据行
    * 2. 将每行数据发送到所有分组中(支持 GROUPING SETS)
    * 3. 每个分组根据其分组键找到对应的累加器列表并更新累加器
    * 4. 当所有数据处理完成后,调用每个分组的 end 方法输出结果
    * 5. 将结果发送到下游节点(sink)
-   * 
+   *
    * GROUPING SETS 处理:
    * - 如果有多个分组集合,同一行数据会被发送到多个分组
    * - 每个分组独立维护自己的累加器状态
@@ -263,7 +263,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 为聚合函数调用创建累加器工厂
-   * 
+   *
    * 这个方法根据聚合函数的类型返回相应的累加器工厂实现
    * 支持的聚合函数类型:
    * 1. COUNT - 计数函数
@@ -272,14 +272,14 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
    * 4. LITERAL_AGG - 字面量聚合
    * 5. 用户定义聚合函数(UDAF)
    * 6. 其他标准聚合函数(AVG 等)
-   * 
+   *
    * @param compiler 编译器,用于编译表达式
    * @param call 聚合函数调用,包含函数类型、参数等信息
    * @param ignoreFilter 是否忽略过滤条件
    *               true: 不处理过滤条件
    *               false: 如果有过滤条件则创建 FilterAccumulator 包装器
    * @return 累加器工厂,可以创建新的累加器实例
-   * 
+   *
    * 过滤条件处理:
    * - 如果聚合函数有过滤条件(filterArg >= 0)且不忽略过滤,
    *   则递归调用自身获取不带过滤的累加器工厂,然后用 FilterAccumulator 包装
@@ -338,7 +338,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
     } else {
       // 其他聚合函数(如 AVG 等):使用代码生成方式实现
       // 这是最通用的实现方式,通过生成 Java 代码来执行聚合
-      
+
       // 获取 Java 类型工厂,用于创建 Java 类型
       final JavaTypeFactory typeFactory =
           (JavaTypeFactory) rel.getCluster().getTypeFactory();
@@ -444,13 +444,13 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 根据聚合函数的数据类型返回对应的 MAX/MIN 实现类
-   * 
+   *
    * 这个方法为 MAX 和 MIN 聚合函数选择适当的实现类
    * 每种数据类型都有专门优化的实现,以提高性能
-   * 
+   *
    * @param call 聚合函数调用,包含函数类型和数据类型信息
    * @return 对应的 MAX/MIN 实现类
-   * 
+   *
    * 支持的数据类型:
    * - INTEGER -> MaxInt / MinInt
    * - REAL -> MaxFloat / MinFloat
@@ -458,7 +458,7 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
    * - DECIMAL -> MaxBigDecimal / MinBigDecimal
    * - BOOLEAN -> MaxBoolean / MinBoolean
    * - 其他类型(包括 BIGINT) -> MaxLong / MinLong
-   * 
+   *
    * 这些实现类都遵循用户定义聚合函数的接口规范:
    * - init(): 初始化累加器
    * - add(accumulator, value): 添加新值
@@ -494,19 +494,19 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 根据聚合函数的数据类型返回对应的 SUM 实现类
-   * 
+   *
    * 这个方法为 SUM 和 SUM0 聚合函数选择适当的实现类
    * 每种数据类型都有专门优化的实现,以提高性能
-   * 
+   *
    * @param call 聚合函数调用,包含数据类型信息
    * @return 对应的 SUM 实现类
-   * 
+   *
    * 支持的数据类型:
    * - DOUBLE/REAL/FLOAT -> DoubleSum
    * - DECIMAL -> BigDecimalSum
    * - INTEGER -> IntSum
    * - BIGINT/其他 -> LongSum
-   * 
+   *
    * 注意:
    * - SUM 和 SUM0 使用相同的实现类
    * - 区别在于空集合的处理:SUM 返回 null,SUM0 返回 0
@@ -535,10 +535,10 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 为给定的类创建聚合函数实现
-   * 
+   *
    * 这个方法将普通的 Java 类包装为 Calcite 的聚合函数实现
    * 使用反射来发现和调用类中的 init、add、merge、result 方法
-   * 
+   *
    * @param clazz 聚合函数的实现类
    *              这个类必须包含以下方法:
    *              - T init(): 初始化累加器
@@ -547,12 +547,12 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
    *              - T result(T accumulator): 返回最终结果
    * @return 聚合函数实现对象,封装了反射调用逻辑
    * @throws NullPointerException 如果无法创建聚合函数实现
-   * 
+   *
    * 工作原理:
    * 1. 使用 AggregateFunctionImpl.create() 创建实现对象
    * 2. 该方法通过反射找到并缓存所有需要的方法
    * 3. 后续通过反射调用这些方法来实现聚合函数
-   * 
+   *
    * 错误处理:
    * - 如果类不符合聚合函数接口规范,会抛出异常
    * - requireNonNull 确保返回值不为 null
@@ -567,15 +567,15 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   }
 
   /** COUNT 函数的累加器实现
-   * 
+   *
    * 这个类实现了 COUNT 聚合函数的累加逻辑
    * COUNT 函数用于统计非空值的数量
-   * 
+   *
    * 特性:
    * - 支持 COUNT(*) 和 COUNT(column) 两种形式
    * - 只统计所有参数都不为 null 的行
    * - 使用 long 类型存储计数,支持大数量级
-   * 
+   *
    * 使用示例:
    * - COUNT(*): 统计所有行(调用时参数列表为空)
    * - COUNT(column): 统计指定列非 null 的行数
@@ -591,9 +591,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 构造函数,初始化 COUNT 累加器
-     * 
+     *
      * @param call 聚合函数调用对象,包含参数列表
-     * 
+     *
      * 初始化:
      * - 保存聚合调用对象
      * - 将计数器初始化为 0
@@ -607,14 +607,14 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 处理输入行,更新计数
-     * 
+     *
      * @param row 输入数据行
-     * 
+     *
      * 处理逻辑:
      * 1. 检查所有参数字段是否都不为 null
      * 2. 如果都不为 null,则计数器加 1
      * 3. 如果有任何一个参数为 null,则不计数
-     * 
+     *
      * 注意:
      * - COUNT(*) 的参数列表为空,此时所有行都计数
      * - COUNT(column) 只统计该列不为 null 的行
@@ -640,9 +640,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 返回聚合结果
-     * 
+     *
      * @return 计数结果(long 类型)
-     * 
+     *
      * 返回值:
      * - 返回 cnt 的值,即符合条件的行数
      * - 如果没有符合条件的行,返回 0
@@ -654,15 +654,15 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
   }
 
   /** LITERAL_AGG 函数的累加器实现
-   * 
+   *
    * 这个类实现了字面量聚合函数的累加逻辑
    * LITERAL_AGG 是 Calcite 的内部函数,用于返回常量值
-   * 
+   *
    * 特性:
    * - 不处理输入数据,总是返回相同的值
    * - 值在构造时确定,后续不会改变
    * - 支持任意类型的常量值
-   * 
+   *
    * 使用场景:
    * - 用于优化某些特殊的聚合查询
    * - 在查询重写过程中可能生成这种聚合
@@ -675,9 +675,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 构造函数,初始化字面量累加器
-     * 
+     *
      * @param value 要返回的常量值,可以为 null
-     * 
+     *
      * 初始化:
      * - 保存要返回的常量值
      * - 这个值在累加器的整个生命周期中不会改变
@@ -689,9 +689,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 处理输入行(不执行任何操作)
-     * 
+     *
      * @param row 输入数据行(被忽略)
-     * 
+     *
      * 注意:
      * - 这个方法不执行任何操作
      * - 字面量聚合不需要处理输入数据
@@ -703,9 +703,9 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
     /**
      * 返回聚合结果(常量值)
-     * 
+     *
      * @return 保存的常量值,可能为 null
-     * 
+     *
      * 返回值:
      * - 总是返回构造时传入的值
      * - 无论处理了多少行数据,结果都相同
@@ -718,19 +718,19 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
    * 累加器工厂接口,用于创建累加器实例
-   * 
+   *
    * 这个接口扩展了 Java 的 Supplier 接口,是一个函数式接口
    * 工厂模式允许为每个聚合函数创建新的累加器实例
-   * 
+   *
    * 为什么需要工厂:
    * - 每个分组需要独立的累加器实例
    * - 累加器状态不能在多个分组间共享
    * - 工厂可以延迟创建累加器,节省资源
-   * 
+   *
    * 使用方式:
    * - 在 Grouping 中,为每个新的分组键创建新的累加器
    * - 工厂的 get() 方法被调用时创建新的累加器实例
-   * 
+   *
    * 实现类:
    * - CountAccumulator 的 lambda 表达式
    * - UdaAccumulatorFactory: 用户定义聚合函数工厂
@@ -743,25 +743,25 @@ public class AggregateNode extends AbstractSingleNode<Aggregate> {
 
   /**
  * 基于标量代码片段的累加器工厂定义
- * 
+ *
  * 这个类为使用生成的 Java 代码实现的聚合函数提供累加器工厂
  * 标量(Scalar)是通过 Janino 编译器在运行时编译的 Java 代码片段
- * 
+ *
  * 工作原理:
  * 1. 在 getAccumulator 方法中生成 Java 代码
  * 2. 使用 Janino 编译器将代码编译为可执行的标量对象
  * 3. 标量对象包含执行聚合操作的编译后代码
  * 4. 每次调用 get() 创建新的累加器实例,每个实例有自己的状态
- * 
+ *
  * 标量类型:
  * - initScalar: 初始化标量(通常为 null,不需要特殊初始化)
  * - addScalar: 添加标量,用于处理每行数据
  * - endScalar: 结束标量(通常为 null,直接返回累加器状态)
- * 
+ *
  * 上下文:
  * - sendContext: 发送上下文,包含输入行和累加器状态
  * - endContext: 结束上下文,只包含累加器状态
- * 
+ *
  * 使用场景:
  * - 复杂的聚合函数(如 AVG)
  * - 用户定义的聚合函数
@@ -782,8 +782,7 @@ private static class ScalarAccumulatorDef implements AccumulatorFactory {
   // 包含输入行数据和累加器状态
   final Context sendContext;
   // 结束上下文,用于执行 end 标量
-  // 只包含累加器状态
-  final Context sendContext;
+  final Context endContext;
   // 输入行的长度(字段数)
   // 用于确定 sendContext.values 数组的大小
   final int rowLength;
@@ -793,14 +792,14 @@ private static class ScalarAccumulatorDef implements AccumulatorFactory {
 
   /**
    * 构造函数,初始化标量累加器工厂定义
-   * 
+   *
    * @param initScalar 初始化标量(通常为 null)
    * @param addScalar 添加标量,包含处理每行数据的代码
    * @param endScalar 结束标量(通常为 null)
    * @param rowLength 输入行的字段数
    * @param accumulatorLength 累加器状态的变量数
    * @param root 根数据上下文,提供运行时环境信息
-   * 
+   *
    * 初始化过程:
    * 1. 保存所有标量和参数
    * 2. 创建发送上下文,包含输入行和累加器状态的数组
@@ -832,9 +831,9 @@ private static class ScalarAccumulatorDef implements AccumulatorFactory {
 
   /**
    * 创建新的累加器实例
-   * 
+   *
    * @return 新的标量累加器实例
-   * 
+   *
    * 创建过程:
    * 1. 创建新的累加器状态数组,初始化为默认值(null)
    * 2. 创建 ScalarAccumulator 对象,传入工厂定义和状态数组
@@ -849,21 +848,21 @@ private static class ScalarAccumulatorDef implements AccumulatorFactory {
 
   /**
  * 基于标量代码片段的累加器实现
- * 
+ *
  * 这个类使用编译后的 Java 代码执行聚合操作
  * 标量代码是在运行时通过 Janino 编译器生成的
- * 
+ *
  * 工作流程:
  * 1. send(): 将输入行复制到上下文,执行 add 标量代码
  * 2. add 标量代码更新累加器状态数组
  * 3. end(): 将累加器状态复制到上下文,执行 end 标量代码
  * 4. 返回最终结果
- * 
+ *
  * 性能特点:
  * - 代码在运行时编译,首次调用较慢
  * - 编译后的代码执行效率高
  * - 适合复杂的聚合函数
- * 
+ *
  * 内存管理:
  * - values 数组存储累加器状态
  * - sendContext.values 临时存储输入行和状态
@@ -880,10 +879,10 @@ private static class ScalarAccumulator implements Accumulator {
 
   /**
    * 构造函数,初始化标量累加器
-   * 
+   *
    * @param def 工厂定义,包含标量和上下文
    * @param values 累加器状态数组(通常为空数组)
-   * 
+   *
    * 初始化:
    * - 保存工厂定义,用于访问标量和上下文
    * - 保存状态数组,用于存储聚合状态
@@ -897,18 +896,18 @@ private static class ScalarAccumulator implements Accumulator {
 
   /**
    * 处理输入行,更新累加器状态
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 处理流程:
    * 1. 获取发送上下文的值数组
    * 2. 将输入行的值复制到数组前面
    * 3. 将累加器状态复制到数组后面
    * 4. 执行 add 标量代码,更新累加器状态
-   * 
+   *
    * 数据布局:
    * sendContext.values = [输入行字段..., 累加器状态...]
-   * 
+   *
    * 注意:
    * - add 标量代码会修改 this.values 数组
    * - 每次调用都会更新累加器状态
@@ -933,15 +932,15 @@ private static class ScalarAccumulator implements Accumulator {
 
   /**
    * 返回聚合结果
-   * 
+   *
    * @return 聚合结果,可能为 null
-   * 
+   *
    * 处理流程:
    * 1. 获取结束上下文
    * 2. 将累加器状态复制到结束上下文的值数组
    * 3. 执行 end 标量代码,计算最终结果
    * 4. 返回计算结果
-   * 
+   *
    * 注意:
    * - end 标量代码可能为 null,此时直接返回状态
    * - 结果可能为 null,取决于聚合函数的实现
@@ -960,19 +959,19 @@ private static class ScalarAccumulator implements Accumulator {
 
   /**
  * 内部类,用于跟踪分组
- * 
+ *
  * 这个类管理一个特定的分组方式(GROUPING SET 中的一个)
  * 每个分组方式对应一组分组键,维护该分组下所有累加器的状态
- * 
+ *
  * 核心功能:
  * 1. 根据分组键将数据行分发到对应的累加器列表
  * 2. 为新的分组键创建新的累加器列表
  * 3. 输出该分组的所有聚合结果
- * 
+ *
  * 数据结构:
  * - grouping: 分组键的位集合,指定哪些字段用于分组
  * - accumulators: 映射表,分组键 -> 累加器列表
- * 
+ *
  * GROUPING SETS 支持:
  * - 每个 Grouping 对象代表一个分组集合
  * - 例如: GROUPING SETS ((a,b), (a)) 会创建两个 Grouping 对象
@@ -988,9 +987,9 @@ private class Grouping {
 
   /**
    * 构造函数,初始化分组对象
-   * 
+   *
    * @param grouping 分组键的位集合,指定哪些字段用于分组
-   * 
+   *
    * 初始化:
    * - 保存分组键的位集合
    * - 创建空的累加器映射表
@@ -1002,20 +1001,20 @@ private class Grouping {
 
   /**
    * 处理输入行,分发给对应的累加器
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 处理流程:
    * 1. 从输入行中提取分组字段的值,构建分组键
    * 2. 检查该分组键是否已存在累加器列表
    * 3. 如果不存在,创建新的累加器列表
    * 4. 将输入行发送到对应的累加器列表
-   * 
+   *
    * 分组键构建:
    * - 只包含分组字段的值
    * - 顺序与 grouping 中的字段顺序一致
    * - 用于在 HashMap 中查找对应的累加器列表
-   * 
+   *
    * 累加器列表创建:
    * - 为每个聚合函数创建一个累加器
    * - 使用工厂模式创建,确保每个累加器独立
@@ -1054,22 +1053,22 @@ private class Grouping {
 
   /**
    * 输出该分组的所有聚合结果
-   * 
+   *
    * @param sink 数据接收器,用于发送结果到下游
    * @throws InterruptedException 如果线程被中断
-   * 
+   *
    * 处理流程:
    * 1. 遍历所有分组键及其累加器列表
    * 2. 为每个分组键构建输出行
    * 3. 设置输出行的分组字段值
    * 4. 调用累加器列表获取聚合结果
    * 5. 将输出行发送到下游
-   * 
+   *
    * 输出行构建:
    * - 长度 = 所有分组字段数 + 聚合函数数
    * - 分组字段位置:根据 unionGroups 确定
    * - 聚合结果位置:在分组字段之后
-   * 
+   *
    * 分组字段处理:
    * - 如果字段在当前分组中,设置对应的值
    * - 如果字段不在当前分组中,设置为 null
@@ -1113,18 +1112,18 @@ private class Grouping {
 
   /**
  * 分组过程中使用的累加器列表
- * 
+ *
  * 这个类继承自 ArrayList<Accumulator>,用于管理一个分组下的所有累加器
  * 每个累加器对应一个聚合函数,按顺序存储
- * 
+ *
  * 核心功能:
  * 1. 将输入行发送到所有累加器进行更新
  * 2. 从所有累加器获取最终结果并添加到输出行
- * 
+ *
  * 数据结构:
  * - 继承自 ArrayList,使用动态数组存储累加器
  * - 累加器的顺序与聚合函数的顺序一致
- * 
+ *
  * 使用场景:
  * - 每个 Grouping 对象为每个分组键创建一个 AccumulatorList
  * - AccumulatorList 包含该分组所有聚合函数的累加器
@@ -1137,14 +1136,14 @@ private class Grouping {
 private static class AccumulatorList extends ArrayList<Accumulator> {
   /**
    * 将输入行发送到所有累加器
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 处理流程:
    * 1. 遍历列表中的所有累加器
    * 2. 调用每个累加器的 send 方法
    * 3. 每个累加器根据其聚合函数逻辑更新内部状态
-   * 
+   *
    * 注意:
    * - 所有累加器都会处理同一行数据
    * - 不同累加器可能关注不同的字段
@@ -1160,18 +1159,18 @@ private static class AccumulatorList extends ArrayList<Accumulator> {
 
   /**
    * 从所有累加器获取最终结果并添加到输出行
-   * 
+   *
    * @param r 输出行构建器,用于构建输出行
-   * 
+   *
    * 处理流程:
    * 1. 计算输出行中聚合结果的起始位置
    * 2. 遍历所有累加器
    * 3. 调用每个累加器的 end 方法获取结果
    * 4. 将结果添加到输出行的对应位置
-   * 
+   *
    * 输出行结构:
    * [分组字段1, 分组字段2, ..., 聚合结果1, 聚合结果2, ...]
-   * 
+   *
    * 位置计算:
    * - 聚合结果从位置 (r.size() - size()) 开始
    * - 每个聚合结果占据一个位置
@@ -1191,25 +1190,25 @@ private static class AccumulatorList extends ArrayList<Accumulator> {
 
 /**
  * 定义聚合函数的实现接口
- * 
+ *
  * 这个接口定义了所有累加器必须实现的方法
  * 累加器是聚合函数的核心组件,负责增量计算聚合值
- * 
+ *
  * 核心方法:
  * 1. send(): 处理输入行,更新累加器状态
  * 2. end(): 返回聚合结果
- * 
+ *
  * 设计模式:
  * - 累加器模式:增量计算,避免存储所有数据
  * - 策略模式:不同的聚合函数有不同的实现
- * 
+ *
  * 实现类:
  * - CountAccumulator: COUNT 函数
  * - LiteralAccumulator: 字面量聚合
  * - ScalarAccumulator: 标量代码实现
  * - UdaAccumulator: 用户定义聚合函数
  * - FilterAccumulator: 过滤包装器
- * 
+ *
  * 使用方式:
  * 1. 创建累加器实例(通过工厂)
  * 2. 对每行数据调用 send 方法
@@ -1221,13 +1220,13 @@ private static class AccumulatorList extends ArrayList<Accumulator> {
 private interface Accumulator {
   /**
    * 处理输入行,更新累加器状态
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 功能:
    * - 根据聚合函数的逻辑更新内部状态
    * - 不同聚合函数有不同的更新逻辑
-   * 
+   *
    * 实现示例:
    * - COUNT: 如果参数不为 null,计数器加 1
    * - SUM: 将参数值累加到累加器
@@ -1235,23 +1234,23 @@ private interface Accumulator {
    * - MIN: 如果参数值小于当前值,更新当前值
    */
   void send(Row row);
-  
+
   /**
    * 返回聚合结果
-   * 
+   *
    * @return 聚合结果,可能为 null
-   * 
+   *
    * 功能:
    * - 基于累加器的内部状态计算最终结果
    * - 不同聚合函数有不同的计算逻辑
-   * 
+   *
    * 返回值:
    * - COUNT: 计数值
    * - SUM: 累加和
    * - MAX: 最大值
    * - MIN: 最小值
    * - AVG: 平均值(需要额外计数)
-   * 
+   *
    * 注意:
    * - 如果没有输入数据,可能返回 null
    * - SUM0 例外,空集合返回 0
@@ -1261,24 +1260,24 @@ private interface Accumulator {
 
   /**
  * INTEGER 类型值的 SUM 函数实现,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对整数类型值的求和聚合函数
  * 遵循用户定义聚合函数的接口规范
- * 
+ *
  * 用户定义聚合函数接口:
  * - init(): 初始化累加器
  * - add(accumulator, value): 添加新值到累加器
  * - merge(accumulator0, accumulator1): 合并两个累加器(用于分布式计算)
  * - result(accumulator): 返回最终结果
- * 
+ *
  * 使用场景:
  * - SQL: SUM(integer_column)
  * - 用于整数列的求和计算
- * 
+ *
  * 性能特点:
  * - 使用基本类型 int,避免装箱拆箱
  * - 简单的加法运算,性能高效
- * 
+ *
  * 注意:
  * - 没有溢出检查,大数可能溢出
  * - 空集合返回 0(SUM0)或 null(SUM),由调用方控制
@@ -1287,19 +1286,19 @@ private interface Accumulator {
 public static class IntSum {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
    */
   public IntSum() {
   }
-  
+
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(0)
-   * 
+   *
    * 功能:
    * - 返回求和的初始值
    * - 对于求和函数,初始值应该是 0
@@ -1307,14 +1306,14 @@ public static class IntSum {
   public int init() {
     return 0;
   }
-  
+
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param v 要添加的新值
    * @return 更新后的累加器值
-   * 
+   *
    * 功能:
    * - 将新值加到累加器上
    * - 返回新的累加器值
@@ -1322,14 +1321,14 @@ public static class IntSum {
   public int add(int accumulator, int v) {
     return accumulator + v;
   }
-  
+
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 将两个部分的和合并为一个总和
@@ -1338,13 +1337,13 @@ public static class IntSum {
   public int merge(int accumulator0, int accumulator1) {
     return accumulator0 + accumulator1;
   }
-  
+
   /**
    * 返回最终结果
-   * 
-   * @param 累加器值
+   *
+   * @param accumulator 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于求和函数,结果就是累加器值本身
    * - 其他聚合函数可能需要额外计算(如 AVG 需要除以计数)
@@ -1356,25 +1355,25 @@ public static class IntSum {
 
 /**
  * BIGINT 类型值的 SUM 函数实现,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对长整数类型值的求和聚合函数
  * 遵循用户定义聚合函数的接口规范
- * 
+ *
  * 用户定义聚合函数接口:
  * - init(): 初始化累加器
  * - add(accumulator, value): 添加新值到累加器
  * - merge(accumulator0, accumulator1): 合并两个累加器
  * - result(accumulator): 返回最终结果
- * 
+ *
  * 使用场景:
  * - SQL: SUM(bigint_column)
  * - 用于长整数列的求和计算
  * - 适用于大数求和,范围比 INTEGER 更大
- * 
+ *
  * 性能特点:
  * - 使用基本类型 long,避免装箱拆箱
  * - 简单的加法运算,性能高效
- * 
+ *
  * 注意:
  * - 没有溢出检查,极大数可能溢出
  * - 空集合返回 0(SUM0)或 null(SUM),由调用方控制
@@ -1383,19 +1382,19 @@ public static class IntSum {
 public static class LongSum {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
    */
   public LongSum() {
   }
-  
+
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(0L)
-   * 
+   *
    * 功能:
    * - 返回求和的初始值
    * - 对于求和函数,初始值应该是 0
@@ -1403,14 +1402,14 @@ public static class LongSum {
   public long init() {
     return 0L;
   }
-  
+
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param v 要添加的新值
    * @return 更新后的累加器值
-   * 
+   *
    * 功能:
    * - 将新值加到累加器上
    * - 返回新的累加器值
@@ -1418,14 +1417,14 @@ public static class LongSum {
   public long add(long accumulator, long v) {
     return accumulator + v;
   }
-  
+
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 将两个部分的和合并为一个总和
@@ -1433,13 +1432,13 @@ public static class LongSum {
   public long merge(long accumulator0, long accumulator1) {
     return accumulator0 + accumulator1;
   }
-  
+
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于求和函数,结果就是累加器值本身
    */
@@ -1450,25 +1449,25 @@ public static class LongSum {
 
 /**
  * DOUBLE 类型值的 SUM 函数实现,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对双精度浮点数类型值的求和聚合函数
  * 遵循用户定义聚合函数的接口规范
- * 
+ *
  * 用户定义聚合函数接口:
  * - init(): 初始化累加器
  * - add(accumulator, value): 添加新值到累加器
  * - merge(accumulator0, accumulator1): 合并两个累加器
  * - result(accumulator): 返回最终结果
- * 
+ *
  * 使用场景:
  * - SQL: SUM(double_column)
  * - 用于浮点数列的求和计算
  * - 适用于需要高精度浮点运算的场景
- * 
+ *
  * 性能特点:
  * - 使用基本类型 double,避免装箱拆箱
  * - 简单的加法运算,性能高效
- * 
+ *
  * 注意:
  * - 浮点数运算可能有精度损失
  * - 没有溢出检查,极大数可能溢出为 Infinity
@@ -1478,19 +1477,19 @@ public static class LongSum {
 public static class DoubleSum {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
    */
   public DoubleSum() {
   }
-  
+
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(0.0)
-   * 
+   *
    * 功能:
    * - 返回求和的初始值
    * - 对于求和函数,初始值应该是 0
@@ -1498,14 +1497,14 @@ public static class DoubleSum {
   public double init() {
     return 0D;
   }
-  
+
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param v 要添加的新值
    * @return 更新后的累加器值
-   * 
+   *
    * 功能:
    * - 将新值加到累加器上
    * - 返回新的累加器值
@@ -1513,14 +1512,14 @@ public static class DoubleSum {
   public double add(double accumulator, double v) {
     return accumulator + v;
   }
-  
+
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 将两个部分的和合并为一个总和
@@ -1528,13 +1527,13 @@ public static class DoubleSum {
   public double merge(double accumulator0, double accumulator1) {
     return accumulator0 + accumulator1;
   }
-  
+
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于求和函数,结果就是累加器值本身
    */
@@ -1545,26 +1544,26 @@ public static class DoubleSum {
 
   /**
  * BigDecimal 类型值的 SUM 函数实现,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对高精度十进制类型值的求和聚合函数
  * 遵循用户定义聚合函数的接口规范
- * 
+ *
  * 用户定义聚合函数接口:
  * - init(): 初始化累加器
  * - add(accumulator, value): 添加新值到累加器
  * - merge(accumulator0, accumulator1): 合并两个累加器
  * - result(accumulator): 返回最终结果
- * 
+ *
  * 使用场景:
  * - SQL: SUM(decimal_column)
  * - 用于需要精确计算的财务、科学计算等场景
  * - 适用于不能容忍浮点数精度损失的场景
- * 
+ *
  * 性能特点:
  * - 使用 BigDecimal 类,保证精度
  * - 运算性能比基本类型慢,但精度高
  * - 不会出现浮点数精度损失
- * 
+ *
  * 注意:
  * - 不会溢出,因为 BigDecimal 可以表示任意精度的数
  * - 性能比基本类型慢
@@ -1574,7 +1573,7 @@ public static class DoubleSum {
 public static class BigDecimalSum {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
@@ -1584,9 +1583,9 @@ public static class BigDecimalSum {
 
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(BigDecimal("0"))
-   * 
+   *
    * 功能:
    * - 返回求和的初始值
    * - 使用字符串 "0" 创建 BigDecimal,避免浮点数精度问题
@@ -1597,11 +1596,11 @@ public static class BigDecimalSum {
 
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param v 要添加的新值
    * @return 更新后的累加器值
-   * 
+   *
    * 功能:
    * - 使用 BigDecimal 的 add 方法进行精确加法
    * - 不会出现浮点数精度损失
@@ -1612,11 +1611,11 @@ public static class BigDecimalSum {
 
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator01 第二个累加器值(参数名拼写错误,应为 accumulator1)
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 将两个部分的和合并为一个总和
@@ -1628,10 +1627,10 @@ public static class BigDecimalSum {
 
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于求和函数,结果就是累加器值本身
    */
@@ -1642,27 +1641,27 @@ public static class BigDecimalSum {
 
   /**
  * 数值类型比较聚合方法的通用实现,作为用户定义聚合函数
- * 
+ *
  * 这个类提供了 MAX 和 MIN 聚合函数的通用实现
  * 使用泛型支持多种数值类型
- * 
+ *
  * 设计模式:
  * - 策略模式:通过传入不同的比较函数实现 MAX 或 MIN
  * - 模板方法:定义了聚合函数的通用流程
- * 
+ *
  * 用户定义聚合函数接口:
  * - init(): 初始化累加器
  * - add(accumulator, value): 添加新值到累加器
  * - merge(accumulator0, accumulator1): 合并两个累加器
  * - result(accumulator): 返回最终结果
- * 
+ *
  * 泛型参数:
  * - T: 数值类型(Integer, Long, Float, Double, BigDecimal 等)
- * 
+ *
  * 使用场景:
  * - MAX 函数: initialValue = 最小值, comparisonFunction = Math::max
  * - MIN 函数: initialValue = 最大值, comparisonFunction = Math::min
- * 
+ *
  * 性能特点:
  * - 使用函数式接口,避免重复代码
  * - 支持所有实现了比较操作的数值类型
@@ -1683,14 +1682,14 @@ public static class NumericComparison<T> {
 
   /**
    * 构造函数,初始化比较聚合函数
-   * 
+   *
    * @param initialValue 初始值
    * @param comparisonFunction 比较函数
-   * 
+   *
    * 参数说明:
    * - initialValue: 对于 MAX 应该是最小值,对于 MIN 应该是最大值
    * - comparisonFunction: 接受两个参数,返回比较结果
-   * 
+   *
    * 使用示例:
    * - MAX: new NumericComparison<>(Integer.MIN_VALUE, Math::max)
    * - MIN: new NumericComparison<>(Integer.MAX_VALUE, Math::min)
@@ -1704,9 +1703,9 @@ public static class NumericComparison<T> {
 
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值
-   * 
+   *
    * 功能:
    * - 返回初始值
    * - MAX 返回最小值,MIN 返回最大值
@@ -1717,11 +1716,11 @@ public static class NumericComparison<T> {
 
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param value 要比较的新值
    * @return 比较后的新累加器值
-   * 
+   *
    * 功能:
    * - 使用比较函数比较累加器值和新值
    * - 返回较大或较小的值(取决于 comparisonFunction)
@@ -1732,11 +1731,11 @@ public static class NumericComparison<T> {
 
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 比较两个累加器的值,返回较大或较小的值
@@ -1747,10 +1746,10 @@ public static class NumericComparison<T> {
 
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于比较函数,结果就是累加器值本身
    */
@@ -1761,22 +1760,22 @@ public static class NumericComparison<T> {
 
   /**
  * MIN 函数的整数实现,计算整数值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对整数类型值的最小值计算
- * 
+ *
  * 使用场景:
  * - SQL: MIN(integer_column)
  * - 用于查找整数列的最小值
- * 
+ *
  * 工作原理:
  * - 初始值: Integer.MAX_VALUE(整数最大值)
  * - 比较函数: Math::min(返回两个数中较小的)
  * - 第一条数据会替换初始值,后续数据会与当前最小值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 int,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -1785,7 +1784,7 @@ public static class NumericComparison<T> {
 public static class MinInt extends NumericComparison<Integer> {
   /**
    * 构造函数,初始化 MIN 整数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Integer.MAX_VALUE(确保任何实际值都会更小)
    * - 比较函数: Math::min(返回两个数中较小的)
@@ -1798,23 +1797,23 @@ public static class MinInt extends NumericComparison<Integer> {
 
 /**
  * MIN 函数的长整数实现,计算长整数值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对长整数类型值的最小值计算
- * 
+ *
  * 使用场景:
  * - SQL: MIN(bigint_column)
  * - 用于查找长整数列的最小值
  * - 适用于大数范围的最小值计算
- * 
+ *
  * 工作原理:
  * - 初始值: Long.MAX_VALUE(长整数最大值)
  * - 比较函数: Math::min(返回两个数中较小的)
  * - 第一条数据会替换初始值,后续数据会与当前最小值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 long,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -1823,7 +1822,7 @@ public static class MinInt extends NumericComparison<Integer> {
 public static class MinLong extends NumericComparison<Long> {
   /**
    * 构造函数,初始化 MIN 长整数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Long.MAX_VALUE(确保任何实际值都会更小)
    * - 比较函数: Math::min(返回两个数中较小的)
@@ -1836,22 +1835,22 @@ public static class MinLong extends NumericComparison<Long> {
 
 /**
  * MIN 函数的浮点数实现,计算浮点数值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对浮点数类型值的最小值计算
- * 
+ *
  * 使用场景:
  * - SQL: MIN(float_column)
  * - 用于查找浮点数列的最小值
- * 
+ *
  * 工作原理:
  * - 初始值: Float.MAX_VALUE(浮点数最大值)
  * - 比较函数: Math::min(返回两个数中较小的)
  * - 第一条数据会替换初始值,后续数据会与当前最小值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 float,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 浮点数比较可能有精度问题
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
@@ -1861,7 +1860,7 @@ public static class MinLong extends NumericComparison<Long> {
 public static class MinFloat extends NumericComparison<Float> {
   /**
    * 构造函数,初始化 MIN 浮点数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Float.MAX_VALUE(确保任何实际值都会更小)
    * - 比较函数: Math::min(返回两个数中较小的)
@@ -1874,23 +1873,23 @@ public static class MinFloat extends NumericComparison<Float> {
 
 /**
  * MIN 函数的双精度浮点数实现,计算双精度浮点数值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对双精度浮点数类型值的最小值计算
- * 
+ *
  * 使用场景:
  * - SQL: MIN(double_column) 或 MIN(real_column)
  * - 用于查找双精度浮点数列的最小值
  * - 适用于需要高精度浮点运算的场景
- * 
+ *
  * 工作原理:
  * - 初始值: Double.MAX_VALUE(双精度浮点数最大值)
  * - 比较函数: Math::min(返回两个数中较小的)
  * - 第一条数据会替换初始值,后续数据会与当前最小值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 double,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 浮点数比较可能有精度问题
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
@@ -1900,7 +1899,7 @@ public static class MinFloat extends NumericComparison<Float> {
 public static class MinDouble extends NumericComparison<Double> {
   /**
    * 构造函数,初始化 MIN 双精度浮点数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Double.MAX_VALUE(确保任何实际值都会更小)
    * - 比较函数: Math::min(返回两个数中较小的)
@@ -1913,24 +1912,24 @@ public static class MinDouble extends NumericComparison<Double> {
 
   /**
  * MIN 函数的 BigDecimal 实现,计算高精度十进制数值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对 BigDecimal 类型值的最小值计算
- * 
+ *
  * 使用场景:
  * - SQL: MIN(decimal_column)
  * - 用于查找高精度十进制数列的最小值
  * - 适用于需要精确计算的财务、科学计算等场景
- * 
+ *
  * 工作原理:
  * - 初始值: BigDecimal(Double.MAX_VALUE)(确保任何实际值都会更小)
  * - 比较函数: BigDecimal::min(返回两个数中较小的)
  * - 第一条数据会替换初始值,后续数据会与当前最小值比较
- * 
+ *
  * 性能特点:
  * - 使用 BigDecimal 类,保证精度
  * - 运算性能比基本类型慢,但精度高
  * - 不会出现浮点数精度损失
- * 
+ *
  * 注意:
  * - 不会溢出,因为 BigDecimal 可以表示任意精度的数
  * - 性能比基本类型慢
@@ -1940,7 +1939,7 @@ public static class MinDouble extends NumericComparison<Double> {
 public static class MinBigDecimal extends NumericComparison<BigDecimal> {
   /**
    * 构造函数,初始化 MIN BigDecimal 聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: BigDecimal(Double.MAX_VALUE)(确保任何实际值都会更小)
    * - 比较函数: MinBigDecimal::min(自定义的 min 方法)
@@ -1953,11 +1952,11 @@ public static class MinBigDecimal extends NumericComparison<BigDecimal> {
 
   /**
    * 返回两个 BigDecimal 中较小的值
-   * 
+   *
    * @param a 第一个 BigDecimal 值
    * @param b 第二个 BigDecimal 值
    * @return 较小的值
-   * 
+   *
    * 功能:
    * - 使用 BigDecimal 的 min 方法
    * - 保证精度,不会出现浮点数精度损失
@@ -1969,27 +1968,27 @@ public static class MinBigDecimal extends NumericComparison<BigDecimal> {
 
 /**
  * MIN 函数的布尔值实现,计算布尔值的最小值,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对布尔类型值的最小值计算
- * 
+ *
  * 布尔值的最小值定义:
  * - FALSE < TRUE
  * - 因此 MIN 返回 FALSE(逻辑与:所有值都为 TRUE 时才返回 TRUE)
- * 
+ *
  * 使用场景:
  * - SQL: MIN(boolean_column)
  * - 用于查找布尔列的最小值
  * - 语义上等同于逻辑与(AND)操作
- * 
+ *
  * 工作原理:
  * - 初始值: Boolean.TRUE(确保任何实际值都会更小或相等)
  * - 比较函数: 逻辑与(AND)
  * - 只有所有值都为 TRUE 时,结果才为 TRUE
- * 
+ *
  * 性能特点:
  * - 使用基本类型 boolean,避免装箱拆箱
  * - 简单的逻辑运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -1999,7 +1998,7 @@ public static class MinBigDecimal extends NumericComparison<BigDecimal> {
 public static class MinBoolean {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
@@ -2008,9 +2007,9 @@ public static class MinBoolean {
 
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(Boolean.TRUE)
-   * 
+   *
    * 功能:
    * - 返回初始值 TRUE
    * - 确保任何实际值(FALSE)都会更小
@@ -2021,11 +2020,11 @@ public static class MinBoolean {
 
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param value 要比较的新值
    * @return 比较后的新累加器值
-   * 
+   *
    * 功能:
    * - 执行逻辑与(AND)操作
    * - 只有当 accumulator 和 value 都为 TRUE 时,结果才为 TRUE
@@ -2037,11 +2036,11 @@ public static class MinBoolean {
 
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 执行逻辑与(AND)操作
@@ -2052,10 +2051,10 @@ public static class MinBoolean {
 
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于 MIN 布尔值,结果就是累加器值本身
    */
@@ -2066,22 +2065,22 @@ public static class MinBoolean {
 
   /**
  * MAX 函数的整数实现,计算整数值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对整数类型值的最大值计算
- * 
+ *
  * 使用场景:
  * - SQL: MAX(integer_column)
  * - 用于查找整数列的最大值
- * 
+ *
  * 工作原理:
  * - 初始值: Integer.MIN_VALUE(整数最小值)
  * - 比较函数: Math::max(返回两个数中较大的)
  * - 第一条数据会替换初始值,后续数据会与当前最大值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 int,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -2090,7 +2089,7 @@ public static class MinBoolean {
 public static class MaxInt extends NumericComparison<Integer> {
   /**
    * 构造函数,初始化 MAX 整数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Integer.MIN_VALUE(确保任何实际值都会更大)
    * - 比较函数: Math::max(返回两个数中较大的)
@@ -2103,23 +2102,23 @@ public static class MaxInt extends NumericComparison<Integer> {
 
 /**
  * MAX 函数的长整数实现,计算长整数值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对长整数类型值的最大值计算
- * 
+ *
  * 使用场景:
  * - SQL: MAX(bigint_column)
  * - 用于查找长整数列的最大值
  * - 适用于大数范围的最大值计算
- * 
+ *
  * 工作原理:
  * - 初始值: Long.MIN_VALUE(长整数最小值)
  * - 比较函数: Math::max(返回两个数中较大的)
  * - 第一条数据会替换初始值,后续数据会与当前最大值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 long,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -2128,7 +2127,7 @@ public static class MaxInt extends NumericComparison<Integer> {
 public static class MaxLong extends NumericComparison<Long> {
   /**
    * 构造函数,初始化 MAX 长整数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Long.MIN_VALUE(确保任何实际值都会更大)
    * - 比较函数: Math::max(返回两个数中较大的)
@@ -2141,22 +2140,22 @@ public static class MaxLong extends NumericComparison<Long> {
 
 /**
  * MAX 函数的浮点数实现,计算浮点数值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对浮点数类型值的最大值计算
- * 
+ *
  * 使用场景:
  * - SQL: MAX(float_column)
  * - 用于查找浮点数列的最大值
- * 
+ *
  * 工作原理:
  * - 初始值: Float.MIN_VALUE(浮点数最小值)
  * - 比较函数: Math::max(返回两个数中较大的)
  * - 第一条数据会替换初始值,后续数据会与当前最大值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 float,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 浮点数比较可能有精度问题
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
@@ -2166,7 +2165,7 @@ public static class MaxLong extends NumericComparison<Long> {
 public static class MaxFloat extends NumericComparison<Float> {
   /**
    * 构造函数,初始化 MAX 浮点数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Float.MIN_VALUE(确保任何实际值都会更大)
    * - 比较函数: Math::max(返回两个数中较大的)
@@ -2179,23 +2178,23 @@ public static class MaxFloat extends NumericComparison<Float> {
 
 /**
  * MAX 函数的双精度浮点数实现,计算双精度浮点数值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对双精度浮点数类型值的最大值计算
- * 
+ *
  * 使用场景:
  * - SQL: MAX(double_column) 或 MAX(real_column)
  * - 用于查找双精度浮点数列的最大值
  * - 适用于需要高精度浮点运算的场景
- * 
+ *
  * 工作原理:
  * - 初始值: Double.MIN_VALUE(双精度浮点数最小值)
  * - 比较函数: Math::max(返回两个数中较大的)
  * - 第一条数据会替换初始值,后续数据会与当前最大值比较
- * 
+ *
  * 性能特点:
  * - 使用基本类型 double,避免装箱拆箱
  * - 简单的比较运算,性能高效
- * 
+ *
  * 注意:
  * - 浮点数比较可能有精度问题
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
@@ -2205,7 +2204,7 @@ public static class MaxFloat extends NumericComparison<Float> {
 public static class MaxDouble extends NumericComparison<Double> {
   /**
    * 构造函数,初始化 MAX 双精度浮点数聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: Double.MIN_VALUE(确保任何实际值都会更大)
    * - 比较函数: Math::max(返回两个数中较大的)
@@ -2218,24 +2217,24 @@ public static class MaxDouble extends NumericComparison<Double> {
 
   /**
  * MAX 函数的 BigDecimal 实现,计算高精度十进制数值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类继承自 NumericComparison,实现了对 BigDecimal 类型值的最大值计算
- * 
+ *
  * 使用场景:
  * - SQL: MAX(decimal_column)
  * - 用于查找高精度十进制数列的最大值
  * - 适用于需要精确计算的财务、科学计算等场景
- * 
+ *
  * 工作原理:
  * - 初始值: BigDecimal(Double.MIN_VALUE)(确保任何实际值都会更大)
  * - 比较函数: BigDecimal::max(返回两个数中较大的)
  * - 第一条数据会替换初始值,后续数据会与当前最大值比较
- * 
+ *
  * 性能特点:
  * - 使用 BigDecimal 类,保证精度
  * - 运算性能比基本类型慢,但精度高
  * - 不会出现浮点数精度损失
- * 
+ *
  * 注意:
  * - 不会溢出,因为 BigDecimal 可以表示任意精度的数
  * - 性能比基本类型慢
@@ -2245,7 +2244,7 @@ public static class MaxDouble extends NumericComparison<Double> {
 public static class MaxBigDecimal extends NumericComparison<BigDecimal> {
   /**
    * 构造函数,初始化 MAX BigDecimal 聚合函数
-   * 
+   *
    * 初始化:
    * - 初始值: BigDecimal(Double.MIN_VALUE)(确保任何实际值都会更大)
    * - 比较函数: MaxBigDecimal::max(自定义的 max 方法)
@@ -2258,11 +2257,11 @@ public static class MaxBigDecimal extends NumericComparison<BigDecimal> {
 
   /**
    * 返回两个 BigDecimal 中较大的值
-   * 
+   *
    * @param a 第一个 BigDecimal 值
    * @param b 第二个 BigDecimal 值
    * @return 较大的值
-   * 
+   *
    * 功能:
    * - 使用 BigDecimal 的 max 方法
    * - 保证精度,不会出现浮点数精度损失
@@ -2274,27 +2273,27 @@ public static class MaxBigDecimal extends NumericComparison<BigDecimal> {
 
 /**
  * MAX 函数的布尔值实现,计算布尔值的最大值,作为用户定义聚合函数
- * 
+ *
  * 这个类实现了对布尔类型值的最大值计算
- * 
+ *
  * 布尔值的最大值定义:
  * - FALSE < TRUE
  * - 因此 MAX 返回 TRUE(逻辑或:只要有一个值为 TRUE 就返回 TRUE)
- * 
+ *
  * 使用场景:
  * - SQL: MAX(boolean_column)
  * - 用于查找布尔列的最大值
  * - 语义上等同于逻辑或(OR)操作
- * 
+ *
  * 工作原理:
  * - 初始值: Boolean.FALSE(确保任何实际值都会更大或相等)
  * - 比较函数: 逻辑或(OR)
    * 只要有一个值为 TRUE,结果就为 TRUE
- * 
+ *
  * 性能特点:
  * - 使用基本类型 boolean,避免装箱拆箱
  * - 简单的逻辑运算,性能高效
- * 
+ *
  * 注意:
  * - 空集合返回 null(由调用方的 nullIfEmpty 参数控制)
  * - 如果所有值都是 null,返回 null
@@ -2304,7 +2303,7 @@ public static class MaxBigDecimal extends NumericComparison<BigDecimal> {
 public static class MaxBoolean {
   /**
    * 构造函数
-   * 
+   *
    * 注意:
    * - 不需要初始化任何状态
    * - init() 方法负责初始化累加器
@@ -2313,9 +2312,9 @@ public static class MaxBoolean {
 
   /**
    * 初始化累加器
-   * 
+   *
    * @return 初始累加器值(Boolean.FALSE)
-   * 
+   *
    * 功能:
    * - 返回初始值 FALSE
    * - 确保任何实际值(TRUE)都会更大
@@ -2326,11 +2325,11 @@ public static class MaxBoolean {
 
   /**
    * 添加新值到累加器
-   * 
+   *
    * @param accumulator 当前累加器值
    * @param value 要比较的新值
    * @return 比较后的新累加器值
-   * 
+   *
    * 功能:
    * - 执行逻辑或(OR)操作
    * - 只要 accumulator 或 value 中有一个为 TRUE,结果就为 TRUE
@@ -2342,11 +2341,11 @@ public static class MaxBoolean {
 
   /**
    * 合并两个累加器
-   * 
+   *
    * @param accumulator0 第一个累加器值
    * @param accumulator1 第二个累加器值
    * @return 合并后的累加器值
-   * 
+   *
    * 功能:
    * - 用于分布式计算或并行聚合
    * - 执行逻辑或(OR)操作
@@ -2357,10 +2356,10 @@ public static class MaxBoolean {
 
   /**
    * 返回最终结果
-   * 
+   *
    * @param 累加器值
    * @return 聚合结果
-   * 
+   *
    * 功能:
    * - 对于 MAX 布尔值,结果就是累加器值本身
    */
@@ -2371,25 +2370,25 @@ public static class MaxBoolean {
 
   /**
  * 基于用户定义聚合函数的累加器工厂
- * 
+ *
  * 这个类为用户定义聚合函数(UDAF)提供累加器工厂
  * 使用反射调用用户定义的聚合函数实现
- * 
+ *
  * 用户定义聚合函数规范:
  * - 必须包含 init() 方法:初始化累加器
  * - 必须包含 add(accumulator, ...args) 方法:添加新值
  * - 必须包含 merge(accumulator0, accumulator1) 方法:合并累加器
  * - 必须包含 result(accumulator) 方法:返回结果
- * 
+ *
  * 支持的构造方式:
  * 1. 无参构造函数:用于静态方法或不需要上下文的函数
  * 2. FunctionContext 参数构造函数:用于需要运行时上下文的函数
- * 
+ *
  * 使用场景:
  * - SUM, MIN, MAX 等内置函数
  * - 用户自定义的聚合函数
  * - 需要特殊逻辑的聚合函数
- * 
+ *
  * 限制:
  * - 当前实现只支持单参数聚合函数
  * - 多参数聚合函数会抛出 UnsupportedOperationException
@@ -2413,19 +2412,19 @@ private static class UdaAccumulatorFactory implements AccumulatorFactory {
 
   /**
    * 构造函数,初始化用户定义聚合函数累加器工厂
-   * 
+   *
    * @param aggFunction 聚合函数实现对象
    * @param call 聚合函数调用,包含参数列表等信息
    * @param nullIfEmpty 空集合是否返回 null
    * @param dataContext 数据上下文,用于创建函数实例
-   * 
+   *
    * 初始化过程:
    * 1. 保存聚合函数实现
    * 2. 验证参数数量(当前只支持单参数)
    * 3. 保存参数位置
    * 4. 创建聚合函数实例(如果需要)
    * 5. 保存空集合处理标志
-   * 
+   *
    * 异常:
    * - 如果参数数量不为 1,抛出 UnsupportedOperationException
    */
@@ -2449,21 +2448,21 @@ private static class UdaAccumulatorFactory implements AccumulatorFactory {
 
   /**
    * 创建聚合函数实例
-   * 
+   *
    * @param aggFunction 聚合函数实现对象
    * @param dataContext 数据上下文
    * @return 聚合函数实例,如果使用静态方法则返回 null
-   * 
+   *
    * 创建过程:
    * 1. 如果是静态方法,返回 null
    * 2. 尝试使用无参构造函数创建实例
    * 3. 如果失败,尝试使用 FunctionContext 参数构造函数
    * 4. 如果都失败,抛出异常
-   * 
+   *
    * 支持的构造函数:
    * - 无参构造函数: public MyClass() {}
    * - FunctionContext 构造函数: public MyClass(FunctionContext ctx) {}
-   * 
+   *
    * 异常处理:
    * - 静态方法返回 null
    * - 创建失败抛出运行时异常
@@ -2506,9 +2505,9 @@ private static class UdaAccumulatorFactory implements AccumulatorFactory {
 
   /**
    * 创建新的累加器实例
-   * 
+   *
    * @return 新的用户定义聚合函数累加器
-   * 
+   *
    * 创建过程:
    * 1. 创建新的 UdaAccumulator 实例
    * 2. 传入工厂引用,用于访问聚合函数信息和实例
@@ -2522,24 +2521,24 @@ private static class UdaAccumulatorFactory implements AccumulatorFactory {
 
   /**
  * 基于用户定义聚合函数的累加器实现
- * 
+ *
  * 这个类使用反射调用用户定义聚合函数的方法来实现聚合操作
  * 每个累加器实例维护独立的状态
- * 
+ *
  * 工作流程:
  * 1. 构造时调用 init() 方法初始化累加器状态
  * 2. 每次调用 send() 时调用 add() 方法更新状态
  * 3. 调用 end() 时调用 result() 方法返回最终结果
- * 
+ *
  * 反射调用:
  * - 使用 Method.invoke() 调用用户定义的方法
  * - 支持静态方法和实例方法
  * - 异常被转换为运行时异常
- * 
+ *
  * 空集合处理:
  * - 跟踪是否处理过任何数据(empty 标志)
  * - 根据工厂的 nullIfEmpty 设置决定空集合返回值
- * 
+ *
  * Null 处理:
  * - 如果参数为 null,则不更新累加器
  * - 这符合 SQL 聚合函数的语义
@@ -2557,14 +2556,14 @@ private static class UdaAccumulator implements Accumulator {
 
   /**
    * 构造函数,初始化用户定义聚合函数累加器
-   * 
+   *
    * @param factory 工厂对象,包含聚合函数信息和实例
-   * 
+   *
    * 初始化过程:
    * 1. 保存工厂引用
    * 2. 调用 init() 方法初始化累加器状态
    * 3. 设置空标志为 true
-   * 
+   *
    * 异常处理:
    * - 反射调用失败时抛出运行时异常
    */
@@ -2585,20 +2584,20 @@ private static class UdaAccumulator implements Accumulator {
 
   /**
    * 处理输入行,更新累加器状态
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 处理流程:
    * 1. 构建参数数组: [累加器值, 参数值]
    * 2. 检查参数是否为 null
    * 3. 如果参数不为 null,调用 add() 方法更新累加器
    * 4. 设置空标志为 false
-   * 
+   *
    * Null 处理:
    * - 如果参数为 null,则不更新累加器
    * - 这符合 SQL 聚合函数的语义
    * - 例如: SUM(col) 跳过 col 为 null 的行
-   * 
+   *
    * 异常处理:
    * - 反射调用失败时抛出运行时异常
    */
@@ -2628,18 +2627,18 @@ private static class UdaAccumulator implements Accumulator {
 
   /**
    * 返回聚合结果
-   * 
+   *
    * @return 聚合结果,可能为 null
-   * 
+   *
    * 处理流程:
    * 1. 检查是否为空集合且需要返回 null
    * 2. 如果不返回 null,调用 result() 方法获取结果
    * 3. 返回结果值
-   * 
+   *
    * 空集合处理:
    * - 如果空标志为 true 且 nullIfEmpty 为 true,返回 null
    * - 否则返回初始值(result 方法的结果)
-   * 
+   *
    * 异常处理:
    * - 反射调用失败时抛出运行时异常
    */
@@ -2668,26 +2667,26 @@ private static class UdaAccumulator implements Accumulator {
 
   /**
  * 应用过滤器的累加器包装器
- * 
+ *
  * 这个类为其他累加器添加过滤功能
  * 只有当过滤条件为 true 时,才会调用内部累加器
- * 
+ *
  * 使用场景:
  * - 聚合函数的过滤条件(如 COUNT(col) FILTER (WHERE condition))
  * - HAVING 子句
  * - 条件聚合
- * 
+ *
  * 工作原理:
  * 1. 包装一个基础累加器
  * 2. 在 send() 方法中检查过滤条件
  * 3. 只有过滤条件为 true 时才调用基础累加器
  * 4. end() 方法直接委托给基础累加器
- * 
+ *
  * 过滤条件:
  * - 过滤条件是输入行中的一个布尔字段
  * - 字段位置由 filterArg 指定
  * - 只有当该字段为 Boolean.TRUE 时才处理
- * 
+ *
  * 设计模式:
  * - 装饰器模式:为累加器添加过滤功能
  * - 委托模式:将操作委托给内部累加器
@@ -2701,10 +2700,10 @@ private static class FilterAccumulator implements Accumulator {
 
   /**
    * 构造函数,初始化过滤累加器
-   * 
+   *
    * @param accumulator 内部累加器,执行实际的聚合操作
    * @param filterArg 过滤字段的位置
-   * 
+   *
    * 初始化:
    * - 保存内部累加器引用
    * - 保存过滤字段位置
@@ -2718,18 +2717,18 @@ private static class FilterAccumulator implements Accumulator {
 
   /**
    * 处理输入行,应用过滤条件
-   * 
+   *
    * @param row 输入数据行
-   * 
+   *
    * 处理流程:
    * 1. 检查过滤字段的值
    * 2. 如果值为 Boolean.TRUE,调用内部累加器的 send 方法
    * 3. 否则,跳过该行数据
-   * 
+   *
    * 过滤逻辑:
    * - 只有当 row.getValues()[filterArg] == Boolean.TRUE 时才处理
    * - 其他情况(包括 null 和 false)都跳过
-   * 
+   *
    * 注意:
    * - 过滤字段必须是布尔类型
    * - 使用严格相等比较,必须是 Boolean.TRUE 对象
@@ -2745,13 +2744,13 @@ private static class FilterAccumulator implements Accumulator {
 
   /**
    * 返回聚合结果
-   * 
+   *
    * @return 聚合结果,可能为 null
-   * 
+   *
    * 功能:
    * - 直接委托给内部累加器的 end 方法
    * - 不需要额外的过滤逻辑
-   * 
+   *
    * 注意:
    * - 如果没有数据通过过滤条件,返回值取决于内部累加器
    * - 例如: COUNT 过滤后可能返回 0

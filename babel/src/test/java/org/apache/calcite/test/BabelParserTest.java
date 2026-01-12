@@ -295,39 +295,39 @@ class BabelParserTest extends SqlParserTest { // 定义BabelParserTest测试类�
     sql(sql).ok(expected); // 执行测试，验证类型转换正确解析
   }
 
-  /** Tests parsing MySQL-style "<=>" equal operator.
- * 测试MySQL风格的"<=>"空值安全相等操作符解析 */
+  /** Tests parsing MySQL-style "<->" equal operator.
+ * 测试MySQL风格的"<->"空值安全相等操作符解析 */
   @Test void testParseNullSafeEqual()  { // 测试空值安全相等操作符的解析
-    // x <=> y
+    // x <-> y
     // 简单的空值安全相等比较
-    final String projectSql = "SELECT x <=> 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 在SELECT子句中使用<=>操作符
-    sql(projectSql).ok("SELECT (`X` <=> 3)\n" // 验证<=>操作符正确解析
+    final String projectSql = "SELECT x <-> 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 在SELECT子句中使用<->操作符
+    sql(projectSql).ok("SELECT (`X` <-> 3)\n" // 验证<->操作符正确解析
         + "FROM (VALUES (ROW(1, 2))) AS `TBL` (`X`, `Y`)"); // FROM子句
-    final String filterSql = "SELECT y FROM (VALUES (1, 2)) as tbl(x,y) WHERE x <=> null"; // 在WHERE子句中使用<=>操作符
-    sql(filterSql).ok("SELECT `Y`\n" // 验证WHERE子句中的<=>操作符
+    final String filterSql = "SELECT y FROM (VALUES (1, 2)) as tbl(x,y) WHERE x <-> null"; // 在WHERE子句中使用<->操作符
+    sql(filterSql).ok("SELECT `Y`\n" // 验证WHERE子句中的<->操作符
         + "FROM (VALUES (ROW(1, 2))) AS `TBL` (`X`, `Y`)\n" // FROM子句
-        + "WHERE (`X` <=> NULL)"); // WHERE条件
-    final String joinConditionSql = "SELECT tbl1.y FROM (VALUES (1, 2)) as tbl1(x,y)\n" // 在JOIN条件中使用<=>操作符
-        + "LEFT JOIN (VALUES (null, 3)) as tbl2(x,y) ON tbl1.x <=> tbl2.x"; // LEFT JOIN条件
-    sql(joinConditionSql).ok("SELECT `TBL1`.`Y`\n" // 验证JOIN条件中的<=>操作符
+        + "WHERE (`X` <-> NULL)"); // WHERE条件
+    final String joinConditionSql = "SELECT tbl1.y FROM (VALUES (1, 2)) as tbl1(x,y)\n" // 在JOIN条件中使用<->操作符
+        + "LEFT JOIN (VALUES (null, 3)) as tbl2(x,y) ON tbl1.x <-> tbl2.x"; // LEFT JOIN条件
+    sql(joinConditionSql).ok("SELECT `TBL1`.`Y`\n" // 验证JOIN条件中的<->操作符
         + "FROM (VALUES (ROW(1, 2))) AS `TBL1` (`X`, `Y`)\n" // 第一个表
-        + "LEFT JOIN (VALUES (ROW(NULL, 3))) AS `TBL2` (`X`, `Y`) ON (`TBL1`.`X` <=> `TBL2`.`X`)"); // JOIN条件
-    // (a, b) <=> (x, y)
+        + "LEFT JOIN (VALUES (ROW(NULL, 3))) AS `TBL2` (`X`, `Y`) ON (`TBL1`.`X` <-> `TBL2`.`X`)"); // JOIN条件
+    // (a, b) <-> (x, y)
     // 行值的空值安全相等比较
     final String rowComparisonSql = "SELECT y\n" // 测试行值比较
-        + "FROM (VALUES (1, 2)) as tbl(x,y) WHERE (x,y) <=> (null,2)"; // WHERE条件中使用行值比较
+        + "FROM (VALUES (1, 2)) as tbl(x,y) WHERE (x,y) <-> (null,2)"; // WHERE条件中使用行值比较
     sql(rowComparisonSql).ok("SELECT `Y`\n" // 验证行值比较正确解析
         + "FROM (VALUES (ROW(1, 2))) AS `TBL` (`X`, `Y`)\n" // FROM子句
-        + "WHERE ((ROW(`X`, `Y`)) <=> (ROW(NULL, 2)))"); // WHERE条件：行值比较
+        + "WHERE ((ROW(`X`, `Y`)) <-> (ROW(NULL, 2)))"); // WHERE条件：行值比较
     // the higher precedence
     // 较高的优先级
-    final String highPrecedenceSql = "SELECT x <=> 3 + 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 测试<=>与加法运算的优先级
-    sql(highPrecedenceSql).ok("SELECT (`X` <=> (3 + 3))\n" // 验证加法优先级高于<=>
+    final String highPrecedenceSql = "SELECT x <-> 3 + 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 测试<->与加法运算的优先级
+    sql(highPrecedenceSql).ok("SELECT (`X` <-> (3 + 3))\n" // 验证加法优先级高于<->
         + "FROM (VALUES (ROW(1, 2))) AS `TBL` (`X`, `Y`)"); // FROM子句
     // the lower precedence
     // 较低的优先级
-    final String lowPrecedenceSql = "SELECT NOT x <=> 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 测试<=>与NOT运算的优先级
-    sql(lowPrecedenceSql).ok("SELECT (NOT (`X` <=> 3))\n" // 验证NOT优先级高于<=>
+    final String lowPrecedenceSql = "SELECT NOT x <-> 3 FROM (VALUES (1, 2)) as tbl(x,y)"; // 测试<->与NOT运算的优先级
+    sql(lowPrecedenceSql).ok("SELECT (NOT (`X` <-> 3))\n" // 验证NOT优先级高于<->
         + "FROM (VALUES (ROW(1, 2))) AS `TBL` (`X`, `Y`)"); // FROM子句
   }
 

@@ -164,7 +164,7 @@ public class RelMdUniqueKeys
     // LogicalProject maps a set of rows to a different set;
     // Without knowledge of the mapping function(whether it
     // preserves uniqueness), it is only safe to derive uniqueness
-    // info from the child of a project when the mapping is f(a) => a.
+    // info from the child of a project when the mapping is f(a) -> a.
     //
     // Further more, the unique bitset coming from the child needs
     // to be mapped to match the output of the project.
@@ -205,7 +205,7 @@ public class RelMdUniqueKeys
     outerLoop:
     for (ImmutableBitSet colMask : childUniqueKeySet) {
       if (!inColumnsUsed.contains(colMask)) {
-        // colMask contains a column that is not projected as RexInput => the key is not unique
+        // colMask contains a column that is not projected as RexInput -> the key is not unique
         continue;
       }
       // colMask is mapped to output project, however, the column can be mapped more than once:

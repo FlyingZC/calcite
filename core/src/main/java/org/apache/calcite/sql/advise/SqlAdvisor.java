@@ -223,7 +223,7 @@ public class SqlAdvisor {
 
   /**
    * Returns casing which is preferred for replacement.
-   * For instance, {@code en => ename, EN => ENAME}.
+   * For instance, {@code en -> ename, EN -> ENAME}.
    * When input has mixed case, {@code Casing.UNCHANGED} is returned.
    *
    * @param word input word
@@ -276,13 +276,13 @@ public class SqlAdvisor {
         new StringBuilder(name.length() + (quoted ? 2 : 0));
 
     if (!isKeyword && !Util.isValidJavaIdentifier(name)) {
-      // needs quotes ==> quoted
+      // needs quotes =-> quoted
       quoted = true;
     }
     String idToAppend = name;
 
     if (!quoted) {
-      // id ==preferredCasing==> preferredId ==unquotedCasing==> recasedId
+      // id ==preferredCasing=-> preferredId ==unquotedCasing=-> recasedId
       // if recasedId matches id, then use preferredId
       String preferredId = applyCasing(name, preferredCasing);
       if (isKeyword || matchesUnquoted(name, preferredId)) {

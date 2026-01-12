@@ -46,9 +46,9 @@ import static java.util.Objects.requireNonNull; // 导入静态方法，用于�
  * An environment for related relational expressions during the
  * optimization of a query.
  * 在查询优化过程中，为相关的关系表达式提供环境上下文
- * 
+ *
  * RelOptCluster是Calcite查询优化器的核心环境类，它封装了在查询优化过程中所有关系表达式共享的上下文信息
- * 
+ *
  * 核心作用：
  * 1. 作为关系表达式（RelNode）的容器和上下文环境，所有属于同一个查询的关系表达式都共享同一个Cluster
  * 2. 提供类型工厂（RelDataTypeFactory），用于创建和管理SQL数据类型
@@ -58,12 +58,12 @@ import static java.util.Objects.requireNonNull; // 导入静态方法，用于�
  * 6. 管理关联变量（CorrelationId），用于子查询去相关化
  * 7. 管理特性集合（RelTraitSet），定义关系表达式的物理特性（如排序、分布等）
  * 8. 管理提示策略（HintStrategyTable），用于处理用户提供的优化提示
- * 
+ *
  * 设计模式：
  * - 工厂模式：提供create()方法创建Cluster实例
  * - 单例模式：同一个查询的所有关系表达式共享同一个Cluster
  * - 上下文模式：作为优化过程的上下文对象，封装所有共享资源
- * 
+ *
  * 使用场景：
  * - SQL解析后，将SQL转换为关系表达式树时，需要创建Cluster
  * - 在优化过程中，所有RelNode都持有对Cluster的引用
@@ -91,7 +91,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Creates a cluster.
    * 创建一个RelOptCluster实例（已废弃的构造方法）
-   * 
+   *
    * @deprecated 使用新的create()方法代替，该方法将在2.0版本前移除
    * 该构造方法已被废弃，因为它依赖于RelOptQuery类，而RelOptQuery类也被废弃
    */
@@ -108,10 +108,10 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Creates a cluster.
    * 创建一个RelOptCluster实例（主构造方法）
-   * 
+   *
    * <p>For use only from {@link #create} and {@link RelOptQuery}.
    * 该构造方法仅供create()静态方法和RelOptQuery类使用，外部不应直接调用
-   * 
+   *
    * 构造方法初始化了Cluster的所有核心组件：
    * 1. 设置关联变量计数器和映射表
    * 2. 设置优化器、类型工厂和表达式构建器
@@ -142,9 +142,9 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /** Creates a cluster.
    * 创建一个RelOptCluster实例（公共静态工厂方法）
-   * 
+   *
    * 这是创建Cluster实例的推荐方式，它会初始化所有必要的组件
-   * 
+   *
    * @param planner 优化器，负责执行优化规则
    * @param rexBuilder 表达式构建器，用于构建表达式树
    * @return 新创建的RelOptCluster实例
@@ -159,7 +159,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取查询对象（已废弃）
-   * 
+   *
    * @deprecated 该方法已废弃，将在2.0版本前移除
    * @return 创建的RelOptQuery对象，包含优化器和关联变量信息
    */
@@ -170,7 +170,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取原始表达式（已废弃）
-   * 
+   *
    * @deprecated 该方法已废弃，将在2.0版本前移除
    * @return 原始表达式节点
    */
@@ -181,7 +181,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 设置原始表达式（已废弃）
-   * 
+   *
    * @deprecated 该方法已废弃，将在2.0版本前移除
    * @param originalExpression 要设置的原始表达式节点
    */
@@ -192,7 +192,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取优化器
-   * 
+   *
    * @return 关系优化器实例，用于执行优化规则
    */
   public RelOptPlanner getPlanner() { // 定义公共方法，获取优化器
@@ -201,7 +201,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取类型工厂
-   * 
+   *
    * @return 关系数据类型工厂实例，用于创建SQL数据类型
    */
   public RelDataTypeFactory getTypeFactory() { // 定义公共方法，获取类型工厂
@@ -210,7 +210,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取表达式构建器
-   * 
+   *
    * @return RexBuilder实例，用于构建行表达式
    */
   public RexBuilder getRexBuilder() { // 定义公共方法，获取表达式构建器
@@ -219,7 +219,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 获取元数据提供者
-   * 
+   *
    * @return 元数据提供者实例，可能为null
    */
   public @Nullable RelMetadataProvider getMetadataProvider() { // 定义公共方法，获取元数据提供者
@@ -229,16 +229,16 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Overrides the default metadata provider for this cluster.
    * 覆盖此集群的默认元数据提供者
-   * 
+   *
    * 该方法允许用户自定义元数据提供者，用于提供特定的元数据实现
-   * 
+   *
    * 执行步骤：
    * 1. 保存自定义的元数据提供者
    * 2. 创建MetadataFactoryImpl实例包装元数据提供者（已废弃）
    * 3. 将元数据提供者包装为JaninoRelMetadataProvider并设置到线程本地存储
    *    JaninoRelMetadataProvider使用Janino编译器动态生成代码，提高元数据查询性能
    * 4. 设置到RelMetadataQueryBase的ThreadLocal中，供RelMetadataQuery使用
-   * 
+   *
    * @param metadataProvider 自定义的元数据提供者
    */
   @EnsuresNonNull({"this.metadataProvider", "this.metadataFactory"}) // 确保方法执行后metadataProvider和metadataFactory非空
@@ -262,7 +262,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Returns a {@link MetadataFactory}.
    * 返回元数据工厂
-   * 
+   *
    * @deprecated 该方法已废弃，请使用getMetadataQuery()代替
    * @return 元数据工厂实例
    */
@@ -275,21 +275,21 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
    * Sets up the customized {@link RelMetadataQuery} instance supplier that to
    * use during rule planning.
    * 设置自定义的RelMetadataQuery实例供应者，用于规则规划期间
-   * 
+   *
    * 该方法允许用户自定义元数据查询对象的创建方式
-   * 
+   *
    * 工作原理：
    * - 在优化过程中，每次调用getMetadataQuery()时，会通过mqSupplier获取新的RelMetadataQuery实例
    * - RelMetadataQuery实例会被缓存在Cluster中，直到调用invalidateMetadataQuery()使其失效
    * - 在每次RelOptRuleCall周期中，可能会使元数据查询失效并重新生成，以确保元数据的准确性
-   * 
+   *
    * <p>Note that the {@code mqSupplier} should return
    * a fresh new {@link RelMetadataQuery} instance because the instance would be
    * cached in this cluster, and we may invalidate and re-generate it
    * for each {@link RelOptRuleCall} cycle.
    * 注意：mqSupplier应该返回一个新的RelMetadataQuery实例，因为实例会被缓存在集群中，
    * 我们可能会在每个RelOptRuleCall周期中使其失效并重新生成
-   * 
+   *
    * @param mqSupplier RelMetadataQuery实例的供应者
    */
   @EnsuresNonNull("this.mqSupplier") // 确保方法执行后mqSupplier非空
@@ -302,9 +302,9 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Returns the current RelMetadataQuery.
    * 返回当前的RelMetadataQuery实例
-   * 
+   *
    * 该方法使用延迟初始化模式，只有在第一次调用时才会通过mqSupplier创建RelMetadataQuery实例
-   * 
+   *
    * <p>This method might be changed or moved in future.
    * 该方法在未来可能会被修改或移动
    * If you have a {@link RelOptRuleCall} available,
@@ -312,10 +312,10 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
    * for example if you are in a {@link RelOptRule#onMatch(RelOptRuleCall)}
    * 例如如果你在RelOptRule#onMatch(RelOptRuleCall)方法中
    * method, then use {@link RelOptRuleCall#getMetadataQuery()} instead. */
-   * 那么请使用RelOptRuleCall#getMetadataQuery()代替
-   * 
-   * @return RelMetadataQuery实例，用于查询关系表达式的元数据
-   */
+   // * 那么请使用RelOptRuleCall#getMetadataQuery()代替
+   // *
+   // * @return RelMetadataQuery实例，用于查询关系表达式的元数据
+   // */
   public RelMetadataQuery getMetadataQuery() { // 定义公共方法，获取元数据查询对象
     if (mq == null) { // 如果元数据查询对象为null（延迟初始化）
       mq = castNonNull(mqSupplier).get(); // 通过供应者获取新的RelMetadataQuery实例并保存
@@ -326,7 +326,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Returns the supplier of RelMetadataQuery.
    * 返回RelMetadataQuery的供应者
-   * 
+   *
    * @return RelMetadataQuery实例的供应者
    */
   public Supplier<RelMetadataQuery> getMetadataQuerySupplier() { // 定义公共方法，获取元数据查询供应者
@@ -338,9 +338,9 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
    * invalid. Typically invoked from {@link RelOptRuleCall#transformTo}.
    * 当当前的RelMetadataQuery失效时应该调用此方法
    * 通常从RelOptRuleCall#transformTo调用
-   * 
+   *
    * 该方法会使缓存的RelMetadataQuery实例失效，下次调用getMetadataQuery()时会重新创建
-   * 
+   *
    * 使用场景：
    * - 当关系表达式树发生变化时，元数据可能不再准确
    * - 在优化规则应用后，需要重新计算元数据
@@ -353,19 +353,19 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Sets up the hint propagation strategies to be used during rule planning.
    * 设置在规则规划期间使用的提示传播策略
-   * 
+   *
    * 提示（Hint）是用户提供的优化建议，可以影响优化器的决策
    * HintStrategyTable定义了如何处理和传播这些提示
-   * 
+   *
    * <p>Use <code>RelOptNode.getCluster().getHintStrategies()</code> to fetch
    * the hint strategies.
    * 使用RelOptNode.getCluster().getHintStrategies()获取提示策略
-   * 
+   *
    * <p>Note that this method is only for internal use; the cluster {@code hintStrategies}
    * would be always set up with the instance configured by
    * {@link org.apache.calcite.sql2rel.SqlToRelConverter.Config}.
    * 注意：此方法仅供内部使用；集群的hintStrategies将始终使用SqlToRelConverter.Config配置的实例设置
-   * 
+   *
    * @param hintStrategies 指定的提示策略，用于覆盖默认策略（空策略）
    */
   public void setHintStrategies(HintStrategyTable hintStrategies) { // 定义公共方法，设置提示策略表
@@ -376,7 +376,7 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /**
    * Returns the hint strategies of this cluster. It is immutable during the whole planning phrase.
    * 返回此集群的提示策略表。它在整个规划阶段是不可变的
-   * 
+   *
    * @return 提示策略表，如果未设置则返回空策略表
    */
   public HintStrategyTable getHintStrategies() { // 定义公共方法，获取提示策略表
@@ -390,10 +390,10 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
    * Constructs a new id for a correlating variable. It is unique within the
    * whole query.
    * 为关联变量构造一个新的ID。它在整个查询中是唯一的
-   * 
+   *
    * 关联变量用于子查询去相关化，将子查询转换为连接操作
    * 每个关联变量都有一个唯一的ID，用于标识和引用
-   * 
+   *
    * @return 新创建的关联变量ID
    */
   public CorrelationId createCorrel() { // 定义公共方法，创建关联变量ID
@@ -402,14 +402,14 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /** Returns the default trait set for this cluster.
    * 返回此集群的默认特性集合
-   * 
+   *
    * 特性集合（RelTraitSet）定义了关系表达式的物理特性，如：
    * - 排序特性（RelCollation）
    * - 分布特性（RelDistribution）
    * - 约定特性（RelConvention，如物理约定、逻辑约定等）
-   * 
+   *
    * 默认特性集合是空的，作为创建新特性集合的基础
-   * 
+   *
    * @return 空的特性集合
    */
   public RelTraitSet traitSet() { // 定义公共方法，获取默认特性集合
@@ -420,13 +420,13 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
   /** @deprecated For {@code traitSetOf(t1, t2)},
    * 已废弃：对于traitSetOf(t1, t2)，
    * use {@link #traitSet}().replace(t1).replace(t2). */
-   * 请使用traitSet().replace(t1).replace(t2)代替
-   * 
-   * 该方法已废弃，因为新的API更清晰和灵活
-   * 
-   * @param traits 要添加到特性集合中的特性
-   * @return 包含指定特性的特性集合
-   */
+   // * 请使用traitSet().replace(t1).replace(t2)代替
+   // *
+   // * 该方法已废弃，因为新的API更清晰和灵活
+   // *
+   // * @param traits 要添加到特性集合中的特性
+   // * @return 包含指定特性的特性集合
+   // */
   @Deprecated // to be removed before 2.0 // 标记为已废弃，将在2.0版本前移除
   public RelTraitSet traitSetOf(RelTrait... traits) { // 定义公共方法，创建包含多个特性的特性集合
     RelTraitSet traitSet = emptyTraitSet; // 从空特性集合开始
@@ -438,9 +438,9 @@ public class RelOptCluster { // 定义RelOptCluster类，关系优化集群类
 
   /**
    * 创建包含单个特性的特性集合
-   * 
+   *
    * 这是创建特性集合的推荐方式，比traitSetOf(RelTrait... traits)更清晰
-   * 
+   *
    * @param trait 要添加到特性集合中的特性
    * @return 包含指定特性的特性集合
    */

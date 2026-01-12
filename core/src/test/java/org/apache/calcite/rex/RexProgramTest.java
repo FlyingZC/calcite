@@ -86,6 +86,17 @@ import static java.util.Objects.requireNonNull;
 /**
  * Unit tests for {@link RexProgram} and
  * {@link org.apache.calcite.rex.RexProgramBuilder}.
+ *
+ * RexProgram 和 RexProgramBuilder 的单元测试类
+ *
+ * 详细说明请参考 RexProgramTest_详细说明文档.md
+ *
+ * 主要测试内容：
+ * - RexProgram 的构建和规范化
+ * - 表达式的简化和优化
+ * - 条件表达式的处理
+ * - 类型转换和字面量处理
+ * - 各种边界情况的处理
  */
 class RexProgramTest extends RexProgramTestBase {
   /**
@@ -195,7 +206,7 @@ class RexProgramTest extends RexProgramTestBase {
   @Test void testDuplicateAnd() {
     // RexProgramBuilder used to translate AND(x, x) to x.
     // Now it translates it to AND(x, x).
-    // The optimization of AND(x, x) => x occurs at a higher level.
+    // The optimization of AND(x, x) -> x occurs at a higher level.
     final RexProgramBuilder builder = createProg(2);
     final String program = builder.getProgram(true).toString();
     TestUtil.assertEqualsVerbose(
@@ -1404,7 +1415,7 @@ class RexProgramTest extends RexProgramTestBase {
             gt(aRef, literal(10))),
         ">(?0.a, 10)");
 
-    // "null AND NOT(null OR x)" => "null AND NOT(x)"
+    // "null AND NOT(null OR x)" -> "null AND NOT(x)"
     checkSimplify3(
         and(nullBool,
             not(or(nullBool, vBool()))),
@@ -1412,7 +1423,7 @@ class RexProgramTest extends RexProgramTestBase {
         "false",
         "NOT(?0.bool0)");
 
-    // "x1 AND x2 AND x3 AND NOT(x1) AND NOT(x2) AND NOT(x0)" =>
+    // "x1 AND x2 AND x3 AND NOT(x1) AND NOT(x2) AND NOT(x0)" ->
     // "x3 AND null AND x1 IS NULL AND x2 IS NULL AND NOT(x0)"
     checkSimplify2(
         and(vBool(1), vBool(2),
@@ -1481,13 +1492,13 @@ class RexProgramTest extends RexProgramTestBase {
     final RexLiteral literal4 = rexBuilder.makeExactLiteral(BigDecimal.valueOf(4));
     final RexLiteral literal5 = rexBuilder.makeExactLiteral(BigDecimal.valueOf(5));
 
-    // "a <> 1 or a = 1" ==> "true"
+    // "a <> 1 or a = 1" =-> "true"
     checkSimplifyFilter(
         or(ne(aRef, literal1),
             eq(aRef, literal1)),
         "true");
 
-    // "a = 1 or a <> 1" ==> "true"
+    // "a = 1 or a <> 1" =-> "true"
     checkSimplifyFilter(
         or(eq(aRef, literal1),
             ne(aRef, literal1)),
@@ -1499,14 +1510,14 @@ class RexProgramTest extends RexProgramTestBase {
             ne(aRef, literal2)),
         "<>(?0.a, 2)");
 
-    // "a < 1 or a > 1" ==> "a <> 1"
+    // "a < 1 or a > 1" =-> "a <> 1"
     checkSimplifyFilter(
         or(lt(aRef, literal1),
             gt(aRef, literal1)),
         "<>(?0.a, 1)");
 
     // "(a >= 1 and a <= 3) or a <> 2", or equivalently
-    // "a between 1 and 3 or a <> 2" ==> "true"
+    // "a between 1 and 3 or a <> 2" =-> "true"
     checkSimplifyFilter(
         or(
             and(ge(aRef, literal1),
@@ -1514,7 +1525,7 @@ class RexProgramTest extends RexProgramTestBase {
             ne(aRef, literal2)),
         "true");
 
-    // "(a >= 1 and a <= 3) or a < 4" ==> "a < 4"
+    // "(a >= 1 and a <= 3) or a < 4" =-> "a < 4"
     checkSimplifyFilter(
         or(
             and(ge(aRef, literal1),
@@ -1522,7 +1533,7 @@ class RexProgramTest extends RexProgramTestBase {
             lt(aRef, literal4)),
         "<(?0.a, 4)");
 
-    // "(a >= 1 and a <= 2) or (a >= 4 and a <= 5) or a <> 3" ==> "a <> 3"
+    // "(a >= 1 and a <= 2) or (a >= 4 and a <= 5) or a <> 3" =-> "a <> 3"
     checkSimplifyFilter(
         or(
             and(ge(aRef, literal1),
@@ -1532,7 +1543,7 @@ class RexProgramTest extends RexProgramTestBase {
             ne(aRef, literal3)),
         "<>(?0.a, 3)");
 
-    // "(a >= 1 and a <= 2) or (a >= 4 and a <= 5) or a <> 4" ==> "true"
+    // "(a >= 1 and a <= 2) or (a >= 4 and a <= 5) or a <> 4" =-> "true"
     checkSimplifyFilter(
         or(
             and(ge(aRef, literal1),
@@ -1542,7 +1553,7 @@ class RexProgramTest extends RexProgramTestBase {
             ne(aRef, literal4)),
         "true");
 
-    // "(a >= 1 and a <= 2) or (a > 4 and a <= 5) or a <> 4" ==> "a <> 4"
+    // "(a >= 1 and a <= 2) or (a > 4 and a <= 5) or a <> 4" =-> "a <> 4"
     checkSimplifyFilter(
         or(
             and(ge(aRef, literal1),
@@ -1552,7 +1563,7 @@ class RexProgramTest extends RexProgramTestBase {
             ne(aRef, literal4)),
         "<>(?0.a, 4)");
 
-    // "b <> 1 or b = 1" ==> "b is not null" with unknown as false
+    // "b <> 1 or b = 1" =-> "b is not null" with unknown as false
     final RexNode neOrEq =
         or(ne(bRef, literal(1)),
             eq(bRef, literal(1)));
@@ -1567,46 +1578,46 @@ class RexProgramTest extends RexProgramTestBase {
     assertThat(simplified,
         hasToString("OR(IS NOT NULL(?0.b), null)"));
 
-    // "a is null or a is not null" ==> "true"
+    // "a is null or a is not null" =-> "true"
     checkSimplifyFilter(
         or(isNull(aRef),
             isNotNull(aRef)),
         "true");
 
-    // "a is not null or a is null" ==> "true"
+    // "a is not null or a is null" =-> "true"
     checkSimplifyFilter(
         or(isNotNull(aRef),
             isNull(aRef)),
         "true");
 
-    // "b is not null or b is null" ==> "true" (valid even though b nullable)
+    // "b is not null or b is null" =-> "true" (valid even though b nullable)
     checkSimplifyFilter(
         or(isNotNull(bRef),
             isNull(bRef)),
         "true");
 
-    // "b is null b > 1 or b <= 1" ==> "true"
+    // "b is null b > 1 or b <= 1" =-> "true"
     checkSimplifyFilter(
         or(isNull(bRef),
             gt(bRef, literal(1)),
             le(bRef, literal(1))),
         "true");
 
-    // "b > 1 or b <= 1 or b is null" ==> "true"
+    // "b > 1 or b <= 1 or b is null" =-> "true"
     checkSimplifyFilter(
         or(gt(bRef, literal(1)),
             le(bRef, literal(1)),
             isNull(bRef)),
         "true");
 
-    // "b <= 1 or b > 1 or b is null" ==> "true"
+    // "b <= 1 or b > 1 or b is null" =-> "true"
     checkSimplifyFilter(
         or(le(bRef, literal(1)),
             gt(bRef, literal(1)),
             isNull(bRef)),
         "true");
 
-    // "b < 2 or b > 0 or b is null" ==> "true"
+    // "b < 2 or b > 0 or b is null" =-> "true"
     checkSimplifyFilter(
         or(lt(bRef, literal(2)),
             gt(bRef, literal(0)),
@@ -1620,7 +1631,7 @@ class RexProgramTest extends RexProgramTestBase {
             isNull(cRef)),
         "OR(IS NULL(?0.c), IS NOT NULL(?0.b))");
 
-    // "d is null or d is not false" => "d is null or d"
+    // "d is null or d is not false" -> "d is null or d"
     // (because after the first term we know that d cannot be null)
     checkSimplifyFilter(
         or(isNull(dRef),
@@ -1658,49 +1669,49 @@ class RexProgramTest extends RexProgramTestBase {
     final RexDynamicParam range = rexBuilder.makeDynamicParam(rowType, 0);
     final RexNode aRef = rexBuilder.makeFieldAccess(range, 0);
 
-    // "1 > a or 1 <= a or a is null" ==> "true"
+    // "1 > a or 1 <= a or a is null" =-> "true"
     checkSimplifyFilter(
         or(gt(literal(1), aRef),
             le(literal(1), aRef),
             isNull(aRef)),
         "true");
 
-    // "1 <= a or 1 > a or a is null" ==> "true"
+    // "1 <= a or 1 > a or a is null" =-> "true"
     checkSimplifyFilter(
         or(le(literal(1), aRef),
             gt(literal(1), aRef),
             isNull(aRef)),
         "true");
 
-    // "a is null or 1 > a or 1 <= a" ==> "true"
+    // "a is null or 1 > a or 1 <= a" =-> "true"
     checkSimplifyFilter(
         or(isNull(aRef),
             gt(literal(1), aRef),
             le(literal(1), aRef)),
         "true");
 
-    // "2 > a or 0 < a or a is null" ==> "true"
+    // "2 > a or 0 < a or a is null" =-> "true"
     checkSimplifyFilter(
         or(gt(literal(2), aRef),
             lt(literal(0), aRef),
             isNull(aRef)),
         "true");
 
-    // "1 > a or a >= 1 or a is null" ==> "true"
+    // "1 > a or a >= 1 or a is null" =-> "true"
     checkSimplifyFilter(
         or(gt(literal(1), aRef),
             ge(aRef, literal(1)),
             isNull(aRef)),
         "true");
 
-    // "1 <= a or a < 1 or a is null" ==> "true"
+    // "1 <= a or a < 1 or a is null" =-> "true"
     checkSimplifyFilter(
         or(le(literal(1), aRef),
             lt(aRef, literal(1)),
             isNull(aRef)),
         "true");
 
-    // "a >= 1 or 1 > a or a is null" ==> "true"
+    // "a >= 1 or 1 > a or a is null" =-> "true"
     checkSimplifyFilter(
         or(ge(aRef, literal(1)),
             gt(literal(1), aRef),
@@ -1725,7 +1736,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER), >=(1, CAST(?0.a):INTEGER))"
     // when (?0.a) is INTEGER
-    // ==> "TRUE"
+    // =-> "TRUE"
     checkSimplifyFilter(
         or(isNull(aRef),
             lt(literal(1), rexBuilder.makeCast(intNullType, aRef)),
@@ -1744,7 +1755,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "IS NULL(?0.a), <(1, CAST(?0.a):INTEGER NOT NULL), >=(1, CAST(?0.a):INTEGER NOT NULL)"
     // when (?0.a) is INTEGER
-    // ==> "TRUE"
+    // =-> "TRUE"
     checkSimplifyFilter(
         or(isNull(aRef),
             lt(literal(1), rexBuilder.makeCast(intType, aRef)),
@@ -1764,7 +1775,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER NOT NULL), >=(1, CAST(?0.a):INTEGER NOT NULL))"
     // when (?0.a) is BIGINT
-    // ==>
+    // =->
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER NOT NULL), >=(1, CAST(?0.a):INTEGER NOT NULL))"
     checkSimplifyFilter(
         or(isNull(aRef),
@@ -1786,7 +1797,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER), >=(1, CAST(?0.a):INTEGER))"
     // when (?0.a) is BIGINT
-    // ==> "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER), >=(1, CAST(?0.a):INTEGER))"
+    // =-> "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER), >=(1, CAST(?0.a):INTEGER))"
     checkSimplifyFilter(
         or(isNull(aRef),
             lt(literal(1), rexBuilder.makeCast(intNullType, aRef)),
@@ -1806,7 +1817,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER NOT NULL), >=(1, CAST(?0.a):INTEGER NOT NULL))"
     // when (?0.a) is TINYINT
-    // ==> "true"
+    // =-> "true"
     checkSimplifyFilter(
         or(isNull(aRef),
             lt(literal(1), rexBuilder.makeCast(intType, aRef)),
@@ -1827,7 +1838,7 @@ class RexProgramTest extends RexProgramTestBase {
 
     // "OR(IS NULL(?0.a), <(1, CAST(?0.a):INTEGER), >=(1, CAST(?0.a):INTEGER))"
     // when (?0.a) is TINYINT
-    // ==> "true"
+    // =-> "true"
     checkSimplifyFilter(
         or(isNull(aRef),
             lt(literal(1), rexBuilder.makeCast(intNullType, aRef)),
@@ -2095,13 +2106,13 @@ class RexProgramTest extends RexProgramTestBase {
   }
 
   @Test void testSimplifyAndIsNotNullWithEquality() {
-    // "AND(IS NOT NULL(x), =(x, y)) => AND(IS NOT NULL(x), =(x, y)) (unknownAsFalse=false),
+    // "AND(IS NOT NULL(x), =(x, y)) -> AND(IS NOT NULL(x), =(x, y)) (unknownAsFalse=false),
     // "=(x, y)" (unknownAsFalse=true)
     checkSimplify2(and(isNotNull(vInt(0)), eq(vInt(0), vInt(1))),
         "AND(IS NOT NULL(?0.int0), =(?0.int0, ?0.int1))",
         "=(?0.int0, ?0.int1)");
 
-    // "AND(IS NOT NULL(x), =(x, y)) => "=(x, y)"
+    // "AND(IS NOT NULL(x), =(x, y)) -> "=(x, y)"
     checkSimplify(and(isNotNull(vIntNotNull(0)), eq(vIntNotNull(0), vInt(1))),
         "=(?0.notNullInt0, ?0.int1)");
   }
@@ -2112,26 +2123,26 @@ class RexProgramTest extends RexProgramTestBase {
     final RexNode intExpr = vInt(0);
     final RelDataType intType = literal3.getType();
 
-    // "AND(<>(?0.int0, 3), =(?0.int0, 5))" => "=(?0.int0, 5)"
+    // "AND(<>(?0.int0, 3), =(?0.int0, 5))" -> "=(?0.int0, 5)"
     checkSimplify(and(ne(intExpr, literal3), eq(intExpr, literal5)), "=(?0.int0, 5)");
-    // "AND(=(?0.int0, 5), <>(?0.int0, 3))" => "=(?0.int0, 5)"
+    // "AND(=(?0.int0, 5), <>(?0.int0, 3))" -> "=(?0.int0, 5)"
     checkSimplify(and(eq(intExpr, literal5), ne(intExpr, literal3)), "=(?0.int0, 5)");
     // "AND(=(CAST(?0.int0):INTEGER NOT NULL, 5), <>(CAST(?0.int0):INTEGER NOT NULL, 3))"
-    // =>
+    // ->
     // "=(CAST(?0.int0):INTEGER NOT NULL, 5)"
     checkSimplify(
         and(ne(rexBuilder.makeCast(intType, intExpr, true, false), literal3),
                     eq(rexBuilder.makeCast(intType, intExpr, true, false), literal5)),
             "=(CAST(?0.int0):INTEGER NOT NULL, 5)");
     // "AND(<>(CAST(?0.int0):INTEGER NOT NULL, 3), =(CAST(?0.int0):INTEGER NOT NULL, 5))"
-    // =>
+    // ->
     // "=(CAST(?0.int0):INTEGER NOT NULL, 5)"
     checkSimplify(
         and(ne(rexBuilder.makeCast(intType, intExpr, true, false), literal3),
                     eq(rexBuilder.makeCast(intType, intExpr, true, false), literal5)),
             "=(CAST(?0.int0):INTEGER NOT NULL, 5)");
     // "AND(<>(CAST(?0.int0):INTEGER NOT NULL, 3), =(?0.int0, 5))"
-    // =>
+    // ->
     // "AND(<>(CAST(?0.int0):INTEGER NOT NULL, 3), =(?0.int0, 5))"
     checkSimplifyUnchanged(
         and(
@@ -2161,7 +2172,7 @@ class RexProgramTest extends RexProgramTestBase {
     RexNode item = item(input(tArray(tInt()), 3), literal(1));
     // paranoid validation doesn't support array types, disable it for a moment
     simplify = this.simplify.withParanoid(false);
-    // (a=1 or a=2 or (arr[1]>4 and arr[1]<3 and a=3)) => a=1 or a=2
+    // (a=1 or a=2 or (arr[1]>4 and arr[1]<3 and a=3)) -> a=1 or a=2
     checkSimplifyFilter(
         or(
             eq(vInt(), literal(1)),
@@ -2183,7 +2194,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyNeOrIsNullAndEq() {
     // (deptno <> 20 OR deptno IS NULL) AND deptno = 10
-    //   ==>
+    //   =->
     // deptno = 10
     final RexNode e =
         and(
@@ -2195,7 +2206,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyEqOrIsNullAndEq() {
     // (deptno = 20 OR deptno IS NULL) AND deptno = 10
-    //   ==>
+    //   =->
     // deptno <> deptno
     final RexNode e =
         and(
@@ -2207,7 +2218,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyEqOrIsNullAndEqSame() {
     // (deptno = 10 OR deptno IS NULL) AND deptno = 10
-    //   ==>
+    //   =->
     // false
     final RexNode e =
         and(
@@ -2221,62 +2232,62 @@ class RexProgramTest extends RexProgramTestBase {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-7019">[CALCITE-7019]
    * Simplify 'NULL IN (20, 10)' to 'NULL'</a>. */
   @Test void testSimplifyIn() {
-    // NULL in (20, 10) ==> SEARCH(null:Integer, Sarg[10, 20])
-    //   ==>
+    // NULL in (20, 10) =-> SEARCH(null:Integer, Sarg[10, 20])
+    //   =->
     // NULL
     checkSimplify3_(in(nullInt, literal(20), literal(10)),
         "null:BOOLEAN", "false", "true");
 
-    // NULL in (NULL, 10) ==> NULL = NULL or NULL = 10
-    //   ==>
+    // NULL in (NULL, 10) =-> NULL = NULL or NULL = 10
+    //   =->
     // NULL
     checkSimplify3_(in(nullInt, nullInt, literal(10)),
         "null:BOOLEAN", "false", "true");
 
-    // 10 in (NULL, 10) ==> 10 = NULL or 10 = 10
-    //   ==>
+    // 10 in (NULL, 10) =-> 10 = NULL or 10 = 10
+    //   =->
     // TRUE
     checkSimplify(in(literal(10), nullInt, literal(10)), "true");
 
-    // 20 in (NULL, 10) ==> 20 = NULL or 20 = 10
-    //   ==>
+    // 20 in (NULL, 10) =-> 20 = NULL or 20 = 10
+    //   =->
     // NULL
     checkSimplify3_(in(literal(20), nullInt, literal(10)),
         "null:BOOLEAN", "false", "true");
 
-    // 10 in (NULL, NULL) ==> 10 = null
-    //   ==>
+    // 10 in (NULL, NULL) =-> 10 = null
+    //   =->
     // NULL
     checkSimplify3_(in(literal(10), nullInt, nullInt),
         "null:BOOLEAN", "false", "true");
   }
 
   @Test void testSimplifyNotIn() {
-    // NULL not in (20, 10) ==> not(SEARCH(null:Integer, Sarg[10, 20]))
-    //   ==>
+    // NULL not in (20, 10) =-> not(SEARCH(null:Integer, Sarg[10, 20]))
+    //   =->
     // NULL
     checkSimplify3_(not(in(nullInt, literal(20), literal(10))),
         "null:BOOLEAN", "false", "true");
 
-    // NULL not in (NULL, 10) ==> not(null = null or null = 10)
-    //   ==>
+    // NULL not in (NULL, 10) =-> not(null = null or null = 10)
+    //   =->
     // NULL
     checkSimplify3_(not(in(nullInt, nullInt, literal(10))),
         "null:BOOLEAN", "false", "true");
 
-    // 10 not in (NULL, 10) ==> not(10 = null or 10 = 10)
-    //   ==>
+    // 10 not in (NULL, 10) =-> not(10 = null or 10 = 10)
+    //   =->
     // FALSE
     checkSimplify(not(in(literal(10), nullInt, literal(10))), "false");
 
-    // 20 not in (NULL, 10) ==> not(20 = null or 20 = 10)
-    //   ==>
+    // 20 not in (NULL, 10) =-> not(20 = null or 20 = 10)
+    //   =->
     // NULL
     checkSimplify3_(not(in(literal(20), nullInt, literal(10))),
         "null:BOOLEAN", "false", "true");
 
-    // 10 not in (NULL, NULL) ==> not(10 = null)
-    //   ==>
+    // 10 not in (NULL, NULL) =-> not(10 = null)
+    //   =->
     // NULL
     checkSimplify3_(not(in(literal(10), nullInt, nullInt)),
         "null:BOOLEAN", "false", "true");
@@ -2284,7 +2295,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyInAnd() {
     // deptno in (20, 10) and deptno = 10
-    //   ==>
+    //   =->
     // deptno = 10
     checkSimplify(
         and(
@@ -2293,7 +2304,7 @@ class RexProgramTest extends RexProgramTestBase {
         "=(?0.int0, 10)");
 
     // deptno in (20, 10) and deptno = 30
-    //   ==>
+    //   =->
     // false
     checkSimplify3(
         and(
@@ -2306,7 +2317,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyInOr() {
     // deptno > 0 or deptno in (20, 10)
-    //   ==>
+    //   =->
     // deptno > 0
     checkSimplify(
         or(
@@ -2326,40 +2337,40 @@ class RexProgramTest extends RexProgramTestBase {
         RelOptPredicateList.of(rexBuilder,
             ImmutableList.of(isNotNull(xRef), isNotNull(yRef)));
 
-    // "(x < y) IS TRUE" (if x and y are both not nullable) => "x < y"
+    // "(x < y) IS TRUE" (if x and y are both not nullable) -> "x < y"
     checkSimplifyWithPredicates(
         isTrue(lt(xRef, yRef)),
         relOptPredicateList,
         RexUnknownAs.UNKNOWN,
         "<($0, $1)");
 
-    // "(x < y) IS NOT TRUE" (if x and y are both not nullable) => "x >= y"
+    // "(x < y) IS NOT TRUE" (if x and y are both not nullable) -> "x >= y"
     checkSimplifyFilter(
         isNotTrue(lt(xRef, yRef)),
         relOptPredicateList,
         ">=($0, $1)");
 
-    // "(x < 1) IS TRUE" (if x is not nullable) => "x < 1"
+    // "(x < 1) IS TRUE" (if x is not nullable) -> "x < 1"
     checkSimplifyWithPredicates(
         isTrue(lt(xRef, literal(1))),
         relOptPredicateList,
         RexUnknownAs.UNKNOWN,
         "<($0, 1)");
 
-    // "(x < 1) IS NOT TRUE" (if x is not nullable) => "x >= 1"
+    // "(x < 1) IS NOT TRUE" (if x is not nullable) -> "x >= 1"
     checkSimplifyFilter(
         isNotTrue(lt(xRef, literal(1))),
         relOptPredicateList,
         ">=($0, 1)");
 
-    // "(1 < x) IS TRUE" (if x is not nullable) => "1 < x"
+    // "(1 < x) IS TRUE" (if x is not nullable) -> "1 < x"
     checkSimplifyWithPredicates(
         isTrue(lt(literal(1), xRef)),
         relOptPredicateList,
         RexUnknownAs.UNKNOWN,
         "<(1, $0)");
 
-    // "(1 >= x) IS NOT TRUE" (if x is not nullable) => "1 >= x"
+    // "(1 >= x) IS NOT TRUE" (if x is not nullable) -> "1 >= x"
     checkSimplifyFilter(
         isNotTrue(lt(literal(1), xRef)),
         relOptPredicateList,
@@ -2517,7 +2528,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyCaseBranchesCollapse() {
     // case when x is true then 1 when x is not true then 1 else 2 end
-    // => case when x is true or x is not true then 1 else 2 end
+    // -> case when x is true or x is not true then 1 else 2 end
     checkSimplify(
         case_(
             isTrue(vBool()), literal(1),
@@ -2528,7 +2539,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyCaseBranchesCollapse2() {
     // case when x is true then 1 when true then 1 else 2 end
-    // => 1
+    // -> 1
     checkSimplify(
         case_(
             isTrue(vBool()), literal(1),
@@ -2701,7 +2712,7 @@ class RexProgramTest extends RexProgramTestBase {
    * When A is deterministic</a>. */
   @Test void testSimplifyIsNotNullWithDeterministic() {
     // "(A IS NOT NULL OR B) AND A IS NOT NULL" when A is deterministic
-    // ==>
+    // =->
     // "A IS NOT NULL"
     SqlOperator dc = getDeterministicOperator();
     checkSimplify2(
@@ -2713,7 +2724,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyIsNotNullWithDeterministic2() {
     // "(A IS NOT NULL AND B) OR A IS NULL" when A is deterministic
-    // ==>
+    // =->
     // "A IS NULL OR B"
     SqlOperator dc = getDeterministicOperator();
     checkSimplify(
@@ -2724,7 +2735,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyIsNotNullWithNoDeterministic() {
     // "(A IS NOT NULL OR B) AND A IS NOT NULL" when A is not deterministic
-    // ==>
+    // =->
     // "(A IS NOT NULL OR B) AND A IS NOT NULL"
     SqlOperator ndc = getNoDeterministicOperator();
     checkSimplifyUnchanged(
@@ -2734,7 +2745,7 @@ class RexProgramTest extends RexProgramTestBase {
 
   @Test void testSimplifyIsNotNullWithNoDeterministic2() {
     // "(A IS NOT NULL AND B) OR A IS NOT NULL" when A is not deterministic
-    // ==>
+    // =->
     // "(A IS NOT NULL AND B) OR A IS NOT NULL"
     SqlOperator ndc = getNoDeterministicOperator();
     checkSimplifyUnchanged(
@@ -2771,15 +2782,15 @@ class RexProgramTest extends RexProgramTestBase {
    * Optimizing 'CAST(e AS t) IS NOT NULL' to 'e IS NOT NULL'</a>. */
   @Test void testSimplifyCastIsNull3() {
     // "(cast A as bigint) IS NULL" when A is int and A is not null
-    // ==>
+    // =->
     // "false"
     checkSimplify(isNull(cast(vIntNotNull(), tBigInt(false))), "false");
     // "(cast A as smallint) IS NULL" when A is int and A is not null
-    // ==>
+    // =->
     // "(cast A as smallint) IS NULL"
     checkSimplifyUnchanged(isNull(cast(vIntNotNull(), tSmallInt(false))));
     // "(cast A as varbinary) IS NULL" when A is varchar and A is not null
-    // ==>
+    // =->
     // "(cast A as varbinary) IS NULL"
     checkSimplifyUnchanged(isNotNull(cast(vVarcharNotNull(), tVarbinary(false))));
   }
@@ -2789,15 +2800,15 @@ class RexProgramTest extends RexProgramTestBase {
    * Optimizing 'CAST(e AS t) IS NOT NULL' to 'e IS NOT NULL'</a>. */
   @Test void testSimplifyCastIsNull4() {
     // "(cast A as bigint) IS NULL" when A is int and A is nullable
-    // ==>
+    // =->
     // "A IS NULL"
     checkSimplify(isNull(cast(vInt(), tBigInt(true))), "IS NULL(?0.int0)");
     // "(cast A as smallint) IS NULL" when A is int and A is nullable
-    // ==>
+    // =->
     // "(cast A as smallint) IS NULL"
     checkSimplifyUnchanged(isNull(cast(vInt(), tSmallInt(true))));
     // "(cast A as varbinary) IS NULL" when A is varchar and A is nullable
-    // ==>
+    // =->
     // "(cast A as varbinary) IS NULL"
     checkSimplifyUnchanged(isNotNull(cast(vVarchar(), tVarbinary(true))));
   }
@@ -2807,15 +2818,15 @@ class RexProgramTest extends RexProgramTestBase {
    * Optimizing 'CAST(e AS t) IS NOT NULL' to 'e IS NOT NULL'</a>. */
   @Test void testSimplifyCastIsNotNull() {
     // "(cast A as bigint) IS NOT NULL" when A is int and A is not null
-    // ==>
+    // =->
     // "true"
     checkSimplify(isNotNull(cast(vIntNotNull(), tBigInt(false))), "true");
     // "(cast A as smallint) IS NOT NULL" when A is int and A is not null
-    // ==>
+    // =->
     // "(cast A as smallint) IS NOT NULL"
     checkSimplifyUnchanged(isNotNull(cast(vIntNotNull(), tSmallInt(false))));
     // "(cast A as varbinary) IS NOT NULL" when A is varchar and A is not null
-    // ==>
+    // =->
     // "(cast A as varbinary) IS NOT NULL"
     checkSimplifyUnchanged(isNotNull(cast(vVarcharNotNull(), tVarbinary(false))));
   }
@@ -2825,15 +2836,15 @@ class RexProgramTest extends RexProgramTestBase {
    * Optimizing 'CAST(e AS t) IS NOT NULL' to 'e IS NOT NULL'</a>. */
   @Test void testSimplifyCastIsNotNull2() {
     // "(cast A as bigint) IS NOT NULL" when A is int and A is nullable
-    // ==>
+    // =->
     // "A IS NOT NULL"
     checkSimplify(isNotNull(cast(vInt(), tBigInt(true))), "IS NOT NULL(?0.int0)");
     // "(cast A as smallint) IS NOT NULL" when A is int and A is nullable
-    // ==>
+    // =->
     // "(cast A as smallint) IS NOT NULL"
     checkSimplifyUnchanged(isNotNull(cast(vInt(), tSmallInt(true))));
     // "(cast A as varbinary) IS NOT NULL" when A is varchar and A is nullable
-    // ==>
+    // =->
     // "(cast A as varbinary) IS NOT NULL"
     checkSimplifyUnchanged(isNotNull(cast(vVarchar(), tVarbinary(true))));
   }
@@ -3433,28 +3444,28 @@ class RexProgramTest extends RexProgramTestBase {
   }
 
   @Test void testSimplifyNot() {
-    // "NOT(NOT(x))" => "x"
+    // "NOT(NOT(x))" -> "x"
     checkSimplify(not(not(vBool())), "?0.bool0");
-    // "NOT(true)"  => "false"
+    // "NOT(true)"  -> "false"
     checkSimplify(not(trueLiteral), "false");
-    // "NOT(false)" => "true"
+    // "NOT(false)" -> "true"
     checkSimplify(not(falseLiteral), "true");
-    // "NOT(IS FALSE(x))" => "IS NOT FALSE(x)"
+    // "NOT(IS FALSE(x))" -> "IS NOT FALSE(x)"
     checkSimplify3(not(isFalse(vBool())),
         "IS NOT FALSE(?0.bool0)", "IS NOT FALSE(?0.bool0)", "?0.bool0");
-    // "NOT(IS TRUE(x))" => "IS NOT TRUE(x)"
+    // "NOT(IS TRUE(x))" -> "IS NOT TRUE(x)"
     checkSimplify3(not(isTrue(vBool())),
         "IS NOT TRUE(?0.bool0)",
         "IS NOT TRUE(?0.bool0)",
         "NOT(?0.bool0)");
-    // "NOT(IS NULL(x))" => "IS NOT NULL(x)"
+    // "NOT(IS NULL(x))" -> "IS NOT NULL(x)"
     checkSimplify(not(isNull(vBool())), "IS NOT NULL(?0.bool0)");
-    // "NOT(IS NOT NULL(x)) => "IS NULL(x)"
+    // "NOT(IS NOT NULL(x)) -> "IS NULL(x)"
     checkSimplify(not(isNotNull(vBool())), "IS NULL(?0.bool0)");
-    // "NOT(AND(x0,x1))" => "OR(NOT(x0),NOT(x1))"
+    // "NOT(AND(x0,x1))" -> "OR(NOT(x0),NOT(x1))"
     checkSimplify(not(and(vBool(0), vBool(1))),
         "OR(NOT(?0.bool0), NOT(?0.bool1))");
-    // "NOT(OR(x0,x1))" => "AND(NOT(x0),NOT(x1))"
+    // "NOT(OR(x0,x1))" -> "AND(NOT(x0),NOT(x1))"
     checkSimplify(not(or(vBool(0), vBool(1))),
         "AND(NOT(?0.bool0), NOT(?0.bool1))");
   }
@@ -3517,17 +3528,17 @@ class RexProgramTest extends RexProgramTestBase {
     final SqlOperator func =
         SqlBasicFunction.create("func", ReturnTypes.BOOLEAN_NULLABLE, OperandTypes.VARIADIC);
     final RexNode unsafeRel = rexBuilder.makeCall(func, div(vInt(0), literal(2)));
-    // x OR x IS NOT TRUE ==> "true"
+    // x OR x IS NOT TRUE =-> "true"
     checkSimplify(or(vBool(), isNotTrue(vBool())), "true");
     checkSimplify(or(vBoolNotNull(), isNotTrue(vBoolNotNull())), "true");
     // outside unsafe expression will not prevent simplification
     checkSimplify(or(unsafeRel, vBool(), isNotTrue(vBool())), "true");
 
-    // x OR NOT x ==> "true" (if x is not nullable)
+    // x OR NOT x =-> "true" (if x is not nullable)
     checkSimplify(or(vBoolNotNull(), not(vBoolNotNull())), "true");
     checkSimplify(or(unsafeRel, vBoolNotNull(), not(vBoolNotNull())), "true");
 
-    // x OR NOT x ==> x IS NOT NULL OR NULL (if x is nullable)
+    // x OR NOT x =-> x IS NOT NULL OR NULL (if x is nullable)
     checkSimplify3(or(vBool(), not(vBool())),
         "OR(IS NOT NULL(?0.bool0), null)",
         "IS NOT NULL(?0.bool0)",

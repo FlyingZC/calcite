@@ -93,7 +93,7 @@ public class AssignableOperandTypeChecker implements SqlOperandTypeChecker {
       }
       if (paramNames != null) {
         sb.append(paramNames.get(paramType.i))
-            .append(" => ");
+            .append(" -> ");
       }
       sb.append("<");
       sb.append(paramType.e.getFamily());

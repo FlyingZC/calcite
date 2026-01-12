@@ -755,11 +755,11 @@ public class RexSimplify {
     final List<RexNode> newOperands;
     switch (a.getKind()) {
     case NOT:
-      // NOT NOT x ==> x
+      // NOT NOT x =-> x
       return simplify(((RexCall) a).getOperands().get(0), unknownAs);
 
     case SEARCH:
-      // NOT SEARCH(x, Sarg[(-inf, 10) OR NULL) ==> SEARCH(x, Sarg[[10, +inf)])
+      // NOT SEARCH(x, Sarg[(-inf, 10) OR NULL) =-> SEARCH(x, Sarg[[10, +inf)])
       final RexCall call2 = (RexCall) a;
       final RexNode ref = call2.operands.get(0);
       final RexLiteral literal = (RexLiteral) call2.operands.get(1);
@@ -844,7 +844,7 @@ public class RexSimplify {
   private RexNode simplifyUnaryMinus(RexCall call, RexUnknownAs unknownAs) {
     final RexNode a = call.getOperands().get(0);
     if (a.getKind() == SqlKind.MINUS_PREFIX) {
-      // -(-(x)) ==> x
+      // -(-(x)) =-> x
       return simplify(((RexCall) a).getOperands().get(0), unknownAs);
     }
     return simplifyGenericNode(call);
@@ -910,7 +910,7 @@ public class RexSimplify {
     final RexNode simplified;
     switch (kind) {
     case IS_NULL:
-      // x IS NULL ==> FALSE (if x is not nullable)
+      // x IS NULL =-> FALSE (if x is not nullable)
       validateStrongPolicy(a);
       simplified = simplifyIsNull(a);
       if (simplified != null) {
@@ -918,7 +918,7 @@ public class RexSimplify {
       }
       break;
     case IS_NOT_NULL:
-      // x IS NOT NULL ==> TRUE (if x is not nullable)
+      // x IS NOT NULL =-> TRUE (if x is not nullable)
       validateStrongPolicy(a);
       simplified = simplifyIsNotNull(a);
       if (simplified != null) {
@@ -927,7 +927,7 @@ public class RexSimplify {
       break;
 
     case IS_TRUE:
-      // x IS TRUE ==> x (if x is not nullable)
+      // x IS TRUE =-> x (if x is not nullable)
       if (predicates.isEffectivelyNotNull(a)) {
         return simplify(a, unknownAs);
       }
@@ -938,7 +938,7 @@ public class RexSimplify {
       return isTrue(simplified);
 
     case IS_NOT_FALSE:
-      // x IS NOT FALSE ==> x (if x is not nullable)
+      // x IS NOT FALSE =-> x (if x is not nullable)
       if (predicates.isEffectivelyNotNull(a)) {
         return simplify(a, unknownAs);
       }
@@ -950,8 +950,8 @@ public class RexSimplify {
 
     case IS_FALSE:
     case IS_NOT_TRUE:
-      // x IS NOT TRUE ==> NOT x (if x is not nullable)
-      // x IS FALSE ==> NOT x (if x is not nullable)
+      // x IS NOT TRUE =-> NOT x (if x is not nullable)
+      // x IS FALSE =-> NOT x (if x is not nullable)
       if (predicates.isEffectivelyNotNull(a)) {
         return simplify(not(a), unknownAs);
       }
@@ -962,11 +962,11 @@ public class RexSimplify {
     }
     switch (a.getKind()) {
     case NOT:
-      // (NOT x) IS TRUE ==> x IS FALSE
+      // (NOT x) IS TRUE =-> x IS FALSE
       // Similarly for IS NOT TRUE, IS FALSE, etc.
       //
       // Note that
-      //   (NOT x) IS TRUE !=> x IS FALSE
+      //   (NOT x) IS TRUE !-> x IS FALSE
       // because of null values.
       final SqlOperator notKind = RexUtil.op(kind.negateNullSafe());
       final RexNode arg = ((RexCall) a).operands.get(0);
@@ -1293,7 +1293,7 @@ public class RexSimplify {
     }
 
     @Override public String toString() {
-      return cond + " => " + value;
+      return cond + " -> " + value;
     }
 
     /** Given "CASE WHEN p1 THEN v1 ... ELSE e END"
@@ -1575,11 +1575,11 @@ public class RexSimplify {
     for (RexNode notDisjunction : notTerms) {
       final List<RexNode> terms2 = RelOptUtil.conjunctions(notDisjunction);
       if (!terms.containsAll(terms2)) {
-        // may be satisfiable ==> check other terms
+        // may be satisfiable =-> check other terms
         continue;
       }
       if (!notDisjunction.getType().isNullable()) {
-        // x is NOT nullable, then x AND NOT(x) ==> FALSE
+        // x is NOT nullable, then x AND NOT(x) =-> FALSE
         return rexBuilder.makeLiteral(false);
       }
       // x AND NOT(x) is UNKNOWN for NULL input
@@ -2021,7 +2021,7 @@ public class RexSimplify {
     }
 
     // CALCITE-3198 Auxiliary map to simplify cases like:
-    //   X <> A OR X <> B => X IS NOT NULL or NULL
+    //   X <> A OR X <> B -> X IS NOT NULL or NULL
     // The map key will be the 'X'; and the value the first call 'X<>A' that is found,
     // or 'X IS NOT NULL' if a simplification takes place (because another 'X<>B' is found)
     final Map<RexNode, RexNode> notEqualsComparisonMap = new HashMap<>();
@@ -2068,7 +2068,7 @@ public class RexSimplify {
               if (comparable1 != null
                   && comparable2 != null
                   && comparable1.compareTo(comparable2) != 0) {
-                // X <> A OR X <> B => X IS NOT NULL OR NULL
+                // X <> A OR X <> B -> X IS NOT NULL OR NULL
                 final RexNode isNotNull =
                     rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL,
                         notEqualsComparison.ref);
@@ -2228,8 +2228,8 @@ public class RexSimplify {
     if (RexUtil.isLosslessCast(operand)) {
       // x :: y below means cast(x as y) (which is PostgreSQL-specific cast by the way)
       // A) Remove lossless casts:
-      // A.1) intExpr :: bigint :: int => intExpr
-      // A.2) char2Expr :: char(5) :: char(2) => char2Expr
+      // A.1) intExpr :: bigint :: int -> intExpr
+      // A.2) char2Expr :: char(5) :: char(2) -> char2Expr
       // B) There are cases when we can't remove two casts, but we could probably remove inner one
       // B.1) char2expression :: char(4) :: char(5) -> char2expression :: char(5)
       // B.2) char2expression :: char(10) :: char(5) -> char2expression :: char(5)

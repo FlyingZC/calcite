@@ -108,7 +108,7 @@ class EnumerableStringComparisonTest {
             .sort(
                 builder.field(1, 0, "name"))
             .build())
-        .explainHookMatches(""
+        .explainHookMatches("
             + "EnumerableSort(sort0=[$0], dir0=[ASC])\n"
             + "  EnumerableValues(tuples=[[{ 'Legal' }, { 'presales' }, { 'hr' }, { 'Administration' }, { 'MARKETING' }]])\n")
         .returnsOrdered("name=Administration",
@@ -127,7 +127,7 @@ class EnumerableStringComparisonTest {
             .sort(
                 builder.field(1, 0, "name"))
             .build())
-        .explainHookMatches(""
+        .explainHookMatches("
             + "EnumerableSort(sort0=[$0], dir0=[ASC])\n"
             + "  EnumerableValues(tuples=[[{ 'Legal' }, { 'presales' }, { 'hr' }, { 'Administration' }, { 'MARKETING' }]])\n")
         .returnsOrdered("name=Administration",
@@ -154,7 +154,7 @@ class EnumerableStringComparisonTest {
                     builder.field(1, 0, "name"),
                     builder.literal("MARKETING")))
             .build())
-        .explainHookMatches(""
+        .explainHookMatches("
             + "EnumerableCalc(expr#0=[{inputs}], expr#1=['MARKETING'], expr#2=[=($t0, $t1)], name=[$t0], $condition=[$t2])\n"
             + "  EnumerableValues(tuples=[[{ 'Legal' }, { 'presales' }, { 'hr' }, { 'Administration' }, { 'MARKETING' }]])\n")
         .returnsUnordered("name=MARKETING");

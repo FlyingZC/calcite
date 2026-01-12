@@ -119,7 +119,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
         .build(); // 构建优化程序
     // 创建Hep启发式规划器，使用上述优化程序
     // HepPlanner是一个基于规则的优化器，按照固定顺序应用规则
-    final HepPlanner planner = new HepPlanner(epProgram); // 创建规划器实例
+    final HepPlanner planner = new HepPlanner(hepProgram); // 创建规划器实例
     planner.setRoot(rootRel); // 设置规划器的根关系表达式
     rootRel = planner.findBestExp(); // 执行优化，找到最优的表达式
     return rootRel; // 返回优化后的关系表达式
@@ -182,7 +182,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * NodeInfo（节点信息）内部类
-   * 
+   *
    * 存储注册在数据流图中的节点的信息。每个关系表达式节点
    * 都对应一个NodeInfo对象，包含该节点的输入输出连接信息、
    * 可执行节点实例等。这个类是数据流图构建和执行的核心数据结构。
@@ -219,7 +219,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * EnumeratorSource（枚举器源）内部类
-   * 
+   *
    * 一个基于Enumerator的Source实现。Enumerator在完成或调用close()时被关闭。
    * 这个类将LINQ4J的枚举器包装为解释器数据流中的Source接口，
    * 使得外部数据源可以接入解释器的数据流图。
@@ -252,7 +252,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * ListSink（列表接收器）内部类
-   * 
+   *
    * 使用ArrayDeque实现的Sink接口。Sink是数据流的接收端，
    * 负责接收上游节点发送的数据行。ListSink使用队列作为缓冲区，
    * 支持多个生产者向同一个队列写入数据。
@@ -293,7 +293,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * ListSource（列表源）内部类
-   * 
+   *
    * 使用ArrayDeque实现的Source接口。Source是数据流的发送端，
    * 负责向下游节点发送数据行。ListSource从队列中读取数据，
    * 支持多个消费者从同一个队列读取数据。
@@ -332,7 +332,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * DuplicatingSink（复制接收器）内部类
-   * 
+   *
    * 使用ArrayDeque实现的Sink接口，支持将同一份数据复制到多个队列。
    * 这个类用于实现广播操作，将数据同时发送给多个下游节点。
    * 每个队列对应一个下游节点的输入。
@@ -374,12 +374,12 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * CompilerImpl（编译器实现）内部类
-   * 
+   *
    * 遍历关系表达式树（RelNode树），为每个节点创建可以在解释器中执行的Node对象。
-   * 
+   *
    * <p>编译器通过反射查找形式为"visit(XxxRel)"的方法。
    * "visit"方法必须创建适当的Node并将其放入{@link #node}字段中。
-   * 
+   *
    * <p>如果希望处理更多类型的关系表达式，可以在此类或子类中添加额外的"visit"方法，
    * 它们将通过反射被找到并调用。这种设计使得编译器具有良好的扩展性，
    * 可以通过添加新的visit方法来支持新的关系表达式类型。
@@ -513,7 +513,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
     /**
      * 默认的rewrite方法（回退方法）
-     * 
+     *
      * <p>重写方法（每个方法都有不同的RelNode子类作为参数类型）
      * 如果打算重写，则设置{@link #rel}字段。
      * 子类可以重写这个方法来实现特定的重写逻辑。
@@ -635,7 +635,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * Edge（边）内部类
-   * 
+   *
    * 表示RelNode与其输入之一之间的边。边是数据流图中的基本连接单元，
    * 记录了数据从子节点流向父节点的路径。每个边包含父节点引用和输入序号。
    */
@@ -648,7 +648,7 @@ public class Interpreter extends AbstractEnumerable<@Nullable Object[]> // 继�
 
   /**
    * ScalarCompiler（标量编译器）接口
-   * 
+   *
    * 将表达式列表转换为可以计算其值的标量。
    * 标量编译器负责将RexNode表达式编译为可执行的代码，
    * 用于在运行时计算表达式的值，如过滤条件、投影表达式等。

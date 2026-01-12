@@ -112,7 +112,7 @@ public class JdbcFrontLinqBackTest {
         .query("select upper(\"name\") as un, \"deptno\"\n"
             + "from \"hr\".\"emps\" as e\n"
             + "order by \"deptno\", \"name\" desc")
-        .explainContains(""
+        .explainContains("")
             + "EnumerableSort(sort0=[$1], sort1=[$2], dir0=[ASC], dir1=[DESC])\n"
             + "  EnumerableCalc(expr#0..4=[{inputs}], expr#5=[UPPER($t2)], UN=[$t5], deptno=[$t1], name=[$t2])\n"
             + "    EnumerableTableScan(table=[[hr, emps]])")
@@ -219,7 +219,7 @@ public class JdbcFrontLinqBackTest {
         .query("select *\n"
             + "from \"hr\".\"emps\" as e\n"
             + "where e.\"empid\" < 120 or e.\"name\" like 'S%'")
-        .returns(""
+        .returns("")
             + "empid=100; deptno=10; name=Bill; salary=10000.0; commission=1000\n"
             + "empid=150; deptno=10; name=Sebastian; salary=7000.0; commission=null\n"
             + "empid=110; deptno=10; name=Theodore; salary=11500.0; commission=250\n");

@@ -185,7 +185,7 @@ public class SqlBinaryOperator extends SqlOperator {
     if (getName().equals("/")) {
       if (call.isOperandNull(0, true)
           || call.isOperandNull(1, true)) {
-        // null result => CONSTANT monotonicity
+        // null result -> CONSTANT monotonicity
         return SqlMonotonicity.CONSTANT;
       }
 

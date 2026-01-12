@@ -101,7 +101,7 @@ public class RexImplicationChecker { // 类声明：RexImplicationChecker类，�
       return false; // 返回false，表示无法证明蕴含关系
     }
 
-    LOGGER.debug("Checking if {} => {}", first.toString(), second.toString()); // 记录调试日志，输出正在检查的两个条件
+    LOGGER.debug("Checking if {} -> {}", first.toString(), second.toString()); // 记录调试日志，输出正在检查的两个条件
 
     // 将两个条件转换为析取范式（DNF）
     // DNF是OR of ANDs的形式，如：(A AND B) OR (C AND D)
@@ -216,7 +216,7 @@ public class RexImplicationChecker { // 类声明：RexImplicationChecker类，�
 
     // 检查是否支持这种表达式模式
     if (!checkSupport(firstUsageFinder, secondUsageFinder)) { // 调用checkSupport方法检查支持情况
-      LOGGER.warn("Support for checking {} => {} is not there", first, second); // 记录警告日志，表示不支持这种检查
+      LOGGER.warn("Support for checking {} -> {} is not there", first, second); // 记录警告日志，表示不支持这种检查
       return false; // 返回false，表示无法检查
     }
 
@@ -276,7 +276,7 @@ public class RexImplicationChecker { // 类声明：RexImplicationChecker类，�
     } catch (Exception e) { // 捕获执行异常
       // TODO: checkSupport方法应该避免抛出这种异常
       // 需要监控并处理所有引发异常的情况
-      LOGGER.warn("Exception thrown while checking if => {}: {}", second, e.getMessage()); // 记录警告日志
+      LOGGER.warn("Exception thrown while checking if -> {}: {}", second, e.getMessage()); // 记录警告日志
       return false; // 返回false，表示检查失败
     }
     return result != null // 检查结果不为null

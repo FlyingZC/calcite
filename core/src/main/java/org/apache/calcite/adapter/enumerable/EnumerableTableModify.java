@@ -166,7 +166,7 @@ public class EnumerableTableModify extends TableModify // 定义类，继承自T
                             updatedCountParameter, countParameter), // updatedCount - count
                         Expressions.subtract( // 否则返回删除的行数（DELETE操作）
                             countParameter, updatedCountParameter)), // count - updatedCount
-                    long.class))))); // 将结果转换为long类型
+                    long.class)))); // 将结果转换为long类型
     final PhysType physType = // 创建物理类型对象，用于返回结果
         PhysTypeImpl.of( // 使用PhysTypeImpl工厂方法创建
             implementor.getTypeFactory(), // 使用实现器的类型工厂

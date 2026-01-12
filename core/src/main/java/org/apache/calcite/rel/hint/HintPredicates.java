@@ -98,9 +98,9 @@ public abstract class HintPredicates { // 抽象类：不能实例化，只作�
    * AND of an array of hint predicates {@code hintPredicates}.  When evaluating the composed // 参数说明：hintPredicates是可变参数数组，包含需要组合的多个HintPredicate对象
    * predicate, if a predicate is {@code false}, then all the left // 短路求值特性：采用短路求值策略，当某个谓词返回false时，立即停止评估剩余谓词，提高性能
    * predicates are not evaluated. */ // 返回值：返回一个CompositeHintPredicate对象，表示组合后的AND谓词
-   *
-   * <p>The predicates are evaluated in sequence. */ // 评估顺序：谓词按照传入数组的顺序依次评估，顺序可能影响性能和结果（对于有副作用的谓词）
-   */ // 使用场景：当Hint需要同时满足多个条件时使用，例如Hint只能应用于特定表且特定类型的节点
+   // *
+  // * <p>The predicates are evaluated in sequence. */ // 评估顺序：谓词按照传入数组的顺序依次评估，顺序可能影响性能和结果（对于有副作用的谓词）
+  // */ // 使用场景：当Hint需要同时满足多个条件时使用，例如Hint只能应用于特定表且特定类型的节点
   public static HintPredicate and(HintPredicate... hintPredicates) { // 静态方法：创建AND组合谓词，使用可变参数接收多个HintPredicate对象
     return new CompositeHintPredicate(CompositeHintPredicate.Composition.AND, hintPredicates); // 创建CompositeHintPredicate实例，组合类型为AND，传入所有要组合的谓词
   } // 方法结束：返回组合后的AND谓词，该谓词只有当所有输入谓词都返回true时才返回true
@@ -110,9 +110,9 @@ public abstract class HintPredicates { // 抽象类：不能实例化，只作�
    * OR of an array of hint predicates {@code hintPredicates}.  When evaluating the composed // 参数说明：hintPredicates是可变参数数组，包含需要组合的多个HintPredicate对象
    * predicate, if a predicate is {@code true}, then all the left // 短路求值特性：采用短路求值策略，当某个谓词返回true时，立即停止评估剩余谓词，提高性能
    * predicates are not evaluated. */ // 返回值：返回一个CompositeHintPredicate对象，表示组合后的OR谓词
-   *
-   * <p>The predicates are evaluated in sequence. */ // 评估顺序：谓词按照传入数组的顺序依次评估，顺序可能影响性能（对于有副作用的谓词）
-   */ // 使用场景：当Hint可以应用于多种不同类型的节点时使用，例如Hint可以应用于JOIN或FILTER节点
+  //*
+  //* <p>The predicates are evaluated in sequence. */ // 评估顺序：谓词按照传入数组的顺序依次评估，顺序可能影响性能（对于有副作用的谓词）
+  //*/ // 使用场景：当Hint可以应用于多种不同类型的节点时使用，例如Hint可以应用于JOIN或FILTER节点
   public static HintPredicate or(HintPredicate... hintPredicates) { // 静态方法：创建OR组合谓词，使用可变参数接收多个HintPredicate对象
     return new CompositeHintPredicate(CompositeHintPredicate.Composition.OR, hintPredicates); // 创建CompositeHintPredicate实例，组合类型为OR，传入所有要组合的谓词
   } // 方法结束：返回组合后的OR谓词，该谓词只要有一个输入谓词返回true就返回true

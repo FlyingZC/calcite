@@ -197,7 +197,7 @@ public class CassandraTable extends AbstractQueryableTable
         .append(" FROM \"");
 
     keyspace.ifPresent(s ->
-        queryBuilder.append(s).append("\".\"");
+        queryBuilder.append(s).append("\".\""));
 
     queryBuilder
         .append(columnFamily)

@@ -51,7 +51,6 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.metadata.RelMdUtil;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.rel2sql.SqlImplementor;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -89,21 +88,21 @@ import static java.util.Objects.requireNonNull;
  * Rules and relational operators for
  * {@link JdbcConvention}
  * calling convention.
- * 
+ *
  * 【类作用说明】:
  * 这个类定义了用于 JDBC 适配器的规则和关系运算符。
- * 
+ *
  * 核心功能:
  * 1. 提供将 Calcite 的逻辑关系算子(如 Join、Project、Filter 等)转换为 JDBC 物理实现(即生成 SQL 语句)的规则
  * 2. 定义了各种 JDBC 关系运算符的实现类(如 JdbcJoin、JdbcProject、JdbcFilter 等)
  * 3. 提供了用于创建 JDBC 关系表达式的工厂方法
  * 4. 这些规则和运算符使得 Calcite 可以将查询下推到 JDBC 数据源执行
- * 
+ *
  * 工作原理:
  * - Calcite 的查询优化器使用这些规则将逻辑计划转换为 JDBC 物理计划
  * - 每个 Rule 负责将特定类型的 RelNode 转换为对应的 JDBC 实现
  * - JDBC 实现最终会通过 JdbcImplementor 生成实际的 SQL 语句发送到数据库执行
- * 
+ *
  * 主要包含的内容:
  * - 各种工厂方法(PROJECT_FACTORY, FILTER_FACTORY 等)用于创建 JDBC 关系节点
  * - 各种转换规则(JdbcJoinRule, JdbcProjectRule 等)用于将逻辑节点转换为 JDBC 节点
@@ -158,7 +157,7 @@ public class JdbcRules {
   // Join 算子的工厂方法
   // Join 是连接算子,用于连接两个关系表
   static final RelFactories.JoinFactory JOIN_FACTORY =
-      (left, right, hints, condition, variablesSet, joinType, semiJoinDone) => {
+      (left, right, hints, condition, variablesSet, joinType, semiJoinDone) -> {
         // 获取左表所在的集群信息
         final RelOptCluster cluster = left.getCluster();
         // 创建特征集合,包含 JDBC 约定
@@ -180,7 +179,7 @@ public class JdbcRules {
   // Correlate 算子的工厂方法
   // Correlate 是关联算子,用于实现关联子查询
   static final RelFactories.CorrelateFactory CORRELATE_FACTORY =
-      (left, right, hints, correlationId, requiredColumns, joinType) => {
+      (left, right, hints, correlationId, requiredColumns, joinType) -> {
         // JDBC 不支持 Correlate 算子,直接抛出不支持异常
         // 关联子查询需要特殊的处理方式,不能简单地转换为 SQL
         throw new UnsupportedOperationException("JdbcCorrelate");
@@ -189,7 +188,7 @@ public class JdbcRules {
   // Sort 算子的工厂方法
   // Sort 是排序算子,用于对结果进行排序
   public static final RelFactories.SortFactory SORT_FACTORY =
-      (input, collation, offset, fetch) => {
+      (input, collation, offset, fetch) -> {
         // JDBC 不支持独立的 Sort 算子,因为排序通常在数据库内部处理
         // 排序会通过 JdbcSortRule 转换为 SQL 的 ORDER BY 子句
         throw new UnsupportedOperationException("JdbcSort");
@@ -198,7 +197,7 @@ public class JdbcRules {
   // Exchange 算子的工厂方法
   // Exchange 是交换算子,用于分布式数据重分布
   public static final RelFactories.ExchangeFactory EXCHANGE_FACTORY =
-      (input, distribution) => {
+      (input, distribution) -> {
         // JDBC 不支持 Exchange 算子,因为 JDBC 连接的是单个数据库实例
         // 数据重分布在分布式系统中才有意义
         throw new UnsupportedOperationException("JdbcExchange");
@@ -207,7 +206,7 @@ public class JdbcRules {
   // SortExchange 算子的工厂方法
   // SortExchange 是排序交换算子,结合了排序和数据重分布
   public static final RelFactories.SortExchangeFactory SORT_EXCHANGE_FACTORY =
-      (input, distribution, collation) => {
+      (input, distribution, collation) -> {
         // JDBC 不支持 SortExchange 算子
         throw new UnsupportedOperationException("JdbcSortExchange");
       };
@@ -215,7 +214,7 @@ public class JdbcRules {
   // Aggregate 算子的工厂方法
   // Aggregate 是聚合算子,用于执行 GROUP BY 和聚合函数(SUM、COUNT 等)
   public static final RelFactories.AggregateFactory AGGREGATE_FACTORY =
-      (input, hints, groupSet, groupSets, aggCalls) => {
+      (input, hints, groupSet, groupSets, aggCalls) -> {
         // 获取输入节点的集群信息
         final RelOptCluster cluster = input.getCluster();
         // 创建特征集合,包含 JDBC 约定
@@ -238,7 +237,7 @@ public class JdbcRules {
   public static final RelFactories.MatchFactory MATCH_FACTORY =
       (input, pattern, rowType, strictStart, strictEnd, patternDefinitions,
           measures, after, subsets, allRows, partitionKeys, orderKeys,
-          interval) => {
+          interval) -> {
         // JDBC 不支持 Match 算子,因为 MATCH_RECOGNIZE 是高级特性,大多数数据库不支持
         throw new UnsupportedOperationException("JdbcMatch");
       };
@@ -246,7 +245,7 @@ public class JdbcRules {
   // SetOp(集合操作)算子的工厂方法
   // SetOp 包括 UNION、INTERSECT、EXCEPT 等集合操作
   public static final RelFactories.SetOpFactory SET_OP_FACTORY =
-      (kind, inputs, all) => {
+      (kind, inputs, all) -> {
         // 获取第一个输入节点的集群信息
         RelNode input = inputs.get(0);
         RelOptCluster cluster = input.getCluster();
@@ -274,7 +273,7 @@ public class JdbcRules {
   // Values 算子的工厂方法
   // Values 是常量值算子,用于生成常量行
   public static final RelFactories.ValuesFactory VALUES_FACTORY =
-      (cluster, rowType, tuples) => {
+      (cluster, rowType, tuples) -> {
         // JDBC 不支持独立的 Values 算子
         // 常量值通常会被转换为 SELECT ... UNION ALL ... 的形式
         throw new UnsupportedOperationException();
@@ -283,7 +282,7 @@ public class JdbcRules {
   // TableScan 算子的工厂方法
   // TableScan 是表扫描算子,用于从表中读取数据
   public static final RelFactories.TableScanFactory TABLE_SCAN_FACTORY =
-      (toRelContext, table) => {
+      (toRelContext, table) -> {
         // JDBC 不使用工厂方法创建 TableScan
         // 表扫描通常由 JdbcTableScan 直接创建
         throw new UnsupportedOperationException();
@@ -292,24 +291,24 @@ public class JdbcRules {
   // Snapshot 算子的工厂方法
   // Snapshot 是快照算子,用于时态查询
   public static final RelFactories.SnapshotFactory SNAPSHOT_FACTORY =
-      (input, period) => {
+      (input, period) -> {
         // JDBC 不支持 Snapshot 算子
         throw new UnsupportedOperationException();
       };
 
   /** A {@link RelBuilderFactory} that creates a {@link RelBuilder} that will
    * create JDBC relational expressions for everything.
-   * 
+   *
    * 【成员变量说明】:
    * JDBC 构建器工厂,用于创建能够生成 JDBC 关系表达式的 RelBuilder。
-   * 
+   *
    * RelBuilder 是 Calcite 提供的用于构建关系代数树的工具类。
    * 这个 JDBC_BUILDER 配置了各种工厂方法,使得 RelBuilder 创建的所有节点都是 JDBC 实现。
-   * 
+   *
    * 使用场景:
    * - 当需要以编程方式构建 JDBC 关系表达式树时使用
    * - 提供了一种统一的方式来创建各种 JDBC 算子
-   * 
+   *
    * 配置的工厂包括:
    * - PROJECT_FACTORY: 创建 JdbcProject
    * - FILTER_FACTORY: 创建 JdbcFilter
@@ -338,21 +337,21 @@ public class JdbcRules {
   // ===========================================
 
   /** Creates a list of rules with the given JDBC convention instance.
-   * 
+   *
    * 【方法作用说明】:
    * 创建 JDBC 转换规则列表。
-   * 
+   *
    * 这个方法为指定的 JDBC 约定创建所有必要的转换规则。
    * 这些规则用于将 Calcite 的逻辑关系算子转换为 JDBC 物理实现。
-   * 
+   *
    * @param out 目标 JDBC 约定,指定要转换到哪个 JDBC 数据源
    * @return 包含所有 JDBC 转换规则的列表
-   * 
+   *
    * 工作流程:
    * 1. 创建一个 ImmutableList.Builder 用于构建规则列表
    * 2. 调用 foreachRule 方法遍历并添加所有规则
    * 3. 返回构建好的规则列表
-   * 
+   *
    * 包含的规则:
    * - JdbcToEnumerableConverterRule: JDBC 到可枚举的转换规则
    * - JdbcJoinRule: Join 转换规则
@@ -377,16 +376,16 @@ public class JdbcRules {
 
   /** Creates a list of rules with the given JDBC convention instance
    * and builder factory.
-   * 
+   *
    * 【方法作用说明】:
    * 创建带有自定义 RelBuilderFactory 的 JDBC 转换规则列表。
-   * 
+   *
    * 这是 rules(JdbcConvention out) 方法的重载版本,允许指定自定义的 RelBuilderFactory。
-   * 
+   *
    * @param out 目标 JDBC 约定
    * @param relBuilderFactory 自定义的 RelBuilderFactory,用于创建 RelBuilder
    * @return 包含所有 JDBC 转换规则的列表
-   * 
+   *
    * 与单参数版本的区别:
    * - 这个版本允许为规则配置自定义的 RelBuilderFactory
    * - 每个规则都会使用配置的 RelBuilderFactory 来创建
@@ -398,28 +397,28 @@ public class JdbcRules {
     final ImmutableList.Builder<RelOptRule> b = ImmutableList.builder();
     // 调用 foreachRule 方法,为每个规则创建配置了 RelBuilderFactory 的版本
     // r.config.withRelBuilderFactory(relBuilderFactory).toRule() 会为规则配置构建器工厂
-    foreachRule(out, r =>
+    foreachRule(out, r ->
         b.add(r.config.withRelBuilderFactory(relBuilderFactory).toRule()));
     // 构建并返回规则列表
     return b.build();
   }
 
   /** Private helper method to iterate over all JDBC rules and apply a consumer.
-   * 
+   *
    * 【方法作用说明】:
    * 遍历所有 JDBC 规则并对每个规则应用消费者操作。
-   * 
+   *
    * 这是一个私有辅助方法,用于避免重复代码。
    * 它遍历所有 JDBC 转换规则,并对每个规则执行指定的操作。
-   * 
+   *
    * @param out 目标 JDBC 约定
    * @param consumer 对每个规则执行的操作,通常是添加到某个集合中
-   * 
+   *
    * 设计模式:
    * - 使用了函数式编程的 Consumer 模式
    * - 允许调用者自定义对每个规则的处理方式
    * - 提高了代码的复用性和灵活性
-   * 
+   *
    * 遍历的规则顺序:
    * 1. JdbcToEnumerableConverterRule - 必须首先转换到可枚举约定
    * 2. JdbcJoinRule - Join 转换
@@ -464,22 +463,22 @@ public class JdbcRules {
   // ===========================================
 
   /** Abstract base class for rule that converts to JDBC.
-   * 
+   *
    * 【类作用说明】:
    * JDBC 转换规则的抽象基类。
-   * 
+   *
    * 所有将关系算子转换为 JDBC 实现的规则都继承自这个类。
    * 这个类继承自 ConverterRule,提供了转换规则的基本框架。
-   * 
+   *
    * 继承关系:
    * - JdbcConverterRule extends ConverterRule
    * - 所有具体的 JDBC 规则(JdbcJoinRule、JdbcProjectRule 等)都继承自 JdbcConverterRule
-   * 
+   *
    * 提供的功能:
    * - 统一的转换规则接口
    * - 约定了输入和输出的约定
    * - 提供了基本的转换逻辑框架
-   * 
+   *
    * 使用方式:
    * - 子类需要实现 convert 方法来定义具体的转换逻辑
    * - 子类通过 Config 配置转换规则的各种属性
@@ -488,14 +487,14 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JDBC 转换规则实例。
-     * 
+     *
      * @param config 规则配置对象,包含转换规则的各种属性:
      *               - from: 源约定(通常是 Convention.NONE)
      *               - to: 目标约定(JdbcConvention)
      *               - description: 规则描述
      *               - operandFactory: 操作数工厂
      *               - ruleFactory: 规则工厂
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 ConverterRule 的构造方法初始化规则
      * - 配置规则的基本属性和行为
@@ -511,23 +510,23 @@ public class JdbcRules {
   // ===========================================
 
   /** Rule that converts a join to JDBC.
-   * 
+   *
    * 【类作用说明】:
    * 将 Join 关系算子转换为 JDBC Join 实现的规则。
-   * 
+   *
    * 这个规则负责将逻辑上的 Join 算子转换为可以在 JDBC 数据源上执行的 SQL JOIN 语句。
-   * 
+   *
    * 转换条件:
    * 1. Join 类型必须被 JDBC 方言支持
    * 2. Join 条件必须是 JDBC 支持的表达式(不能包含子查询等复杂逻辑)
    * 3. 不能是 SEMI 或 ANTI Join(这些需要特殊处理)
-   * 
+   *
    * 支持的 Join 类型:
    * - INNER JOIN: 内连接
    * - LEFT OUTER JOIN: 左外连接
    * - RIGHT OUTER JOIN: 右外连接
    * - FULL OUTER JOIN: 全外连接(需要数据库支持)
-   * 
+   *
    * 不支持的 Join 类型:
    * - SEMI JOIN: 半连接(IN 子查询)
    * - ANTI JOIN: 反半连接(NOT IN 子查询)
@@ -536,10 +535,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcJoinRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcJoinRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE(逻辑约定)
      * - to: out(JDBC 约定)
@@ -560,7 +559,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcJoinRule(Config config) {
@@ -570,14 +569,14 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Join 关系节点转换为 JdbcJoin 节点。
-     * 
+     *
      * @param rel 要转换的 Join 关系节点
      * @return 转换后的 JdbcJoin 节点,如果转换失败则返回 null
-     * 
+     *
      * 转换逻辑:
      * 1. 检查 Join 类型,SEMI 和 ANTI Join 不支持转换
      * 2. 调用 convert(Join, boolean) 方法执行实际转换
-     * 
+     *
      * 返回 null 的情况:
      * - Join 类型是 SEMI 或 ANTI
      * - Join 条件包含不支持的表达式
@@ -603,25 +602,25 @@ public class JdbcRules {
 
     /**
      * Converts a {@code Join} into a {@code JdbcJoin}.
-     * 
+     *
      * 【方法作用说明】:
      * 将 Join 算子转换为 JdbcJoin 算子。
-     * 
+     *
      * @param join 要转换的 Join 算子
      * @param convertInputTraits 是否转换输入的约定为 Join 的 JDBC 约定
      * @return 转换后的 JdbcJoin 实例,如果转换失败则返回 null
-     * 
+     *
      * 转换步骤:
      * 1. 创建新输入列表
      * 2. 如果需要,将每个输入转换为 JDBC 约定
      * 3. 检查 Join 条件是否支持
      * 4. 创建 JdbcJoin 实例
-     * 
+     *
      * 转换失败的情况:
      * - 输入节点无法转换为 JDBC 约定
      * - Join 条件包含不支持的表达式
      * - 创建 JdbcJoin 时抛出 InvalidRelException
-     * 
+     *
      * 参数说明:
      * - convertInputTraits=true: 将输入节点转换为 JDBC 约定(正常情况)
      * - convertInputTraits=false: 不转换输入节点(特殊场景,如嵌套转换)
@@ -667,15 +666,15 @@ public class JdbcRules {
 
     /**
      * Returns whether a condition is supported by {@link JdbcJoin}.
-     * 
+     *
      * 【方法作用说明】:
      * 判断 Join 条件是否被 JdbcJoin 支持。
-     * 
+     *
      * 这个方法检查 Join 条件表达式是否可以转换为 SQL 的 ON 子句。
-     * 
+     *
      * @param node Join 条件表达式(RexNode)
      * @return 如果条件支持则返回 true,否则返回 false
-     * 
+     *
      * 支持的表达式类型:
      * - DYNAMIC_PARAM: 动态参数(?)
      * - INPUT_REF: 输入引用(列引用)
@@ -693,14 +692,14 @@ public class JdbcRules {
      * - LESS_THAN_OR_EQUAL: 小于等于(<=)
      * - IS_NOT_DISTINCT_FROM: 不区分 NULL 的相等
      * - CAST: 类型转换
-     * 
+     *
      * 不支持的表达式:
      * - 子查询
      * - 聚合函数
      * - 窗口函数
      * - 用户定义函数
      * - 其他复杂表达式
-     * 
+     *
      * 递归检查:
      * - 对于复合表达式(如 AND、OR),递归检查所有操作数
      * - 只有所有操作数都支持时,整个表达式才支持
@@ -770,15 +769,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 判断规则是否匹配给定的规则调用。
-     * 
+     *
      * 这个方法在优化器考虑应用规则时调用,用于确定规则是否适用。
-     * 
+     *
      * @param call 规则调用对象,包含关系节点等信息
      * @return 如果规则匹配则返回 true,否则返回 false
-     * 
+     *
      * 匹配条件:
      * - Join 类型必须被 JDBC 方言支持
-     * 
+     *
      * 方言支持检查:
      * - 不同的数据库对 Join 类型的支持程度不同
      * - 例如,某些数据库可能不支持 FULL OUTER JOIN
@@ -795,26 +794,26 @@ public class JdbcRules {
   }
 
   /** Join operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Join 算子。
-   * 
+   *
    * 这个类表示一个可以在 JDBC 数据源上执行的 Join 操作。
    * 它实现了 JdbcRel 接口,可以被 JdbcImplementor 转换为 SQL JOIN 语句。
-   * 
+   *
    * 继承关系:
    * - JdbcJoin extends Join
    * - Join extends AbstractJoin
    * - AbstractJoin extends BiRel
    * - BiRel extends AbstractRelNode
    * - JdbcJoin implements JdbcRel
-   * 
+   *
    * 实现的功能:
    * - 存储 Join 的所有信息(左右输入、连接条件、连接类型等)
    * - 提供 copy 方法用于创建副本
    * - 实现 implement 方法用于生成 SQL
    * - 提供成本估算和行数估算
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL JOIN 语句
    * - 生成的 SQL 格式: SELECT ... FROM left_table [JOIN_TYPE] right_table ON condition
@@ -823,7 +822,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcJoin 实例。
-     * 
+     *
      * @param cluster 关系集群,包含类型工厂等共享资源
      * @param traitSet 特征集合,描述节点的物理属性
      * @param left 左输入关系节点
@@ -832,7 +831,7 @@ public class JdbcRules {
      * @param variablesSet 相关变量集合(用于关联子查询)
      * @param joinType Join 类型(INNER、LEFT、RIGHT、FULL 等)
      * @throws InvalidRelException 如果 Join 无效则抛出异常
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Join 的构造方法初始化 Join 节点
      * - 传入空提示列表(ImmutableList.of())
@@ -849,7 +848,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 已废弃的构造方法,将在 2.0 版本之前移除。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param left 左输入
@@ -858,7 +857,7 @@ public class JdbcRules {
      * @param joinType Join 类型
      * @param variablesStopped 已停止的变量集合(使用字符串而不是 CorrelationId)
      * @throws InvalidRelException 如果 Join 无效
-     * 
+     *
      * 废弃原因:
      * - 使用字符串表示变量已被 CorrelationId 替代
      * - 新代码应该使用新的构造方法
@@ -881,7 +880,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcJoin 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param condition 新的 Join 条件
      * @param left 新的左输入
@@ -889,11 +888,11 @@ public class JdbcRules {
      * @param joinType 新的 Join 类型
      * @param semiJoinDone 半连接完成标志(未使用)
      * @return 新的 JdbcJoin 实例
-     * 
+     *
      * 使用场景:
      * - 优化器在应用规则时创建修改后的节点
      * - 改变 Join 的某些属性而不改变其他属性
-     * 
+     *
      * 异常处理:
      * - 如果创建失败,转换为 AssertionError,表示代码中的 bug
      */
@@ -914,21 +913,21 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcJoin 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本,包含行数、CPU 成本、IO 成本
-     * 
+     *
      * 成本计算策略:
      * - 行数:使用元数据查询获取估算的行数
      * - CPU 成本:0(JDBC Join 在数据库中执行,CPU 成本由数据库承担)
      * - IO 成本:0(JDBC Join 的 IO 成本由数据库承担)
-     * 
+     *
      * 为什么 CPU 和 IO 成本为 0:
      * - JDBC 操作被下推到数据库执行
      * - Calcite 只负责发送 SQL 和接收结果
      * - 实际的计算和 IO 成本在数据库中发生
-     * 
+     *
      * 成本模型:
      * - Cost = (rowCount, cpu, io)
      * - 这里简化为只有行数
@@ -945,21 +944,21 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 估算 JdbcJoin 的输出行数。
-     * 
+     *
      * @param mq 元数据查询对象
      * @return 估算的输出行数
-     * 
+     *
      * 估算策略:
      * - 返回左右输入行数的最大值
      * - 这是一个保守的估算,通常大于实际行数
-     * 
+     *
      * 为什么使用最大值:
      * - INNER JOIN: 行数 <= min(left, right)
      * - LEFT JOIN: 行数 = left
      * - RIGHT JOIN: 行数 = right
      * - FULL JOIN: 行数 <= left + right
      * - 使用最大值是一个安全的上界
-     * 
+     *
      * 更精确的估算:
      * - 可以使用统计信息和选择率
      * - 但这里使用简单的最大值策略
@@ -976,19 +975,19 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcJoin,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL 和相关表达式
-     * 
+     *
      * 实现过程:
      * - 调用 implementor.implement(this) 方法
      * - JdbcImplementor 会将 JdbcJoin 转换为 SQL JOIN 语句
      * - 生成的 SQL 格式: SELECT ... FROM table1 [JOIN_TYPE] table2 ON condition
-     * 
+     *
      * SQL 生成示例:
      * - INNER JOIN: SELECT * FROM t1 INNER JOIN t2 ON t1.id = t2.id
      * - LEFT JOIN: SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id
-     * 
+     *
      * 返回值:
      * - JdbcImplementor.Result 对象
      * - 包含生成的 SQL 字符串
@@ -1009,14 +1008,14 @@ public class JdbcRules {
     /**
      * 【成员变量说明】:
      * RexProgram,表示 Calc 算子的程序。
-     * 
+     *
      * RexProgram 是一个组合的算子,可以同时表示 Project 和 Filter。
      * 它包含:
      * - 输入表达式列表
      * - 项目表达式列表(用于计算输出列)
      * - 条件表达式(用于过滤)
      * - 输出行类型
-     * 
+     *
      * 为什么使用 RexProgram:
      * - Calc 是 Project 和 Filter 的组合
      * - RexProgram 可以高效地表示这种组合
@@ -1027,12 +1026,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcCalc 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入关系节点
      * @param program RexProgram,包含 Project 和 Filter 的逻辑
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 SingleRel 的构造方法
      * - 验证约定必须是 JdbcConvention
@@ -1055,7 +1054,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 已废弃的构造方法,将在 2.0 版本之前移除。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入
@@ -1073,10 +1072,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 解释 JdbcCalc 的术语,用于调试和日志记录。
-     * 
+     *
      * @param pw 关系写入器
      * @return 关系写入器,用于链式调用
-     * 
+     *
      * 输出格式:
      * - 包含程序的详细信息
      * - 包含输入、输出、条件等信息
@@ -1089,10 +1088,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 估算 JdbcCalc 的输出行数。
-     * 
+     *
      * @param mq 元数据查询对象
      * @return 估算的输出行数
-     * 
+     *
      * 估算策略:
      * - 使用 RelMdUtil.estimateFilteredRows 方法
      * - 根据程序中的过滤条件估算行数
@@ -1105,11 +1104,11 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcCalc 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本
-     * 
+     *
      * 成本计算:
      * - 行数:使用元数据查询获取
      * - CPU 成本:输入行数 * 表达式数量
@@ -1131,7 +1130,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcCalc 的副本。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表
      * @return 新的 JdbcCalc 实例
@@ -1144,7 +1143,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcCalc,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果
      */
@@ -1161,21 +1160,21 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Project} to
    * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcProject}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Project 关系算子转换为 JdbcProject 实现的规则。
-   * 
+   *
    * Project 算子用于:
    * - 选择列(类似 SQL 的 SELECT 子句)
    * - 重命名列
    * - 计算表达式(如 col1 + col2)
    * - 添加常量列
-   * 
+   *
    * 转换条件:
    * 1. Project 不包含变量(用于关联子查询)
    * 2. 如果包含窗口函数,JDBC 方言必须支持窗口函数
    * 3. 不能包含用户定义函数(UDF)
-   * 
+   *
    * 不转换的情况:
    * - 包含变量
    * - 包含窗口函数但方言不支持
@@ -1185,16 +1184,16 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcProjectRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcProjectRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
      * - operand: Project.class
      * - description: "JdbcProjectRule"
-     * 
+     *
      * 转换条件(通过 lambda 表达式):
      * - 方言支持窗口函数 OR Project 不包含窗口函数
      * - AND Project 不包含用户定义函数
@@ -1202,7 +1201,7 @@ public class JdbcRules {
     public static JdbcProjectRule create(JdbcConvention out) {
       return Config.INSTANCE
           // 配置转换,使用 lambda 表达式定义转换条件
-          .withConversion(Project.class, project =>
+          .withConversion(Project.class, project ->
                   // 条件1: 方言支持窗口函数 OR Project 不包含窗口函数
                   (out.dialect.supportsWindowFunctions()
                       || !project.containsOver())
@@ -1218,7 +1217,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcProjectRule(Config config) {
@@ -1228,10 +1227,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 检查 Project 是否包含用户定义函数。
-     * 
+     *
      * @param project 要检查的 Project 节点
      * @return 如果包含用户定义函数则返回 true,否则返回 false
-     * 
+     *
      * 检查方法:
      * - 创建 CheckingUserDefinedFunctionVisitor 访问器
      * - 遍历 Project 的所有投影表达式
@@ -1257,13 +1256,13 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 判断规则是否匹配给定的规则调用。
-     * 
+     *
      * @param call 规则调用对象
      * @return 如果规则匹配则返回 true,否则返回 false
-     * 
+     *
      * 匹配条件:
      * - Project 不包含变量集合
-     * 
+     *
      * 为什么检查变量:
      * - 变量用于关联子查询
      * - JDBC Project 不支持变量
@@ -1279,15 +1278,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Project 关系节点转换为 JdbcProject 节点。
-     * 
+     *
      * @param rel 要转换的 Project 关系节点
      * @return 转换后的 JdbcProject 节点
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Project
      * 2. 将输入节点转换为 JDBC 约定
      * 3. 创建 JdbcProject 实例
-     * 
+     *
      * 参数说明:
      * - projects: 投影表达式列表
      * - rowType: 输出行类型
@@ -1311,25 +1310,25 @@ public class JdbcRules {
 
   /** Implementation of {@link org.apache.calcite.rel.core.Project} in
    * {@link JdbcConvention jdbc calling convention}.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Project 算子。
-   * 
+   *
    * Project 算子对应 SQL 的 SELECT 子句,用于:
    * - 选择列
    * - 重命名列
    * - 计算表达式
    * - 添加常量
-   * 
+   *
    * 继承关系:
    * - JdbcProject extends Project
    * - Project extends SingleRel
    * - JdbcProject implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT expr1 AS col1, expr2 AS col2, ... FROM ...
-   * 
+   *
    * 示例:
    * - 输入: SELECT emp_id, salary * 1.1 AS new_salary FROM emp
    * - JdbcProject 包含两个表达式:
@@ -1342,13 +1341,13 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcProject 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入关系节点
      * @param projects 投影表达式列表
      * @param rowType 输出行类型
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Project 的构造方法
      * - 传入空提示列表
@@ -1370,7 +1369,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 已废弃的构造方法,将在 2.0 版本之前移除。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入
@@ -1389,7 +1388,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcProject 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param input 新的输入
      * @param projects 新的投影表达式列表
@@ -1405,15 +1404,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcProject 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本
-     * 
+     *
      * 成本计算策略:
      * - 使用父类的成本计算方法
      * - 乘以 COST_MULTIPLIER(通常小于 1)
-     * 
+     *
      * 为什么乘以乘数:
      * - JDBC 操作被下推到数据库执行
      * - 相比于在内存中执行,成本更低
@@ -1434,10 +1433,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcProject,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: projects = [emp_id, salary * 1.1 AS new_salary]
      * - 输出: SELECT emp_id, salary * 1.1 AS new_salary FROM emp
@@ -1455,16 +1454,16 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Filter} to
    * an {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcFilter}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Filter 关系算子转换为 JdbcFilter 实现的规则。
-   * 
+   *
    * Filter 算子用于:
    * - 根据条件过滤行(类似 SQL 的 WHERE 子句)
-   * 
+   *
    * 转换条件:
    * 1. Filter 不包含用户定义函数(UDF)
-   * 
+   *
    * 不转换的情况:
    * - 包含用户定义函数
    */
@@ -1472,16 +1471,16 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcFilterRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcFilterRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
      * - operand: Filter.class
      * - description: "JdbcFilterRule"
-     * 
+     *
      * 转换条件(通过 lambda 表达式):
      * - Filter 不包含用户定义函数
      */
@@ -1499,7 +1498,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcFilterRule(Config config) {
@@ -1509,10 +1508,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 检查 Filter 是否包含用户定义函数。
-     * 
+     *
      * @param filter 要检查的 Filter 节点
      * @return 如果包含用户定义函数则返回 true,否则返回 false
-     * 
+     *
      * 检查方法:
      * - 创建 CheckingUserDefinedFunctionVisitor 访问器
      * - 让过滤条件接受访问器
@@ -1530,15 +1529,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Filter 关系节点转换为 JdbcFilter 节点。
-     * 
+     *
      * @param rel 要转换的 Filter 关系节点
      * @return 转换后的 JdbcFilter 节点
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Filter
      * 2. 将输入节点转换为 JDBC 约定
      * 3. 创建 JdbcFilter 实例
-     * 
+     *
      * 参数说明:
      * - condition: 过滤条件表达式
      */
@@ -1559,22 +1558,22 @@ public class JdbcRules {
 
   /** Implementation of {@link org.apache.calcite.rel.core.Filter} in
    * {@link JdbcConvention jdbc calling convention}.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Filter 算子。
-   * 
+   *
    * Filter 算子对应 SQL 的 WHERE 子句,用于:
    * - 根据条件过滤行
-   * 
+   *
    * 继承关系:
    * - JdbcFilter extends Filter
    * - Filter extends SingleRel
    * - JdbcFilter implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT ... FROM ... WHERE condition
-   * 
+   *
    * 示例:
    * - 输入: condition = salary > 50000
    * - 输出: SELECT * FROM emp WHERE salary > 50000
@@ -1583,12 +1582,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcFilter 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入关系节点
      * @param condition 过滤条件表达式
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Filter 的构造方法
      * - 验证约定必须是 JdbcConvention
@@ -1607,7 +1606,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcFilter 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param input 新的输入
      * @param condition 新的过滤条件
@@ -1622,10 +1621,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcFilter,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: condition = salary > 50000 AND dept_id = 10
      * - 输出: SELECT * FROM emp WHERE salary > 50000 AND dept_id = 10
@@ -1643,20 +1642,20 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Aggregate}
    * to a {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcAggregate}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Aggregate 关系算子转换为 JdbcAggregate 实现的规则。
-   * 
+   *
    * Aggregate 算子用于:
    * - 执行 GROUP BY 分组
    * - 执行聚合函数(SUM、COUNT、AVG、MIN、MAX 等)
-   * 
+   *
    * 转换条件:
    * 1. 不支持 GROUPING SETS(只支持单个分组集合)
    * 2. 聚合函数必须被 JDBC 方言支持
    * 3. 聚合函数不能有 distinctKeys
    * 4. 如果聚合函数有 FILTER 子句,方言必须支持
-   * 
+   *
    * 不转换的情况:
    * - 包含 GROUPING SETS
    * - 聚合函数不被方言支持
@@ -1667,10 +1666,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcAggregateRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcAggregateRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -1691,7 +1690,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcAggregateRule(Config config) {
@@ -1701,16 +1700,16 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Aggregate 关系节点转换为 JdbcAggregate 节点。
-     * 
+     *
      * @param rel 要转换的 Aggregate 关系节点
      * @return 转换后的 JdbcAggregate 节点,如果转换失败则返回 null
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Aggregate
      * 2. 检查是否包含 GROUPING SETS
      * 3. 将输入节点转换为 JDBC 约定
      * 4. 创建 JdbcAggregate 实例
-     * 
+     *
      * 返回 null 的情况:
      * - 包含 GROUPING SETS(groupSets.size() != 1)
      * - 创建 JdbcAggregate 时抛出 InvalidRelException
@@ -1745,18 +1744,18 @@ public class JdbcRules {
 
   /** Returns whether this JDBC data source can implement a given aggregate
    * function.
-   * 
+   *
    * 【方法作用说明】:
    * 判断 JDBC 数据源是否可以实现给定的聚合函数。
-   * 
+   *
    * @param aggregateCall 聚合调用,包含聚合函数的信息
    * @param sqlDialect SQL 方言,描述数据库的特性
    * @return 如果可以实现则返回 true,否则返回 false
-   * 
+   *
    * 判断条件:
    * 1. 方言支持该聚合函数类型
    * 2. 聚合调用没有 distinctKeys
-   * 
+   *
    * 支持的聚合函数类型:
    * - COUNT: 计数
    * - SUM: 求和
@@ -1764,7 +1763,7 @@ public class JdbcRules {
    * - MIN: 最小值
    * - MAX: 最大值
    * - 其他标准 SQL 聚合函数
-   * 
+   *
    * 不支持的情况:
    * - 聚合函数不被方言支持(如某些数据库不支持 ARRAY_AGG)
    * - 聚合调用有 distinctKeys(表示 DISTINCT 聚合)
@@ -1779,27 +1778,27 @@ public class JdbcRules {
   }
 
   /** Aggregate operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Aggregate 算子。
-   * 
+   *
    * Aggregate 算子对应 SQL 的 GROUP BY 和聚合函数,用于:
    * - 分组数据
    * - 计算聚合值
-   * 
+   *
    * 继承关系:
    * - JdbcAggregate extends Aggregate
    * - Aggregate extends SingleRel
    * - JdbcAggregate implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT group_cols, agg_func(...) FROM ... GROUP BY group_cols
-   * 
+   *
    * 示例:
    * - 输入: groupSet = {dept_id}, aggCalls = [COUNT(*), SUM(salary)]
    * - 输出: SELECT dept_id, COUNT(*), SUM(salary) FROM emp GROUP BY dept_id
-   * 
+   *
    * 限制:
    * - 不支持 GROUPING SETS
    * - 聚合函数必须被方言支持
@@ -1809,7 +1808,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcAggregate 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入关系节点
@@ -1817,7 +1816,7 @@ public class JdbcRules {
      * @param groupSets 分组集合列表(用于 GROUPING SETS,这里只支持单个)
      * @param aggCalls 聚合调用列表
      * @throws InvalidRelException 如果聚合无效则抛出异常
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Aggregate 的构造方法
      * - 验证约定必须是 JdbcConvention
@@ -1862,7 +1861,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 已废弃的构造方法,将在 2.0 版本之前移除。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入
@@ -1885,7 +1884,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcAggregate 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param input 新的输入
      * @param groupSet 新的分组集合
@@ -1910,14 +1909,14 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcAggregate,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: groupSet = {dept_id}, aggCalls = [COUNT(*), SUM(salary)]
      * - 输出: SELECT dept_id, COUNT(*), SUM(salary) FROM emp GROUP BY dept_id
-     * 
+     *
      * 带 FILTER 的示例:
      * - 输入: aggCalls = [SUM(salary) FILTER (WHERE salary > 0)]
      * - 输出: SELECT SUM(salary) FILTER (WHERE salary > 0) FROM emp
@@ -1935,17 +1934,17 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Sort} to an
    * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcSort}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Sort 关系算子转换为 JdbcSort 实现的规则。
-   * 
+   *
    * Sort 算子用于:
    * - 排序结果(ORDER BY)
    * - 限制结果数量(LIMIT/OFFSET)
-   * 
+   *
    * 转换条件:
    * - 无特殊条件,所有 Sort 都可以转换
-   * 
+   *
    * SQL 生成:
    * - ORDER BY 子句
    * - LIMIT 子句(对应 fetch)
@@ -1955,10 +1954,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcSortRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcSortRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -1978,7 +1977,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcSortRule(Config config) {
@@ -1988,10 +1987,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Sort 关系节点转换为 JdbcSort 节点。
-     * 
+     *
      * @param rel 要转换的 Sort 关系节点
      * @return 转换后的 JdbcSort 节点
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Sort
      * 2. 调用 convert(Sort, boolean) 方法执行实际转换
@@ -2003,19 +2002,19 @@ public class JdbcRules {
 
     /**
      * Converts a {@code Sort} into a {@code JdbcSort}.
-     * 
+     *
      * 【方法作用说明】:
      * 将 Sort 算子转换为 JdbcSort 算子。
-     * 
+     *
      * @param sort 要转换的 Sort 算子
      * @param convertInputTraits 是否转换输入的约定为 Sort 的 JDBC 约定
      * @return 转换后的 JdbcSort 实例
-     * 
+     *
      * 转换步骤:
      * 1. 创建新的特征集合,将约定替换为 JDBC 约定
      * 2. 如果需要,将输入节点转换为 JDBC 约定
      * 3. 创建 JdbcSort 实例
-     * 
+     *
      * 参数说明:
      * - collation: 排序规则,包含排序列和排序方向
      * - offset: 偏移量(OFFSET),用于跳过前 N 行
@@ -2046,24 +2045,24 @@ public class JdbcRules {
   }
 
   /** Sort operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Sort 算子。
-   * 
+   *
    * Sort 算子对应 SQL 的 ORDER BY、LIMIT、OFFSET 子句,用于:
    * - 排序结果
    * - 限制返回的行数
    * - 跳过前 N 行
-   * 
+   *
    * 继承关系:
    * - JdbcSort extends Sort
    * - Sort extends SingleRel
    * - JdbcSort implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT ... FROM ... ORDER BY ... LIMIT ... OFFSET ...
-   * 
+   *
    * 示例:
    * - 输入: collation = [emp_id ASC], offset = 10, fetch = 20
    * - 输出: SELECT ... FROM emp ORDER BY emp_id ASC LIMIT 20 OFFSET 10
@@ -2074,14 +2073,14 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcSort 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param input 输入关系节点
      * @param collation 排序规则,包含排序列和方向
      * @param offset 偏移量(OFFSET),可以为 null
      * @param fetch 获取行数(LIMIT),可以为 null
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Sort 的构造方法
      * - 验证约定必须是 JdbcConvention
@@ -2105,7 +2104,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcSort 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param newInput 新的输入
      * @param newCollation 新的排序规则
@@ -2123,15 +2122,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcSort 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本
-     * 
+     *
      * 成本计算策略:
      * - 使用父类的成本计算方法
      * - 乘以 0.9,降低成本
-     * 
+     *
      * 为什么乘以 0.9:
      * - JDBC Sort 在数据库中执行,效率较高
      * - 相比于在内存中排序,成本更低
@@ -2152,10 +2151,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcSort,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: collation = [emp_id ASC, salary DESC], offset = 10, fetch = 20
      * - 输出: SELECT ... FROM emp ORDER BY emp_id ASC, salary DESC LIMIT 20 OFFSET 10
@@ -2173,17 +2172,17 @@ public class JdbcRules {
   /**
    * Rule to convert an {@link org.apache.calcite.rel.core.Union} to a
    * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcUnion}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Union 关系算子转换为 JdbcUnion 实现的规则。
-   * 
+   *
    * Union 算子用于:
    * - 合并多个查询的结果集
    * - 对应 SQL 的 UNION 或 UNION ALL
-   * 
+   *
    * 转换条件:
    * - 无特殊条件,所有 Union 都可以转换
-   * 
+   *
    * SQL 生成:
    * - UNION 或 UNION ALL 子句
    */
@@ -2191,10 +2190,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcUnionRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcUnionRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -2214,7 +2213,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcUnionRule(Config config) {
@@ -2224,10 +2223,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Union 关系节点转换为 JdbcUnion 节点。
-     * 
+     *
      * @param rel 要转换的 Union 关系节点
      * @return 转换后的 JdbcUnion 节点
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Union
      * 2. 创建新的特征集合,将约定替换为 JDBC 约定
@@ -2248,27 +2247,27 @@ public class JdbcRules {
   }
 
   /** Union operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Union 算子。
-   * 
+   *
    * Union 算子对应 SQL 的 UNION 或 UNION ALL,用于:
    * - 合并多个查询的结果集
-   * 
+   *
    * 继承关系:
    * - JdbcUnion extends Union
    * - Union extends SetOp
    * - SetOp extends AbstractRelNode
    * - JdbcUnion implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT ... UNION [ALL] SELECT ... UNION [ALL] SELECT ...
-   * 
+   *
    * 示例:
    * - 输入: inputs = [emp1, emp2], all = true
    * - 输出: SELECT * FROM emp1 UNION ALL SELECT * FROM emp2
-   * 
+   *
    * UNION vs UNION ALL:
    * - UNION: 去除重复行
    * - UNION ALL: 保留所有行(包括重复)
@@ -2277,12 +2276,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcUnion 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param inputs 输入关系节点列表
      * @param all 是否保留所有行(UNION ALL)
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Union 的构造方法
      */
@@ -2298,7 +2297,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcUnion 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表
      * @param all 新的 all 标志
@@ -2313,15 +2312,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcUnion 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本
-     * 
+     *
      * 成本计算策略:
      * - 使用父类的成本计算方法
      * - 乘以 COST_MULTIPLIER,降低成本
-     * 
+     *
      * 为什么乘以乘数:
      * - JDBC Union 在数据库中执行,效率较高
      * - 相比于在内存中合并,成本更低
@@ -2342,10 +2341,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcUnion,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: inputs = [emp1, emp2, emp3], all = false
      * - 输出: SELECT * FROM emp1 UNION SELECT * FROM emp2 UNION SELECT * FROM emp3
@@ -2363,20 +2362,20 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Intersect}
    * to a {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcIntersect}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Intersect 关系算子转换为 JdbcIntersect 实现的规则。
-   * 
+   *
    * Intersect 算子用于:
    * - 返回多个查询结果的交集
    * - 对应 SQL 的 INTERSECT
-   * 
+   *
    * 转换条件:
    * - 不支持 INTERSECT ALL,只支持 INTERSECT
-   * 
+   *
    * 不转换的情况:
    * - all = true (INTERSECT ALL)
-   * 
+   *
    * SQL 生成:
    * - INTERSECT 子句
    */
@@ -2384,10 +2383,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcIntersectRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcIntersectRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -2408,7 +2407,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcIntersectRule(Config config) {
@@ -2418,17 +2417,17 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Intersect 关系节点转换为 JdbcIntersect 节点。
-     * 
+     *
      * @param rel 要转换的 Intersect 关系节点
      * @return 转换后的 JdbcIntersect 节点,如果转换失败则返回 null
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Intersect
      * 2. 检查是否为 INTERSECT ALL
      * 3. 创建新的特征集合,将约定替换为 JDBC 约定
      * 4. 将所有输入节点转换为 JDBC 约定
      * 5. 创建 JdbcIntersect 实例
-     * 
+     *
      * 返回 null 的情况:
      * - all = true (INTERSECT ALL 不支持)
      */
@@ -2452,27 +2451,27 @@ public class JdbcRules {
   }
 
   /** Intersect operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Intersect 算子。
-   * 
+   *
    * Intersect 算子对应 SQL 的 INTERSECT,用于:
    * - 返回多个查询结果的交集
-   * 
+   *
    * 继承关系:
    * - JdbcIntersect extends Intersect
    * - Intersect extends SetOp
    * - SetOp extends AbstractRelNode
    * - JdbcIntersect implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT ... INTERSECT SELECT ... INTERSECT SELECT ...
-   * 
+   *
    * 示例:
    * - 输入: inputs = [emp1, emp2]
    * - 输出: SELECT * FROM emp1 INTERSECT SELECT * FROM emp2
-   * 
+   *
    * 限制:
    * - 不支持 INTERSECT ALL
    */
@@ -2482,12 +2481,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcIntersect 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param inputs 输入关系节点列表
      * @param all 是否保留所有行(必须为 false)
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Intersect 的构造方法
      * - 断言 all 为 false
@@ -2506,7 +2505,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcIntersect 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表
      * @param all 新的 all 标志(必须为 false)
@@ -2521,10 +2520,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcIntersect,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: inputs = [emp1, emp2, emp3]
      * - 输出: SELECT * FROM emp1 INTERSECT SELECT * FROM emp2 INTERSECT SELECT * FROM emp3
@@ -2542,20 +2541,20 @@ public class JdbcRules {
   /**
    * Rule to convert a {@link org.apache.calcite.rel.core.Minus} to a
    * {@link org.apache.calcite.adapter.jdbc.JdbcRules.JdbcMinus}.
-   * 
+   *
    * 【类作用说明】:
    * 将 Minus 关系算子转换为 JdbcMinus 实现的规则。
-   * 
+   *
    * Minus 算子用于:
    * - 返回第一个查询结果中不在其他查询结果中的行
    * - 对应 SQL 的 EXCEPT
-   * 
+   *
    * 转换条件:
    * - 不支持 EXCEPT ALL,只支持 EXCEPT
-   * 
+   *
    * 不转换的情况:
    * - all = true (EXCEPT ALL)
-   * 
+   *
    * SQL 生成:
    * - EXCEPT 子句
    */
@@ -2563,10 +2562,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcMinusRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcMinusRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -2586,7 +2585,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcMinusRule(Config config) {
@@ -2596,17 +2595,17 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Minus 关系节点转换为 JdbcMinus 节点。
-     * 
+     *
      * @param rel 要转换的 Minus 关系节点
      * @return 转换后的 JdbcMinus 节点,如果转换失败则返回 null
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Minus
      * 2. 检查是否为 EXCEPT ALL
      * 3. 创建新的特征集合,将约定替换为 JDBC 约定
      * 4. 将所有输入节点转换为 JDBC 约定
      * 5. 创建 JdbcMinus 实例
-     * 
+     *
      * 返回 null 的情况:
      * - all = true (EXCEPT ALL 不支持)
      */
@@ -2630,27 +2629,27 @@ public class JdbcRules {
   }
 
   /** Minus operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Minus 算子。
-   * 
+   *
    * Minus 算子对应 SQL 的 EXCEPT,用于:
    * - 返回第一个查询结果中不在其他查询结果中的行
-   * 
+   *
    * 继承关系:
    * - JdbcMinus extends Minus
    * - Minus extends SetOp
    * - SetOp extends AbstractRelNode
    * - JdbcMinus implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式: SELECT ... EXCEPT SELECT ... EXCEPT SELECT ...
-   * 
+   *
    * 示例:
    * - 输入: inputs = [emp1, emp2]
    * - 输出: SELECT * FROM emp1 EXCEPT SELECT * FROM emp2
-   * 
+   *
    * 限制:
    * - 不支持 EXCEPT ALL
    */
@@ -2658,12 +2657,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcMinus 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param inputs 输入关系节点列表
      * @param all 是否保留所有行(必须为 false)
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Minus 的构造方法
      * - 断言 all 为 false
@@ -2679,7 +2678,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcMinus 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表
      * @param all 新的 all 标志(必须为 false)
@@ -2694,10 +2693,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcMinus,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: inputs = [emp1, emp2, emp3]
      * - 输出: SELECT * FROM emp1 EXCEPT SELECT * FROM emp2 EXCEPT SELECT * FROM emp3
@@ -2713,16 +2712,16 @@ public class JdbcRules {
   // ===========================================
 
   /** Rule that converts a table-modification to JDBC.
-   * 
+   *
    * 【类作用说明】:
    * 将 TableModify 关系算子转换为 JdbcTableModify 实现的规则。
-   * 
+   *
    * TableModify 算子用于:
    * - 修改表数据(INSERT、UPDATE、DELETE)
-   * 
+   *
    * 转换条件:
    * 1. 表必须是可修改的(实现 ModifiableTable 接口)
-   * 
+   *
    * 不转换的情况:
    * - 表不是可修改的
    */
@@ -2730,10 +2729,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcTableModificationRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcTableModificationRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -2754,7 +2753,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcTableModificationRule(Config config) {
@@ -2764,17 +2763,17 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 TableModify 关系节点转换为 JdbcTableModify 节点。
-     * 
+     *
      * @param rel 要转换的 TableModify 关系节点
      * @return 转换后的 JdbcTableModify 节点,如果转换失败则返回 null
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 TableModify
      * 2. 检查表是否可修改
      * 3. 创建新的特征集合,将约定替换为 JDBC 约定
      * 4. 将输入节点转换为 JDBC 约定
      * 5. 创建 JdbcTableModify 实例
-     * 
+     *
      * 返回 null 的情况:
      * - 表不是可修改的
      */
@@ -2808,25 +2807,25 @@ public class JdbcRules {
   }
 
   /** Table-modification operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 TableModify 算子。
-   * 
+   *
    * TableModify 算子对应 SQL 的 INSERT、UPDATE、DELETE 语句,用于:
    * - 修改表数据
-   * 
+   *
    * 继承关系:
    * - JdbcTableModify extends TableModify
    * - TableModify extends SingleRel
    * - JdbcTableModify implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式:
      - INSERT: INSERT INTO table (...) VALUES (...)
      - UPDATE: UPDATE table SET ... WHERE ...
      - DELETE: DELETE FROM table WHERE ...
-   * 
+   *
    * 操作类型:
    * - INSERT: 插入数据
    * - UPDATE: 更新数据
@@ -2837,7 +2836,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcTableModify 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param traitSet 特征集合
      * @param table 要修改的表
@@ -2847,7 +2846,7 @@ public class JdbcRules {
      * @param updateColumnList 更新的列列表(UPDATE 操作使用)
      * @param sourceExpressionList 源表达式列表
      * @param flattened 是否扁平化
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 TableModify 的构造方法
      * - 验证约定必须是 JdbcConvention
@@ -2891,15 +2890,15 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 计算 JdbcTableModify 的自身成本。
-     * 
+     *
      * @param planner 优化器
      * @param mq 元数据查询对象
      * @return 估算的成本
-     * 
+     *
      * 成本计算策略:
      * - 使用父类的成本计算方法
      * - 乘以 0.1,大幅降低成本
-     * 
+     *
      * 为什么乘以 0.1:
      * - 表修改操作在数据库中执行,效率高
      * - 相比于在内存中修改数据,成本更低
@@ -2920,7 +2919,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcTableModify 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表
      * @return 新的 JdbcTableModify 实例
@@ -2936,10 +2935,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcTableModify,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - INSERT: INSERT INTO emp (emp_id, name) VALUES (1, 'John')
      * - UPDATE: UPDATE emp SET salary = 60000 WHERE emp_id = 1
@@ -2956,17 +2955,17 @@ public class JdbcRules {
   // ===========================================
 
   /** Rule that converts a values operator to JDBC.
-   * 
+   *
    * 【类作用说明】:
    * 将 Values 关系算子转换为 JdbcValues 实现的规则。
-   * 
+   *
    * Values 算子用于:
    * - 生成常量行
    * - 对应 SQL 的 VALUES 子句或 SELECT ... UNION ALL ...
-   * 
+   *
    * 转换条件:
    * - 无特殊条件,所有 Values 都可以转换
-   * 
+   *
    * SQL 生成:
    * - VALUES 子句或 UNION ALL 形式
    */
@@ -2974,10 +2973,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcValuesRule 实例的静态工厂方法。
-     * 
+     *
      * @param out 目标 JDBC 约定
      * @return 配置好的 JdbcValuesRule 实例
-     * 
+     *
      * 配置内容:
      * - from: Convention.NONE
      * - to: out(JDBC 约定)
@@ -2997,7 +2996,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 由 Config 调用的构造方法。
-     * 
+     *
      * @param config 规则配置对象
      */
     protected JdbcValuesRule(Config config) {
@@ -3007,10 +3006,10 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 将 Values 关系节点转换为 JdbcValues 节点。
-     * 
+     *
      * @param rel 要转换的 Values 关系节点
      * @return 转换后的 JdbcValues 节点
-     * 
+     *
      * 转换步骤:
      * 1. 将输入强制转换为 Values
      * 2. 创建新的特征集合,将约定替换为 JDBC 约定
@@ -3027,24 +3026,24 @@ public class JdbcRules {
   }
 
   /** Values operator implemented in JDBC convention.
-   * 
+   *
    * 【类作用说明】:
    * 在 JDBC 约定下实现的 Values 算子。
-   * 
+   *
    * Values 算子对应 SQL 的 VALUES 子句或常量行,用于:
    * - 生成常量行
-   * 
+   *
    * 继承关系:
    * - JdbcValues extends Values
    * - Values extends AbstractRelNode
    * - JdbcValues implements JdbcRel
-   * 
+   *
    * SQL 生成:
    * - 通过 JdbcImplementor.implement(this) 生成 SQL
    * - 生成的 SQL 格式:
      - VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')
      - 或 SELECT 1, 'John' UNION ALL SELECT 2, 'Jane' UNION ALL SELECT 3, 'Bob'
-   * 
+   *
    * 示例:
    * - 输入: tuples = [(1, 'John'), (2, 'Jane'), (3, 'Bob')]
    * - 输出: VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')
@@ -3053,12 +3052,12 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 JdbcValues 实例。
-     * 
+     *
      * @param cluster 关系集群
      * @param rowType 行类型
      * @param tuples 元组列表,每个元组是一行常量值
      * @param traitSet 特征集合
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 Values 的构造方法
      */
@@ -3071,7 +3070,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 创建 JdbcValues 的副本,可以修改部分属性。
-     * 
+     *
      * @param traitSet 新的特征集合
      * @param inputs 新的输入列表(Values 没有输入,应该为空)
      * @return 新的 JdbcValues 实例
@@ -3086,14 +3085,14 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 实现 JdbcValues,生成 SQL。
-     * 
+     *
      * @param implementor JDBC 实现器
      * @return 实现结果,包含生成的 SQL
-     * 
+     *
      * SQL 生成示例:
      * - 输入: tuples = [(1, 'John'), (2, 'Jane'), (3, 'Bob')]
      * - 输出: VALUES (1, 'John'), (2, 'Jane'), (3, 'Bob')
-     * 
+     *
      * 或 UNION ALL 形式:
      * - 输出: SELECT 1, 'John' UNION ALL SELECT 2, 'Jane' UNION ALL SELECT 3, 'Bob'
      */
@@ -3109,19 +3108,19 @@ public class JdbcRules {
 
   /** Visitor that checks whether part of a projection is a user-defined
    * function (UDF).
-   * 
+   *
    * 【类作用说明】:
    * 检查投影表达式中是否包含用户定义函数(UDF)的访问器。
-   * 
+   *
    * 用户定义函数:
    * - 用户自定义的 SQL 函数
    * - 不能直接转换为 SQL,因为数据库不知道如何执行
    * - 需要在 Calcite 中执行,然后下推其他部分
-   * 
+   *
    * 使用场景:
    * - JdbcProjectRule 使用此访问器检查 Project 是否可以转换为 JDBC
    * - JdbcFilterRule 使用此访问器检查 Filter 是否可以转换为 JDBC
-   * 
+   *
    * 工作原理:
    * - 继承自 RexVisitorImpl,遍历表达式树
    * - 当遇到函数调用(RexCall)时,检查是否是用户定义函数
@@ -3132,7 +3131,7 @@ public class JdbcRules {
     /**
      * 【成员变量说明】:
      * 标志,表示是否发现了用户定义函数。
-     * 
+     *
      * 初始值为 false,当访问器遇到 UDF 时设置为 true。
      */
     private boolean containsUsedDefinedFunction = false;
@@ -3140,7 +3139,7 @@ public class JdbcRules {
     /**
      * 【构造方法说明】:
      * 创建 CheckingUserDefinedFunctionVisitor 实例。
-     * 
+     *
      * 构造方法功能:
      * - 调用父类 RexVisitorImpl 的构造方法
      * - 传入 true,表示要深度优先遍历表达式树
@@ -3153,7 +3152,7 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 返回是否发现了用户定义函数。
-     * 
+     *
      * @return 如果发现了 UDF 则返回 true,否则返回 false
      */
     public boolean containsUserDefinedFunction() {
@@ -3164,16 +3163,16 @@ public class JdbcRules {
     /**
      * 【方法作用说明】:
      * 访问函数调用节点。
-     * 
+     *
      * @param call 函数调用节点
      * @return null
-     * 
+     *
      * 访问逻辑:
      * - 获取函数操作符
      * - 检查是否是用户定义函数
      * - 如果是,设置标志
      * - 继续遍历子表达式
-     * 
+     *
      * 判断 UDF 的方法:
      * - 检查操作符是否是 SqlFunction
      * - 检查函数类型是否是用户定义的

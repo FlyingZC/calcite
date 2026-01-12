@@ -14,388 +14,531 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.tools;
+package org.apache.calcite.tools; // Apache Calcite工具包，包含Planner等核心工具类
 
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.adapter.enumerable.EnumerableProject;
-import org.apache.calcite.adapter.enumerable.EnumerableRules;
-import org.apache.calcite.adapter.enumerable.EnumerableTableScan;
-import org.apache.calcite.adapter.java.ReflectiveSchema;
-import org.apache.calcite.adapter.jdbc.JdbcConvention;
-import org.apache.calcite.adapter.jdbc.JdbcImplementor;
-import org.apache.calcite.adapter.jdbc.JdbcRel;
-import org.apache.calcite.adapter.jdbc.JdbcRules;
-import org.apache.calcite.config.Lex;
-import org.apache.calcite.plan.ConventionTraitDef;
-import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.plan.RelOptPredicateList;
-import org.apache.calcite.plan.RelOptRule;
-import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelOptTable;
-import org.apache.calcite.plan.RelOptUtil;
-import org.apache.calcite.plan.RelRule;
-import org.apache.calcite.plan.RelTraitDef;
-import org.apache.calcite.plan.RelTraitSet;
-import org.apache.calcite.rel.RelCollationTraitDef;
-import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.core.RelFactories;
-import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.logical.LogicalFilter;
-import org.apache.calcite.rel.logical.LogicalProject;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
-import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.calcite.rel.rules.ProjectMergeRule;
-import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.rel.rules.UnionMergeRule;
-import org.apache.calcite.rel.type.DelegatingTypeSystem;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.schema.impl.ScalarFunctionImpl;
-import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlDialect;
-import org.apache.calcite.sql.SqlExplainFormat;
-import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.sql.SqlFunctionCategory;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.parser.SqlParseException;
-import org.apache.calcite.sql.parser.SqlParser;
-import org.apache.calcite.sql.test.SqlTests;
-import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.SqlOperatorTables;
-import org.apache.calcite.sql.validate.SqlValidator;
-import org.apache.calcite.sql.validate.SqlValidatorScope;
-import org.apache.calcite.test.CalciteAssert;
-import org.apache.calcite.test.RelBuilderTest;
-import org.apache.calcite.test.schemata.tpch.TpchSchema;
-import org.apache.calcite.util.Optionality;
-import org.apache.calcite.util.Smalls;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.adapter.enumerable.EnumerableConvention; // 可枚举调用约定，定义可枚举关系表达式的约定
+import org.apache.calcite.adapter.enumerable.EnumerableProject; // 可枚举投影节点，用于将关系表达式转换为可执行的Java代码
+import org.apache.calcite.adapter.enumerable.EnumerableRules; // 可枚举规则集合，包含将逻辑节点转换为可枚举节点的规则
+import org.apache.calcite.adapter.enumerable.EnumerableTableScan; // 可枚举表扫描节点，用于扫描表并生成可执行的Java代码
+import org.apache.calcite.adapter.java.ReflectiveSchema; // 反射模式，通过反射将Java对象暴露为数据库表
+import org.apache.calcite.adapter.jdbc.JdbcConvention; // JDBC调用约定，定义JDBC关系表达式的约定
+import org.apache.calcite.adapter.jdbc.JdbcImplementor; // JDBC实现器，用于将关系表达式转换为SQL语句
+import org.apache.calcite.adapter.jdbc.JdbcRel; // JDBC关系表达式接口，标记可以通过JDBC执行的关系表达式
+import org.apache.calcite.adapter.jdbc.JdbcRules; // JDBC规则集合，包含将逻辑节点转换为JDBC节点的规则
+import org.apache.calcite.config.Lex; // 词法分析配置，定义SQL解析的词法规则
+import org.apache.calcite.plan.ConventionTraitDef; // 调用约定特征定义，定义关系表达式的调用约定特征
+import org.apache.calcite.plan.RelOptCluster; // 关系优化集群，包含共享的优化器组件
+import org.apache.calcite.plan.RelOptPlanner; // 关系优化规划器，负责优化关系表达式
+import org.apache.calcite.plan.RelOptPredicateList; // 关系优化谓词列表，表示关系表达式的谓词集合
+import org.apache.calcite.plan.RelOptRule; // 关系优化规则，定义如何转换关系表达式
+import org.apache.calcite.plan.RelOptRuleCall; // 关系优化规则调用，表示规则的调用上下文
+import org.apache.calcite.plan.RelOptTable; // 关系优化表，表示优化过程中的表
+import org.apache.calcite.plan.RelOptUtil; // 关系优化工具类，提供关系表达式操作的工具方法
+import org.apache.calcite.plan.RelRule; // 关系规则基类，提供规则实现的通用框架
+import org.apache.calcite.plan.RelTraitDef; // 关系特征定义，定义关系表达式的特征
+import org.apache.calcite.plan.RelTraitSet; // 关系特征集合，表示关系表达式的一组特征
+import org.apache.calcite.rel.RelCollationTraitDef; // 排序特征定义，定义关系表达式的排序特征
+import org.apache.calcite.rel.RelNode; // 关系表达式节点，表示关系代数操作
+import org.apache.calcite.rel.RelRoot; // 关系根节点，表示完整的关系表达式树
+import org.apache.calcite.rel.convert.ConverterRule; // 转换规则基类，用于将一种约定转换为另一种约定
+import org.apache.calcite.rel.core.JoinRelType; // 连接关系类型，定义INNER/LEFT/RIGHT/FULL等连接类型
+import org.apache.calcite.rel.core.RelFactories; // 关系工厂，提供创建关系表达式的工厂方法
+import org.apache.calcite.rel.core.TableScan; // 表扫描节点，表示扫描表的操作
+import org.apache.calcite.rel.logical.LogicalFilter; // 逻辑过滤节点，表示过滤操作
+import org.apache.calcite.rel.logical.LogicalProject; // 逻辑投影节点，表示投影操作
+import org.apache.calcite.rel.metadata.RelMetadataQuery; // 关系元数据查询，用于查询关系表达式的元数据
+import org.apache.calcite.rel.rules.CoreRules; // 核心规则集合，包含Calcite的核心优化规则
+import org.apache.calcite.rel.rules.ProjectMergeRule; // 投影合并规则，用于合并相邻的投影节点
+import org.apache.calcite.rel.rules.PruneEmptyRules; // 空关系剪枝规则，用于移除产生空结果的关系节点
+import org.apache.calcite.rel.rules.UnionMergeRule; // 合并规则，用于合并相邻的UNION节点
+import org.apache.calcite.rel.type.DelegatingTypeSystem; // 委托类型系统，允许自定义类型系统行为
+import org.apache.calcite.rel.type.RelDataType; // 关系数据类型，表示关系表达式的数据类型
+import org.apache.calcite.rel.type.RelDataTypeFactory; // 关系数据类型工厂，用于创建关系数据类型
+import org.apache.calcite.rel.type.RelDataTypeSystem; // 关系数据类型系统，定义类型系统的行为
+import org.apache.calcite.schema.SchemaPlus; // 模式扩展接口，允许向模式中添加表和函数
+import org.apache.calcite.schema.impl.ScalarFunctionImpl; // 标量函数实现，用于实现自定义标量函数
+import org.apache.calcite.sql.SqlAggFunction; // SQL聚合函数接口，定义聚合函数的行为
+import org.apache.calcite.sql.SqlCall; // SQL调用节点，表示函数调用
+import org.apache.calcite.sql.SqlDialect; // SQL方言，定义不同数据库的SQL语法差异
+import org.apache.calcite.sql.SqlExplainFormat; // SQL解释格式，定义解释计划的输出格式
+import org.apache.calcite.sql.SqlExplainLevel; // SQL解释级别，定义解释计划的详细程度
+import org.apache.calcite.sql.SqlFunctionCategory; // SQL函数类别，定义函数的分类
+import org.apache.calcite.sql.SqlKind; // SQL节点类型，标识SQL节点的种类
+import org.apache.calcite.sql.SqlNode; // SQL节点，表示SQL语法树中的一个节点
+import org.apache.calcite.sql.fun.SqlStdOperatorTable; // SQL标准操作符表，包含标准SQL操作符
+import org.apache.calcite.sql.parser.SqlParseException; // SQL解析异常，表示SQL解析失败
+import org.apache.calcite.sql.parser.SqlParser; // SQL解析器，负责将SQL文本解析为语法树
+import org.apache.calcite.sql.test.SqlTests; // SQL测试工具类，提供SQL测试的辅助方法
+import org.apache.calcite.sql.type.OperandTypes; // 操作数类型检查器，用于验证操作数类型
+import org.apache.calcite.sql.type.ReturnTypes; // 返回类型推断器，用于推断函数的返回类型
+import org.apache.calcite.sql.type.SqlTypeName; // SQL类型名称，枚举SQL标准类型
+import org.apache.calcite.sql.util.SqlOperatorTables; // SQL操作符表工具，用于组合多个操作符表
+import org.apache.calcite.sql.validate.SqlValidator; // SQL验证器，负责验证SQL语句的语义正确性
+import org.apache.calcite.sql.validate.SqlValidatorScope; // SQL验证器作用域，表示验证过程中的作用域
+import org.apache.calcite.test.CalciteAssert; // Calcite断言工具，提供测试断言方法
+import org.apache.calcite.test.RelBuilderTest; // 关系构建器测试，提供RelBuilder的测试辅助
+import org.apache.calcite.test.schemata.tpch.TpchSchema; // TPC-H测试模式，提供TPC-H基准测试的数据模式
+import org.apache.calcite.util.Optionality; // 可选性，表示某个特性是否可选
+import org.apache.calcite.util.Smalls; // 小型测试工具类，提供测试用的辅助类和方法
+import org.apache.calcite.util.Util; // 通用工具类，提供各种实用方法
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Throwables; // Google Guava异常工具类，用于处理异常堆栈
+import com.google.common.collect.ImmutableList; // Google Guava不可变列表，提供线程安全的不可变集合
 
-import org.hamcrest.Matcher;
-import org.immutables.value.Value;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.hamcrest.Matcher; // Hamcrest匹配器接口，用于编写灵活的断言
+import org.immutables.value.Value; // Immutables值对象注解，用于生成不可变值对象
+import org.junit.jupiter.api.Assertions; // JUnit5断言工具类，提供各种断言方法
+import org.junit.jupiter.api.Disabled; // JUnit5禁用测试注解，标记测试为禁用状态
+import org.junit.jupiter.api.Tag; // JUnit5标签注解，用于对测试进行分类
+import org.junit.jupiter.api.Test; // JUnit5测试注解，标记测试方法
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.ArrayList; // Java动态数组列表，提供可变大小的数组实现
+import java.util.List; // Java列表接口，定义有序集合的行为
 
-import static org.apache.calcite.test.Matchers.sortsAs;
+import static org.apache.calcite.test.Matchers.sortsAs; // Calcite测试匹配器，用于验证排序结果
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.notNullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.hamcrest.CoreMatchers.containsString; // Hamcrest字符串包含匹配器
+import static org.hamcrest.CoreMatchers.equalTo; // Hamcrest相等匹配器
+import static org.hamcrest.CoreMatchers.is; // Hamcrest是匹配器
+import static org.hamcrest.CoreMatchers.notNullValue; // Hamcrest非空匹配器
+import static org.hamcrest.MatcherAssert.assertThat; // Hamcrest断言方法，使用匹配器进行断言
+import static org.junit.jupiter.api.Assertions.assertFalse; // JUnit5假断言方法
+import static org.junit.jupiter.api.Assertions.fail; // JUnit5失败方法，标记测试为失败
 
 /**
- * Unit tests for {@link Planner}.
+ * 单元测试类，用于测试 {@link Planner} 接口的功能
+ *
+ * Planner是Calcite的核心组件，负责将SQL语句转换为可执行的关系表达式，
+ * 并进行优化生成最终的执行计划。
+ *
+ * 本测试类覆盖了Planner的以下核心功能：
+ * 1. SQL解析（parse）：将SQL文本解析为抽象语法树（SqlNode）
+ * 2. SQL验证（validate）：验证SQL语句的语义正确性
+ * 3. 关系转换（rel）：将验证后的SQL转换为关系表达式（RelNode）
+ * 4. 优化转换（transform）：应用优化规则，将逻辑计划转换为物理执行计划
+ *
+ * 测试场景包括：
+ * - 基本查询的解析、验证和转换
+ * - JOIN操作的优化（包括多表连接、外连接、笛卡尔积等）
+ * - 投影和过滤的优化
+ * - 排序操作的优化
+ * - 集合操作（UNION）的优化
+ * - 用户自定义函数和聚合函数的支持
+ * - 元数据查询和谓词上推
+ * - 不同SQL方言的支持
+ * - 自定义类型系统的支持
+ * - 视图的支持
+ * - 相关子查询的去关联化
  */
-class PlannerTest {
-  private void checkParseAndConvert(String query,
-      String queryFromParseTree, String expectedRelExpr) throws Exception {
-    Planner planner = getPlanner(null);
-    SqlNode parse = planner.parse(query);
-    assertThat(Util.toLinux(parse.toString()), equalTo(queryFromParseTree));
+class PlannerTest { // Planner单元测试类，测试Planner接口的各项功能
+  private void checkParseAndConvert(String query, // 输入的SQL查询字符串
+      String queryFromParseTree, // 期望的解析树字符串表示
+      String expectedRelExpr) throws Exception { // 期望的关系表达式字符串表示
+    // 获取Planner实例，traitDefs为null表示使用默认的特征定义
+    Planner planner = getPlanner(null); // 创建规划器实例
+    // 解析SQL查询，将SQL文本转换为SqlNode（抽象语法树）
+    SqlNode parse = planner.parse(query); // 执行SQL解析，生成语法树
+    // 验证解析结果是否与期望的解析树字符串一致（使用Linux换行符格式化）
+    assertThat(Util.toLinux(parse.toString()), equalTo(queryFromParseTree)); // 断言解析结果正确
 
-    SqlNode validate = planner.validate(parse);
-    RelNode rel = planner.rel(validate).project();
-    assertThat(toString(rel), equalTo(expectedRelExpr));
+    // 验证SqlNode，进行语义检查（如表名、列名是否存在，类型是否匹配等）
+    SqlNode validate = planner.validate(parse); // 执行语义验证
+    // 将验证后的SqlNode转换为关系表达式，并获取投影节点
+    RelNode rel = planner.rel(validate).project(); // 转换为关系表达式树
+    // 验证生成的关系表达式是否与期望的字符串表示一致
+    assertThat(toString(rel), equalTo(expectedRelExpr)); // 断言转换结果正确
   }
 
-  @Test void testParseAndConvert() throws Exception {
-    checkParseAndConvert(
-        "select * from \"emps\" where \"name\" like '%e%'",
+  /** 测试基本的SQL解析和转换功能
+   * 验证Planner能够正确执行以下操作：
+   * 1. 解析带有LIKE条件的SELECT语句
+   * 2. 验证解析后的语法树格式
+   * 3. 将SQL转换为逻辑关系表达式
+   * 4. 验证生成的逻辑计划结构
+   */
+  @Test void testParseAndConvert() throws Exception { // 测试解析和转换功能
+    // 调用辅助方法，测试带有LIKE条件的查询
+    checkParseAndConvert( // 执行解析和转换检查
+        "select * from \"emps\" where \"name\" like '%e%'", // 输入SQL：查询name包含'e'的员工
 
-        "SELECT *\n"
+        "SELECT *\n" // 期望的解析树格式（使用反引号引用标识符）
             + "FROM `emps`\n"
             + "WHERE `name` LIKE '%e%'",
 
-        "LogicalProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
-        + "  LogicalFilter(condition=[LIKE($2, '%e%')])\n"
-        + "    LogicalTableScan(table=[[hr, emps]])\n");
+        "LogicalProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n" // 期望的逻辑计划
+        + "  LogicalFilter(condition=[LIKE($2, '%e%')])\n" // 过滤条件：name字段包含'e'
+        + "    LogicalTableScan(table=[[hr, emps]])\n"); // 扫描hr模式下的emps表
   }
 
-  @Test void testParseIdentifierMaxLengthWithDefault() {
-    Assertions.assertThrows(SqlParseException.class, () -> {
-      Planner planner = getPlanner(null, SqlParser.config());
-      planner.parse("select name as "
-          + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa from \"emps\"");
+  /** 测试使用默认标识符最大长度时解析超长标识符的行为
+   * 验证当标识符长度超过默认限制时，Planner会抛出SqlParseException异常
+   */
+  @Test void testParseIdentifierMaxLengthWithDefault() { // 测试默认标识符长度限制
+    // 断言解析带有超长别名的查询会抛出SqlParseException异常
+    Assertions.assertThrows(SqlParseException.class, () -> { // 验证抛出解析异常
+      Planner planner = getPlanner(null, SqlParser.config()); // 创建使用默认配置的规划器
+      // 尝试解析带有超长别名的查询（别名长度超过默认限制）
+      planner.parse("select name as " // 解析带有超长别名的查询
+          + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa from \"emps\""); // 超长别名导致解析失败
     });
   }
 
-  @Test void testParseIdentifierMaxLengthWithIncreased() throws Exception {
-    Planner planner =
-        getPlanner(null, SqlParser.config().withIdentifierMaxLength(512));
-    planner.parse("select name as "
-        + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa from \"emps\"");
+  /** 测试增加标识符最大长度后解析超长标识符的行为
+   * 验证当将标识符最大长度配置为512时，Planner能够成功解析超长标识符
+   */
+  @Test void testParseIdentifierMaxLengthWithIncreased() throws Exception { // 测试增加标识符长度限制
+    // 创建规划器，配置标识符最大长度为512
+    Planner planner = // 创建规划器实例
+        getPlanner(null, SqlParser.config().withIdentifierMaxLength(512)); // 设置标识符最大长度为512
+    // 解析带有超长别名的查询，此时应该成功（因为512 > 别名长度）
+    planner.parse("select name as " // 解析带有超长别名的查询
+        + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa from \"emps\""); // 超长别名解析成功
   }
 
-  /** Unit test that parses, validates and converts the query using
-   * order by and offset. */
-  @Test void testParseAndConvertWithOrderByAndOffset() throws Exception {
-    checkParseAndConvert(
-        "select * from \"emps\" "
-            + "order by \"emps\".\"deptno\" offset 10",
+  /** 单元测试：解析、验证和转换带有ORDER BY和OFFSET的查询
+   * 验证Planner能够正确处理以下SQL特性：
+   * 1. ORDER BY子句：按指定字段排序
+   * 2. OFFSET子句：跳过指定数量的行
+   * 3. 生成正确的逻辑计划，包含LogicalSort节点
+   */
+  @Test void testParseAndConvertWithOrderByAndOffset() throws Exception { // 测试带有排序和偏移的查询
+    // 调用辅助方法，测试带有ORDER BY和OFFSET的查询
+    checkParseAndConvert( // 执行解析和转换检查
+        "select * from \"emps\" " // 输入SQL：查询所有员工并按deptno排序，跳过前10行
+            + "order by \"emps\".\"deptno\" offset 10", // ORDER BY和OFFSET子句
 
-        "SELECT *\n"
+        "SELECT *\n" // 期望的解析树格式
             + "FROM `emps`\n"
-            + "ORDER BY `emps`.`deptno`\n"
-            + "OFFSET 10 ROWS",
+            + "ORDER BY `emps`.`deptno`\n" // ORDER BY子句
+            + "OFFSET 10 ROWS", // OFFSET子句
 
-        "LogicalSort(sort0=[$1], dir0=[ASC], offset=[10])\n"
-        + "  LogicalProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
-        + "    LogicalTableScan(table=[[hr, emps]])\n");
+        "LogicalSort(sort0=[$1], dir0=[ASC], offset=[10])\n" // 期望的逻辑计划：排序节点，按第1列（deptno）升序排列，偏移10行
+        + "  LogicalProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n" // 投影所有字段
+        + "    LogicalTableScan(table=[[hr, emps]])\n"); // 扫描emps表
   }
 
-  private String toString(RelNode rel) {
-    return Util.toLinux(
-        RelOptUtil.dumpPlan("", rel, SqlExplainFormat.TEXT,
-            SqlExplainLevel.EXPPLAN_ATTRIBUTES));
+  /**
+   * 辅助方法：将关系表达式转换为字符串表示
+   * 用于在测试中验证生成的执行计划
+   *
+   * @param rel 要转换的关系表达式节点
+   * @return 关系表达式的字符串表示，使用TEXT格式和EXPPLAN_ATTRIBUTES详细级别
+   */
+  private String toString(RelNode rel) { // 将关系表达式转换为字符串
+    // 使用RelOptUtil工具类将关系表达式转储为文本格式
+    return Util.toLinux( // 转换为Linux换行符格式
+        RelOptUtil.dumpPlan("", rel, SqlExplainFormat.TEXT, // 使用文本格式转储计划
+            SqlExplainLevel.EXPPLAN_ATTRIBUTES)); // 使用EXPPLAN_ATTRIBUTES详细级别（包含所有属性）
   }
 
-  @Test void testParseFails() {
-    Planner planner = getPlanner(null);
-    try {
-      SqlNode parse =
-          planner.parse("select * * from \"emps\"");
-      fail("expected error, got " + parse);
-    } catch (SqlParseException e) {
-      assertThat(e.getMessage(),
-          containsString("Encountered \"*\" at line 1, column 10."));
+  /** 测试SQL解析失败的情况
+   * 验证当SQL语法错误时，Planner能够正确抛出SqlParseException异常
+   * 测试场景：SELECT语句中有两个连续的*号（语法错误）
+   */
+  @Test void testParseFails() { // 测试解析失败场景
+    Planner planner = getPlanner(null); // 创建规划器实例
+    try { // 尝试解析错误的SQL
+      SqlNode parse = // 解析SQL语句
+          planner.parse("select * * from \"emps\""); // 语法错误：两个连续的*号
+      fail("expected error, got " + parse); // 如果没有抛出异常，测试失败
+    } catch (SqlParseException e) { // 捕获解析异常
+      // 验证异常消息包含预期的错误信息（指出在第1行第10列遇到了*号）
+      assertThat(e.getMessage(), // 断言异常消息
+          containsString("Encountered \"*\" at line 1, column 10.")); // 验证错误位置
     }
   }
 
-  @Test void testValidateFails() throws SqlParseException {
-    Planner planner = getPlanner(null);
-    SqlNode parse =
-        planner.parse("select * from \"emps\" where \"Xname\" like '%e%'");
-    assertThat(Util.toLinux(parse.toString()),
-        equalTo("SELECT *\n"
+  /** 测试SQL验证失败的情况
+   * 验证当SQL语义错误时，Planner能够正确抛出ValidationException异常
+   * 测试场景：SELECT语句中引用了不存在的列名"Xname"
+   */
+  @Test void testValidateFails() throws SqlParseException { // 测试验证失败场景
+    Planner planner = getPlanner(null); // 创建规划器实例
+    // 解析SQL语句（语法正确，但语义有错误）
+    SqlNode parse = // 解析SQL语句
+        planner.parse("select * from \"emps\" where \"Xname\" like '%e%'"); // 引用不存在的列Xname
+    // 验证解析结果（解析阶段不会检查列是否存在）
+    assertThat(Util.toLinux(parse.toString()), // 断言解析结果
+        equalTo("SELECT *\n" // 解析成功，生成语法树
             + "FROM `emps`\n"
             + "WHERE `Xname` LIKE '%e%'"));
 
-    try {
-      SqlNode validate = planner.validate(parse);
-      fail("expected error, got " + validate);
-    } catch (ValidationException e) {
-      assertThat(Throwables.getStackTraceAsString(e),
-          containsString("Column 'Xname' not found in any table"));
-      // ok
+    try { // 尝试验证解析后的SQL
+      SqlNode validate = planner.validate(parse); // 验证SQL语义
+      fail("expected error, got " + validate); // 如果没有抛出异常，测试失败
+    } catch (ValidationException e) { // 捕获验证异常
+      // 验证异常消息包含预期的错误信息（指出列'Xname'不存在）
+      assertThat(Throwables.getStackTraceAsString(e), // 获取完整的异常堆栈
+          containsString("Column 'Xname' not found in any table")); // 验证错误信息
+      // ok - 异常符合预期
     }
   }
 
-  @Test void testValidateUserDefinedAggregate() throws Exception {
-    final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
-    final FrameworkConfig config = Frameworks.newConfigBuilder()
-        .defaultSchema(
-            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR))
-        .operatorTable(
-            SqlOperatorTables.chain(SqlStdOperatorTable.instance(),
-                SqlOperatorTables.of(new MyCountAggFunction())))
-        .build();
-    final Planner planner = Frameworks.getPlanner(config);
-    SqlNode parse =
-        planner.parse("select \"deptno\", my_count(\"empid\") from \"emps\"\n"
-            + "group by \"deptno\"");
-    assertThat(Util.toLinux(parse.toString()),
-        equalTo("SELECT `deptno`, `MY_COUNT`(`empid`)\n"
+  @Test void testValidateUserDefinedAggregate() throws Exception { // 测试用户自定义聚合函数的验证
+    final SchemaPlus rootSchema = Frameworks.createRootSchema(true); // 创建根Schema
+    final FrameworkConfig config = Frameworks.newConfigBuilder() // 构建配置
+        .defaultSchema( // 设置默认Schema
+            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR)) // 添加HR测试Schema
+        .operatorTable( // 设置操作符表
+            SqlOperatorTables.chain(SqlStdOperatorTable.instance(), // 链接标准操作符表
+                SqlOperatorTables.of(new MyCountAggFunction()))) // 添加自定义聚合函数MY_COUNT
+        .build(); // 构建配置
+    final Planner planner = Frameworks.getPlanner(config); // 创建规划器
+    SqlNode parse = // 解析SQL
+        planner.parse("select \"deptno\", my_count(\"empid\") from \"emps\"\n" // 使用自定义聚合函数MY_COUNT
+            + "group by \"deptno\""); // 按deptno分组
+    assertThat(Util.toLinux(parse.toString()), // 断言解析结果
+        equalTo("SELECT `deptno`, `MY_COUNT`(`empid`)\n" // MY_COUNT被识别为聚合函数
             + "FROM `emps`\n"
             + "GROUP BY `deptno`"));
 
     // MY_COUNT is recognized as an aggregate function, and therefore it is OK
     // that its argument empid is not in the GROUP BY clause.
-    SqlNode validate = planner.validate(parse);
-    assertThat(validate, notNullValue());
+    SqlNode validate = planner.validate(parse); // 验证SQL语义
+    assertThat(validate, notNullValue()); // 断言验证成功
 
     // The presence of an aggregate function in the SELECT clause causes it
     // to become an aggregate query. Non-aggregate expressions become illegal.
-    planner.close();
-    planner.reset();
-    parse = planner.parse("select \"deptno\", count(1) from \"emps\"");
-    try {
-      validate = planner.validate(parse);
-      fail("expected exception, got " + validate);
-    } catch (ValidationException e) {
-      assertThat(e.getCause().getCause().getMessage(),
-          containsString("Expression 'deptno' is not being grouped"));
+    planner.close(); // 关闭规划器
+    planner.reset(); // 重置规划器状态
+    parse = planner.parse("select \"deptno\", count(1) from \"emps\""); // 解析带有count聚合的查询
+    try { // 尝试验证
+      validate = planner.validate(parse); // 验证SQL（应该失败，因为deptno不在GROUP BY中）
+      fail("expected exception, got " + validate); // 如果没有抛出异常，测试失败
+    } catch (ValidationException e) { // 捕获验证异常
+      assertThat(e.getCause().getCause().getMessage(), // 获取嵌套异常消息
+          containsString("Expression 'deptno' is not being grouped")); // 验证错误信息
     }
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-3547">[CALCITE-3547]
-   * SqlValidatorException because Planner cannot find UDFs added to schema</a>. */
-  @Test void testValidateUserDefinedFunctionInSchema() throws Exception {
-    SchemaPlus rootSchema = Frameworks.createRootSchema(true);
-    rootSchema.add("my_plus",
-        ScalarFunctionImpl.create(Smalls.MY_PLUS_EVAL_METHOD));
-    final FrameworkConfig config = Frameworks.newConfigBuilder()
-        .defaultSchema(
-            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR))
-        .build();
-    final Planner planner = Frameworks.getPlanner(config);
-    final String sql = "select \"my_plus\"(\"deptno\", 100) as \"p\"\n"
-        + "from \"hr\".\"emps\"";
-    SqlNode parse = planner.parse(sql);
-    SqlNode validate = planner.validate(parse);
-    assertThat(Util.toLinux(validate.toString()),
-        equalTo("SELECT `my_plus`(`emps`.`deptno`, 100) AS `p`\n"
-            + "FROM `hr`.`emps` AS `emps`"));
+  /** 测试用例：验证Planner能够找到添加到Schema中的用户自定义函数（UDF）
+   * 解决JIRA issue CALCITE-3547
+   * 测试场景：将自定义标量函数my_plus添加到Schema中，并在SQL中使用它
+   */
+  @Test void testValidateUserDefinedFunctionInSchema() throws Exception { // 测试Schema中的用户自定义函数
+    SchemaPlus rootSchema = Frameworks.createRootSchema(true); // 创建根Schema
+    rootSchema.add("my_plus", // 添加自定义函数到Schema
+        ScalarFunctionImpl.create(Smalls.MY_PLUS_EVAL_METHOD)); // 创建my_plus函数实现
+    final FrameworkConfig config = Frameworks.newConfigBuilder() // 构建配置
+        .defaultSchema( // 设置默认Schema
+            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR)) // 添加HR测试Schema
+        .build(); // 构建配置
+    final Planner planner = Frameworks.getPlanner(config); // 创建规划器
+    final String sql = "select \"my_plus\"(\"deptno\", 100) as \"p\"\n" // SQL：使用my_plus函数
+        + "from \"hr\".\"emps\""; // 从emps表查询
+    SqlNode parse = planner.parse(sql); // 解析SQL
+    SqlNode validate = planner.validate(parse); // 验证SQL
+    assertThat(Util.toLinux(validate.toString()), // 断言验证结果
+        equalTo("SELECT `my_plus`(`emps`.`deptno`, 100) AS `p`\n" // my_plus函数被正确识别
+            + "FROM `hr`.`emps` AS `emps`")); // 表别名正确
   }
 
-  private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) {
-    return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs);
+  /**
+   * 辅助方法：获取使用默认解析器配置的Planner实例
+   *
+   * @param traitDefs 关系特征定义列表，可为null表示使用默认值
+   * @param programs 优化程序数组
+   * @return 配置好的Planner实例
+   */
+  private Planner getPlanner(List<RelTraitDef> traitDefs, Program... programs) { // 获取Planner实例（使用默认解析器配置）
+    return getPlanner(traitDefs, SqlParser.Config.DEFAULT, programs); // 调用重载方法
   }
 
-  private Planner getPlanner(List<RelTraitDef> traitDefs,
-                             SqlParser.Config parserConfig,
-                             Program... programs) {
-    final SchemaPlus rootSchema = Frameworks.createRootSchema(true);
-    final FrameworkConfig config = Frameworks.newConfigBuilder()
-        .parserConfig(parserConfig)
-        .defaultSchema(
-            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR))
-        .traitDefs(traitDefs)
-        .programs(programs)
-        .build();
-    return Frameworks.getPlanner(config);
+  /**
+   * 辅助方法：获取使用指定配置的Planner实例
+   * 这是测试类中创建Planner的主要方法，配置了：
+   * 1. 解析器配置（parserConfig）
+   * 2. 默认Schema（HR测试Schema）
+   * 3. 特征定义（traitDefs）
+   * 4. 优化程序（programs）
+   *
+   * @param traitDefs 关系特征定义列表，可为null表示使用默认值
+   * @param parserConfig SQL解析器配置
+   * @param programs 优化程序数组
+   * @return 配置好的Planner实例
+   */
+  private Planner getPlanner(List<RelTraitDef> traitDefs, // 关系特征定义列表
+                             SqlParser.Config parserConfig, // SQL解析器配置
+                             Program... programs) { // 优化程序数组
+    final SchemaPlus rootSchema = Frameworks.createRootSchema(true); // 创建根Schema
+    final FrameworkConfig config = Frameworks.newConfigBuilder() // 构建框架配置
+        .parserConfig(parserConfig) // 设置解析器配置
+        .defaultSchema( // 设置默认Schema
+            CalciteAssert.addSchema(rootSchema, CalciteAssert.SchemaSpec.HR)) // 添加HR测试Schema
+        .traitDefs(traitDefs) // 设置特征定义
+        .programs(programs) // 设置优化程序
+        .build(); // 构建配置
+    return Frameworks.getPlanner(config); // 返回Planner实例
   }
 
-  /** Tests that planner throws an error if you pass to
-   * {@link Planner#rel(org.apache.calcite.sql.SqlNode)}
-   * a {@link org.apache.calcite.sql.SqlNode} that has been parsed but not
-   * validated. */
-  @Test void testConvertWithoutValidateFails() throws Exception {
-    Planner planner = getPlanner(null);
-    SqlNode parse = planner.parse("select * from \"emps\"");
-    try {
-      RelRoot rel = planner.rel(parse);
-      fail("expected error, got " + rel);
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(),
-          containsString(
-              "cannot move from STATE_3_PARSED to STATE_4_VALIDATED"));
+  /** 测试：验证Planner在转换未验证的SqlNode时会抛出错误
+   * Planner遵循状态机模式，必须按顺序执行：parse -> validate -> rel
+   * 如果跳过validate直接调用rel，应该抛出IllegalArgumentException
+   */
+  @Test void testConvertWithoutValidateFails() throws Exception { // 测试未验证就转换的情况
+    Planner planner = getPlanner(null); // 创建规划器
+    SqlNode parse = planner.parse("select * from \"emps\""); // 解析SQL
+    try { // 尝试直接转换（跳过验证）
+      RelRoot rel = planner.rel(parse); // 直接调用rel，应该失败
+      fail("expected error, got " + rel); // 如果没有抛出异常，测试失败
+    } catch (IllegalArgumentException e) { // 捕获非法参数异常
+      assertThat(e.getMessage(), // 断言异常消息
+          containsString( // 包含状态转换错误信息
+              "cannot move from STATE_3_PARSED to STATE_4_VALIDATED")); // 不能从已解析状态直接跳到已验证状态
     }
   }
 
-  /** Helper method for testing {@link RelMetadataQuery#getPulledUpPredicates}
-   * metadata. */
-  private void checkMetadataPredicates(String sql,
-      String expectedPredicates) throws Exception {
-    Planner planner = getPlanner(null);
-    SqlNode parse = planner.parse(sql);
-    SqlNode validate = planner.validate(parse);
-    RelNode rel = planner.rel(validate).project();
-    final RelMetadataQuery mq = rel.getCluster().getMetadataQuery();
-    final RelOptPredicateList predicates = mq.getPulledUpPredicates(rel);
-    assertThat(predicates.pulledUpPredicates, sortsAs(expectedPredicates));
+  /**
+   * 辅助方法：测试关系表达式的上推谓词元数据
+   * 上推谓词（pulled-up predicates）是指可以从子节点向上推到父节点的过滤条件
+   * 这对于查询优化非常重要，可以尽早过滤数据
+   *
+   * @param sql 要测试的SQL语句
+   * @param expectedPredicates 期望的上推谓词列表（字符串表示）
+   */
+  private void checkMetadataPredicates(String sql, // 输入SQL语句
+      String expectedPredicates) throws Exception { // 期望的谓词列表
+    Planner planner = getPlanner(null); // 创建规划器
+    SqlNode parse = planner.parse(sql); // 解析SQL
+    SqlNode validate = planner.validate(parse); // 验证SQL
+    RelNode rel = planner.rel(validate).project(); // 转换为关系表达式
+    final RelMetadataQuery mq = rel.getCluster().getMetadataQuery(); // 获取元数据查询器
+    final RelOptPredicateList predicates = mq.getPulledUpPredicates(rel); // 获取上推谓词列表
+    assertThat(predicates.pulledUpPredicates, sortsAs(expectedPredicates)); // 断言谓词列表正确
   }
 
-  /** Tests predicates that can be pulled-up from a UNION. */
-  @Test void testMetadataUnionPredicates() throws Exception {
-    checkMetadataPredicates(
-        "select * from \"emps\" where \"deptno\" < 10\n"
-            + "union all\n"
-            + "select * from \"emps\" where \"empid\" > 2",
-        "[OR(<($1, 10), >($0, 2))]");
+  /** 测试：验证可以从UNION节点上推的谓词
+   * UNION ALL的两个分支都有不同的过滤条件，上推后的谓词是两个条件的OR
+   * 第一个分支：deptno < 10
+   * 第二个分支：empid > 2
+   * 上推结果：OR(<($1, 10), >($0, 2))
+   */
+  @Test void testMetadataUnionPredicates() throws Exception { // 测试UNION的谓词上推
+    checkMetadataPredicates( // 检查谓词上推
+        "select * from \"emps\" where \"deptno\" < 10\n" // 第一个分支：deptno < 10
+            + "union all\n" // UNION ALL
+            + "select * from \"emps\" where \"empid\" > 2", // 第二个分支：empid > 2
+        "[OR(<($1, 10), >($0, 2))]"); // 期望的上推谓词：两个条件的OR
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-443">[CALCITE-443]
-   * getPredicates from a union is not correct</a>. */
-  @Test void testMetadataUnionPredicates2() throws Exception {
-    checkMetadataPredicates(
-        "select * from \"emps\" where \"deptno\" < 10\n"
-            + "union all\n"
-            + "select * from \"emps\"",
-        "[]");
+  /** 测试用例：验证UNION中一个分支无过滤条件时的谓词上推
+   * 解决JIRA issue CALCITE-443
+   * 当UNION ALL的一个分支没有过滤条件时，无法上推任何谓词
+   * 第一个分支：deptno < 10
+   * 第二个分支：无过滤条件
+   * 上推结果：[]（空列表）
+   */
+  @Test void testMetadataUnionPredicates2() throws Exception { // 测试UNION的谓词上推（一个分支无过滤）
+    checkMetadataPredicates( // 检查谓词上推
+        "select * from \"emps\" where \"deptno\" < 10\n" // 第一个分支：deptno < 10
+            + "union all\n" // UNION ALL
+            + "select * from \"emps\"", // 第二个分支：无过滤条件
+        "[]"); // 期望的上推谓词：空列表（无法上推）
   }
 
-  @Test void testMetadataUnionPredicates3() throws Exception {
-    checkMetadataPredicates(
-        "select * from \"emps\" where \"deptno\" < 10\n"
-            + "union all\n"
-            + "select * from \"emps\" where \"deptno\" < 10 and \"empid\" > 1",
-        "[<($1, 10)]");
+  /** 测试：验证UNION的两个分支有共同过滤条件时的谓词上推
+   * 第一个分支：deptno < 10
+   * 第二个分支：deptno < 10 AND empid > 1
+   * 上推结果：deptno < 10（两个分支的共同条件）
+   */
+  @Test void testMetadataUnionPredicates3() throws Exception { // 测试UNION的谓词上推（共同条件）
+    checkMetadataPredicates( // 检查谓词上推
+        "select * from \"emps\" where \"deptno\" < 10\n" // 第一个分支：deptno < 10
+            + "union all\n" // UNION ALL
+            + "select * from \"emps\" where \"deptno\" < 10 and \"empid\" > 1", // 第二个分支：deptno < 10 AND empid > 1
+        "[<($1, 10)]"); // 期望的上推谓词：deptno < 10（共同条件）
   }
 
-  @Test void testMetadataUnionPredicates4() throws Exception {
-    checkMetadataPredicates(
-        "select * from \"emps\" where \"deptno\" < 10\n"
-            + "union all\n"
-            + "select * from \"emps\" where \"deptno\" < 10 or \"empid\" > 1",
-        "[OR(<($1, 10), >($0, 1))]");
+  /** 测试：验证UNION的分支有OR条件时的谓词上推
+   * 第一个分支：deptno < 10
+   * 第二个分支：deptno < 10 OR empid > 1
+   * 上推结果：OR(<($1, 10), >($0, 1))（两个分支的OR条件的组合）
+   */
+  @Test void testMetadataUnionPredicates4() throws Exception { // 测试UNION的谓词上推（OR条件）
+    checkMetadataPredicates( // 检查谓词上推
+        "select * from \"emps\" where \"deptno\" < 10\n" // 第一个分支：deptno < 10
+            + "union all\n" // UNION ALL
+            + "select * from \"emps\" where \"deptno\" < 10 or \"empid\" > 1", // 第二个分支：deptno < 10 OR empid > 1
+        "[OR(<($1, 10), >($0, 1))]"); // 期望的上推谓词：OR(<($1, 10), >($0, 1))
   }
 
-  @Test void testMetadataUnionPredicates5() throws Exception {
-    final String sql = "select * from \"emps\" where \"deptno\" < 10\n"
-        + "union all\n"
-        + "select * from \"emps\" where \"deptno\" < 10 and false";
-    checkMetadataPredicates(sql, "[<($1, 10)]");
+  /** 测试：验证UNION的分支有false条件时的谓词上推
+   * 第一个分支：deptno < 10
+   * 第二个分支：deptno < 10 AND false（永远为false）
+   * 上推结果：deptno < 10（忽略false条件）
+   */
+  @Test void testMetadataUnionPredicates5() throws Exception { // 测试UNION的谓词上推（false条件）
+    final String sql = "select * from \"emps\" where \"deptno\" < 10\n" // 第一个分支：deptno < 10
+        + "union all\n" // UNION ALL
+        + "select * from \"emps\" where \"deptno\" < 10 and false"; // 第二个分支：deptno < 10 AND false
+    checkMetadataPredicates(sql, "[<($1, 10)]"); // 期望的上推谓词：deptno < 10（忽略false）
   }
 
-  /** Tests predicates that can be pulled-up from an Aggregate with
-   * {@code GROUP BY ()}. This form of Aggregate can convert an empty relation
-   * to a single-row relation, so it is not valid to pull up the predicate
-   * {@code false}. */
-  @Test void testMetadataAggregatePredicates() throws Exception {
-    checkMetadataPredicates("select count(*) from \"emps\" where false",
-        "[]");
+  /** 测试：验证从GROUP BY ()形式的聚合节点上推谓词
+   * GROUP BY ()表示没有分组键的聚合（如COUNT(*)）
+   * 这种聚合可以将空关系转换为单行关系（count=0）
+   * 因此不能上推false谓词，因为false谓词会被忽略
+   */
+  @Test void testMetadataAggregatePredicates() throws Exception { // 测试GROUP BY ()的谓词上推
+    checkMetadataPredicates("select count(*) from \"emps\" where false", // COUNT(*)聚合，where false
+        "[]"); // 期望的上推谓词：空列表（false不能上推）
   }
 
-  /** Tests predicates that can be pulled-up from an Aggregate with a non-empty
-   * group key. The {@code false} predicate effectively means that the relation
-   * is empty, because no row can satisfy {@code false}. */
-  @Test void testMetadataAggregatePredicates2() throws Exception {
-    final String sql = "select \"deptno\", count(\"deptno\")\n"
-        + "from \"emps\" where false\n"
-        + "group by \"deptno\"";
-    checkMetadataPredicates(sql, "[false]");
+  /** 测试：验证从有分组键的聚合节点上推谓词
+   * 当聚合有非空的分组键时，false谓词意味着关系为空
+   * 因为没有行能满足false条件
+   * 此时可以上推false谓词
+   */
+  @Test void testMetadataAggregatePredicates2() throws Exception { // 测试有分组键的聚合的谓词上推
+    final String sql = "select \"deptno\", count(\"deptno\")\n" // 聚合查询，按deptno分组
+        + "from \"emps\" where false\n" // where false（没有行满足）
+        + "group by \"deptno\""; // 按deptno分组
+    checkMetadataPredicates(sql, "[false]"); // 期望的上推谓词：false（可以上推）
   }
 
-  @Test void testMetadataAggregatePredicates3() throws Exception {
-    final String sql = "select \"deptno\", count(\"deptno\")\n"
-        + "from \"emps\" where \"deptno\" > 10\n"
-        + "group by \"deptno\"";
-    checkMetadataPredicates(sql, "[>($0, 10)]");
+  /** 测试：验证从有分组键和真实过滤条件的聚合节点上推谓词
+   * 当聚合有非空的分组键和真实的过滤条件时
+   * 可以上推该过滤条件
+   */
+  @Test void testMetadataAggregatePredicates3() throws Exception { // 测试有真实条件的聚合的谓词上推
+    final String sql = "select \"deptno\", count(\"deptno\")\n" // 聚合查询，按deptno分组
+        + "from \"emps\" where \"deptno\" > 10\n" // where deptno > 10
+        + "group by \"deptno\""; // 按deptno分组
+    checkMetadataPredicates(sql, "[>($0, 10)]"); // 期望的上推谓词：deptno > 10
   }
 
-  /** Unit test that parses, validates, converts and plans. */
-  @Test void testPlan() throws Exception {
-    Program program =
-        Programs.ofRules(
-            CoreRules.FILTER_MERGE,
-            EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE,
-            EnumerableRules.ENUMERABLE_FILTER_RULE,
-            EnumerableRules.ENUMERABLE_PROJECT_RULE);
-    Planner planner = getPlanner(null, program);
-    SqlNode parse = planner.parse("select * from \"emps\"");
-    SqlNode validate = planner.validate(parse);
-    RelNode convert = planner.rel(validate).project();
-    RelTraitSet traitSet = convert.getTraitSet()
-        .replace(EnumerableConvention.INSTANCE);
-    RelNode transform = planner.transform(0, traitSet, convert);
-    assertThat(toString(transform),
-        equalTo(
-            "EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n"
-            + "  EnumerableTableScan(table=[[hr, emps]])\n"));
+  /** 单元测试：完整的SQL处理流程 - 解析、验证、转换和计划
+   * 这个测试展示了Planner的完整工作流程：
+   * 1. parse: 解析SQL为语法树
+   * 2. validate: 验证SQL语义
+   * 3. rel: 转换为逻辑关系表达式
+   * 4. transform: 应用优化规则，转换为物理执行计划
+   *
+   * 使用的优化规则：
+   * - FILTER_MERGE: 合并相邻的过滤节点
+   * - ENUMERABLE_TABLE_SCAN_RULE: 将逻辑表扫描转换为可枚举表扫描
+   * - ENUMERABLE_FILTER_RULE: 将逻辑过滤转换为可枚举过滤
+   * - ENUMERABLE_PROJECT_RULE: 将逻辑投影转换为可枚举投影
+   */
+  @Test void testPlan() throws Exception { // 测试完整的SQL处理流程
+    // 创建优化程序，包含一组优化规则
+    Program program = // 定义优化程序
+        Programs.ofRules( // 从规则列表创建优化程序
+            CoreRules.FILTER_MERGE, // 过滤合并规则：合并相邻的过滤节点
+            EnumerableRules.ENUMERABLE_TABLE_SCAN_RULE, // 可枚举表扫描规则
+            EnumerableRules.ENUMERABLE_FILTER_RULE, // 可枚举过滤规则
+            EnumerableRules.ENUMERABLE_PROJECT_RULE); // 可枚举投影规则
+    Planner planner = getPlanner(null, program); // 创建规划器，指定优化程序
+    SqlNode parse = planner.parse("select * from \"emps\""); // 步骤1: 解析SQL
+    SqlNode validate = planner.validate(parse); // 步骤2: 验证SQL语义
+    RelNode convert = planner.rel(validate).project(); // 步骤3: 转换为关系表达式
+    RelTraitSet traitSet = convert.getTraitSet() // 获取特征集合
+        .replace(EnumerableConvention.INSTANCE); // 替换为可枚举约定
+    RelNode transform = planner.transform(0, traitSet, convert); // 步骤4: 应用优化规则转换
+    assertThat(toString(transform), // 断言转换后的物理计划
+        equalTo( // 期望的物理执行计划
+            "EnumerableProject(empid=[$0], deptno=[$1], name=[$2], salary=[$3], commission=[$4])\n" // 可枚举投影节点
+            + "  EnumerableTableScan(table=[[hr, emps]])\n")); // 可枚举表扫描节点
   }
 
   /** Unit test that parses, validates, converts and plans. */

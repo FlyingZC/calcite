@@ -90,8 +90,8 @@ public abstract class SingleValuesOptimizationRules {
      * @param isValuesLeftChild TRUE if Values is left child of join, FALSE otherwise.
      * @param litTransformer A transformer function supplied by the caller.
      *                       This function is specific to Join Type.
-     *                       LEFT/ RIGHT => has logic to produce null values for unmatched rows.
-     *                       INNER => produce the rexLiterals specified in the Values node.
+     *                       LEFT/ RIGHT -> has logic to produce null values for unmatched rows.
+     *                       INNER -> produce the rexLiterals specified in the Values node.
      */
     protected SingleValuesRelTransformer(
         Join join, List<RexNode> rexNodes, RelNode otherNode,

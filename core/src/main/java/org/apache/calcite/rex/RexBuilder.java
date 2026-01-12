@@ -981,12 +981,12 @@ public class RexBuilder {
     case 0:
       return e;
     case 1:
-      // E.g. multiplyDivide(e, 1000, 10) ==> e * 100
+      // E.g. multiplyDivide(e, 1000, 10) =-> e * 100
       return makeCall(pos, SqlStdOperatorTable.MULTIPLY, e,
           makeExactLiteral(
               multiplier.divide(divider, RoundingMode.UNNECESSARY)));
     case -1:
-      // E.g. multiplyDivide(e, 10, 1000) ==> e / 100
+      // E.g. multiplyDivide(e, 10, 1000) =-> e / 100
       return makeCall(pos, SqlStdOperatorTable.DIVIDE_INTEGER, e,
           makeExactLiteral(
               divider.divide(multiplier, RoundingMode.UNNECESSARY)));

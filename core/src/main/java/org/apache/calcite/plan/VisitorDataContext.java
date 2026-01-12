@@ -60,21 +60,21 @@ import java.util.List;
 
 /**
  * 用于评估 RexExpression（行表达式）的 DataContext 实现
- * 
+ *
  * 类作用说明：
  * -----------
  * VisitorDataContext 是 DataContext 接口的一个特殊实现，主要用于在查询优化和验证阶段
  * 评估 Rex 表达式的值。它不是用于实际执行查询，而是用于：
- * 
+ *
  * 1. 表达式蕴含检查（Implication Checking）：检查一个条件是否蕴含另一个条件
  * 2. 查询优化：在优化器中评估表达式，帮助做出优化决策
  * 3. 表达式简化：通过提供具体的值来简化表达式
- * 
+ *
  * 该类的工作原理是：
  * - 维护一个值数组，对应关系表达式的输入字段
  * - 当需要评估表达式时，提供这些值作为上下文
  * - 主要用于处理形如 "字段 = 常量" 这样的简单条件
- * 
+ *
  * 应用场景：
  * - 在检查谓词蕴含时，需要评估某个谓词是否在给定条件下成立
  * - 在子查询重写和优化中，需要评估条件表达式的结果
@@ -99,11 +99,11 @@ public class VisitorDataContext implements DataContext {
   // 参数说明：
   // - values: 输入记录的值数组，可以为 null
   //           数组的每个元素对应一个输入字段的值，索引与字段位置对应
-  // 
+  //
   // 构造逻辑：
   // - 将传入的值数组保存到成员变量 values 中
   // - 该构造方法非常简单，只是保存引用，不做任何复制或验证
-  // 
+  //
   // 使用场景：
   // - 在静态工厂方法 of() 中创建实例时使用
   // - 当已经准备好值数组时，可以直接构造实例
@@ -112,68 +112,68 @@ public class VisitorDataContext implements DataContext {
   }
 
   // 实现 DataContext 接口方法：获取根模式（Schema）
-  // 
+  //
   // 方法作用：
   // - 返回当前数据上下文的根 Schema，包含所有可用的表、函数等元数据
-  // 
+  //
   // 实现说明：
   // - 该方法直接抛出 RuntimeException 异常，标记为 "Unsupported"（不支持）
   // - 原因：VisitorDataContext 不是用于实际执行查询，而是用于表达式评估
   // - 实际查询执行需要完整的 Schema 信息，但 VisitorDataContext 不需要
   // - 如果调用此方法，说明使用方式错误
-  // 
+  //
   // 返回值：永远不返回，总是抛出异常
   @Override public SchemaPlus getRootSchema() {
     throw new RuntimeException("Unsupported");
   }
 
   // 实现 DataContext 接口方法：获取类型工厂
-  // 
+  //
   // 方法作用：
   // - 返回 JavaTypeFactory 实例，用于创建和转换 Java 类型
   // - 类型工厂负责在 SQL 类型和 Java 类型之间进行映射
-  // 
+  //
   // 实现说明：
   // - 该方法直接抛出 RuntimeException 异常，标记为 "Unsupported"（不支持）
   // - 原因：VisitorDataContext 不需要类型转换功能，它只处理简单的值评估
   // - 如果调用此方法，说明使用方式错误
-  // 
+  //
   // 返回值：永远不返回，总是抛出异常
   @Override public JavaTypeFactory getTypeFactory() {
     throw new RuntimeException("Unsupported");
   }
 
   // 实现 DataContext 接口方法：获取查询提供者
-  // 
+  //
   // 方法作用：
   // - 返回 QueryProvider 实例，用于执行 LINQ 风格的查询
   // - QueryProvider 提供了创建和执行可枚举查询的能力
-  // 
+  //
   // 实现说明：
   // - 该方法直接抛出 RuntimeException 异常，标记为 "Unsupported"（不支持）
   // - 原因：VisitorDataContext 不执行实际的查询，只是提供评估上下文
   // - 如果调用此方法，说明使用方式错误
-  // 
+  //
   // 返回值：永远不返回，总是抛出异常
   @Override public QueryProvider getQueryProvider() {
     throw new RuntimeException("Unsupported");
   }
 
   // 实现 DataContext 接口方法：根据名称获取值
-  // 
+  //
   // 方法作用：
   // - 根据变量名获取对应的值
   // - 这是 DataContext 接口的核心方法，用于在表达式评估时获取变量的值
-  // 
+  //
   // 参数说明：
   // - name: 变量名，标识要获取的值
-  // 
+  //
   // 实现说明：
   // - 如果 name 等于 "inputRecord"，返回 values 数组
   // - "inputRecord" 是一个特殊的预定义名称，用于访问输入记录的所有字段值
   // - 对于其他名称，返回 null，表示不支持该变量
   // - 这个设计允许表达式通过 "inputRecord" 访问整个输入记录
-  // 
+  //
   // 返回值：
   // - 如果 name 是 "inputRecord"，返回 values 数组（可能为 null）
   // - 否则返回 null
@@ -188,22 +188,22 @@ public class VisitorDataContext implements DataContext {
     }
   }
   // 静态工厂方法：从关系节点和逻辑过滤器创建 DataContext
-  // 
+  //
   // 方法作用：
   // - 根据目标关系节点（targetRel）和查询过滤器（queryRel）创建 DataContext
   // - 这是一个便捷方法，简化了从 RelNode 创建 DataContext 的过程
-  // 
+  //
   // 参数说明：
   // - targetRel: 目标关系节点，表示要操作的关系表达式
   //              通过 getRowType() 可以获取该节点的行类型信息
   // - queryRel: 逻辑过滤器节点，包含过滤条件
   //             通过 getCondition() 可以获取过滤条件表达式
-  // 
+  //
   // 实现说明：
   // - 提取目标关系节点的行类型（row type）
   // - 提取逻辑过滤器的条件表达式（condition）
   // - 调用另一个重载的 of() 方法来创建 DataContext
-  // 
+  //
   // 返回值：
   // - 成功时返回 VisitorDataContext 实例
   // - 如果无法解析条件，返回 null
@@ -213,35 +213,35 @@ public class VisitorDataContext implements DataContext {
   }
 
   // 静态工厂方法：从行类型和表达式创建 DataContext
-  // 
+  //
   // 方法作用：
   // - 根据行类型（rowType）和 Rex 表达式（rex）创建 DataContext
   // - 该方法处理二元比较表达式（如 "字段 = 常量"）
   // - 提取表达式中的字段引用和常量值，构造值数组
-  // 
+  //
   // 参数说明：
   // - rowType: 关系类型的元数据，描述行的结构（字段列表、类型等）
   // - rex: Rex 表达式，通常是二元比较表达式（如 =, <, > 等）
   //        期望该表达式是一个 RexCall，包含两个操作数
-  // 
+  //
   // 实现逻辑：
   // 1. 获取行类型中的字段数量，确定值数组的大小
   // 2. 将 rex 强制转换为 RexCall，获取操作数列表
   // 3. 提取第一个操作数（通常是字段引用）
   // 4. 提取第二个操作数（通常是常量字面量）
   // 5. 调用 getValue() 方法解析字段索引和值
-  * 6. 如果解析成功，创建值数组并填充对应的值
-  * 7. 返回 VisitorDataContext 实例
-  * 
-  * 限制：
-  * - 只处理二元表达式（两个操作数）
-  * - 期望第一个操作数是字段引用，第二个是常量
-  * - 不支持更复杂的表达式
-  * 
-  * 返回值：
-  * - 成功时返回 VisitorDataContext 实例
-  * - 如果表达式格式不符合要求或无法解析，返回 null
-  */
+  // * 6. 如果解析成功，创建值数组并填充对应的值
+  // * 7. 返回 VisitorDataContext 实例
+  // *
+  // * 限制：
+  // * - 只处理二元表达式（两个操作数）
+  // * - 期望第一个操作数是字段引用，第二个是常量
+  // * - 不支持更复杂的表达式
+  // *
+  // * 返回值：
+  // * - 成功时返回 VisitorDataContext 实例
+  // * - 如果表达式格式不符合要求或无法解析，返回 null
+  // */
   public static @Nullable DataContext of(RelDataType rowType, RexNode rex) {
     // 获取行类型中的字段数量，用于确定值数组的大小
     // fieldList() 返回所有字段的列表，size() 返回字段数量
@@ -274,36 +274,36 @@ public class VisitorDataContext implements DataContext {
   }
 
   // 静态工厂方法：从行类型和使用列表创建 DataContext
-  // 
+  //
   // 方法作用：
   // - 根据行类型和字段引用-值对列表创建 DataContext
   // - 该方法可以处理多个字段的赋值，比前一个方法更通用
-  * - 用于构建包含多个字段值的 DataContext
-  * 
-  * 参数说明：
-  * - rowType: 关系类型的元数据，描述行的结构
-  * - usageList: 字段引用和表达式的配对列表
-  *              每个元素的 key 是 RexInputRef（字段引用）
-  *              每个元素的 value 是 RexNode（通常是常量表达式）
-  *              List 使用通配符 ? extends 表示支持多种 RexNode 子类型
-  * 
-  * 实现逻辑：
-  * 1. 获取行类型中的字段数量
-  * 2. 创建值数组，初始化为 null
-  * 3. 遍历 usageList 中的每个配对
-  * 4. 对每个配对，调用 getValue() 解析字段索引和值
-  * 5. 如果任一配对解析失败，记录警告并返回 null
-  * 6. 将解析出的值填充到对应位置
-  * 7. 返回填充好的 VisitorDataContext 实例
-  * 
-  * 错误处理：
-  * - 如果任何一个字段-值对无法解析，整个方法返回 null
-  * - 使用日志记录器记录警告信息，便于调试
-  * 
-  * 返回值：
-  * - 所有字段都成功解析时，返回 VisitorDataContext 实例
-  * - 任一字段解析失败时，返回 null
-  */
+  // * - 用于构建包含多个字段值的 DataContext
+  // *
+  // * 参数说明：
+  // * - rowType: 关系类型的元数据，描述行的结构
+  // * - usageList: 字段引用和表达式的配对列表
+  // *              每个元素的 key 是 RexInputRef（字段引用）
+  // *              每个元素的 value 是 RexNode（通常是常量表达式）
+  // *              List 使用通配符 ? extends 表示支持多种 RexNode 子类型
+  // *
+  // * 实现逻辑：
+  // * 1. 获取行类型中的字段数量
+  // * 2. 创建值数组，初始化为 null
+  // * 3. 遍历 usageList 中的每个配对
+  // * 4. 对每个配对，调用 getValue() 解析字段索引和值
+  // * 5. 如果任一配对解析失败，记录警告并返回 null
+  // * 6. 将解析出的值填充到对应位置
+  // * 7. 返回填充好的 VisitorDataContext 实例
+  // *
+  // * 错误处理：
+  // * - 如果任何一个字段-值对无法解析，整个方法返回 null
+  // * - 使用日志记录器记录警告信息，便于调试
+  // *
+  // * 返回值：
+  // * - 所有字段都成功解析时，返回 VisitorDataContext 实例
+  // * - 任一字段解析失败时，返回 null
+  // */
   public static @Nullable DataContext of(RelDataType rowType,
       List<? extends Pair<RexInputRef, ? extends @Nullable RexNode>> usageList) {
     // 获取行类型中的字段数量
@@ -333,50 +333,50 @@ public class VisitorDataContext implements DataContext {
   }
 
   // 静态辅助方法：从字段引用和常量表达式中提取字段索引和值
-  * 
-  * 方法作用：
-  * - 核心解析方法，从 RexInputRef 和 RexLiteral 中提取字段索引和对应的 Java 值
-  * - 处理各种 SQL 类型的值转换
-  * - 移除类型转换（CAST）操作，直接获取底层值
-  * 
-  * 参数说明：
-  * - inputRef: 字段引用（RexInputRef），指向输入行中的某个字段
-  *             可能为 null，表示没有字段引用
-  * - literal: 常量表达式（RexLiteral），表示一个常量值
-  *            可能为 null，表示没有常量值
-  * 
-  * 返回值：
-  * - 成功时返回 Pair<Integer, Object>，其中：
-  *   - Integer: 字段索引（在输入行中的位置）
-  *   - Object: 转换后的 Java 值（根据 SQL 类型映射到对应的 Java 类型）
-  * - 失败时返回 null，包括以下情况：
-  *     * inputRef 不是 RexInputRef 类型
-  *     * literal 不是 RexLiteral 类型
-  *     * 类型信息缺失（SqlTypeName 为 null）
-  *     * 不支持的类型
-  * 
-  * 实现逻辑：
-  * 1. 移除输入引用和常量上的类型转换（CAST）
-  * 2. 验证参数类型是否正确
-  * 3. 获取字段索引
-  * 4. 获取字段类型信息
-  * 5. 根据类型进行值转换
-  * 6. 返回字段索引和转换后的值
-  * 
-  * 类型映射规则：
-  * - INTEGER -> Integer
-  * - FLOAT/DOUBLE -> Double
-  * - REAL -> Float
-  * - BIGINT -> Long
-  * - SMALLINT -> Short
-  * - TINYINT -> Byte
-  * - DECIMAL -> BigDecimal
-  * - DATE/TIME -> Integer
-  * - TIMESTAMP -> Long
-  * - CHAR -> Character
-  * - VARCHAR -> String
-  * - 其他类型 -> 尝试使用 Comparable 接口
-  */
+  // *
+  // * 方法作用：
+  // * - 核心解析方法，从 RexInputRef 和 RexLiteral 中提取字段索引和对应的 Java 值
+  // * - 处理各种 SQL 类型的值转换
+  // * - 移除类型转换（CAST）操作，直接获取底层值
+  // *
+  // * 参数说明：
+  // * - inputRef: 字段引用（RexInputRef），指向输入行中的某个字段
+  // *             可能为 null，表示没有字段引用
+  // * - literal: 常量表达式（RexLiteral），表示一个常量值
+  // *            可能为 null，表示没有常量值
+  // *
+  // * 返回值：
+  // * - 成功时返回 Pair<Integer, Object>，其中：
+  // *   - Integer: 字段索引（在输入行中的位置）
+  // *   - Object: 转换后的 Java 值（根据 SQL 类型映射到对应的 Java 类型）
+  // * - 失败时返回 null，包括以下情况：
+  // *     * inputRef 不是 RexInputRef 类型
+  // *     * literal 不是 RexLiteral 类型
+  // *     * 类型信息缺失（SqlTypeName 为 null）
+  // *     * 不支持的类型
+  // *
+  // * 实现逻辑：
+  // * 1. 移除输入引用和常量上的类型转换（CAST）
+  // * 2. 验证参数类型是否正确
+  // * 3. 获取字段索引
+  // * 4. 获取字段类型信息
+  // * 5. 根据类型进行值转换
+  // * 6. 返回字段索引和转换后的值
+  // *
+  // * 类型映射规则：
+  // * - INTEGER -> Integer
+  // * - FLOAT/DOUBLE -> Double
+  // * - REAL -> Float
+  // * - BIGINT -> Long
+  // * - SMALLINT -> Short
+  // * - TINYINT -> Byte
+  // * - DECIMAL -> BigDecimal
+  // * - DATE/TIME -> Integer
+  // * - TIMESTAMP -> Long
+  // * - CHAR -> Character
+  // * - VARCHAR -> String
+  // * - 其他类型 -> 尝试使用 Comparable 接口
+  // */
   public static @Nullable Pair<Integer, ? extends @Nullable Object> getValue(
       @Nullable RexNode inputRef, @Nullable RexNode literal) {
     // 如果 inputRef 不为 null，移除可能的类型转换（CAST）操作

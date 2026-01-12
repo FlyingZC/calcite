@@ -415,7 +415,7 @@ public class ReflectiveSchemaTest {
     CalciteAssert.that()
         .withSchema("s", new ReflectiveSchema(new DateColumnSchema()))
         .query("select * from \"s\".\"emps\"")
-        .returns(""
+        .returns("
             + "hireDate=1970-01-01; empid=10; deptno=20; name=fred; salary=0.0; commission=null\n"
             + "hireDate=1970-04-11; empid=10; deptno=20; name=bill; salary=0.0; commission=null\n");
   }
@@ -440,7 +440,7 @@ public class ReflectiveSchemaTest {
         .returns("primitiveBoolean=false\n"
             + "primitiveBoolean=true\n");
     with.query("select * from \"s\".\"everyTypes\"")
-        .returns(""
+        .returns("
             + "primitiveBoolean=false; primitiveByte=0; primitiveChar=\u0000; "
             + "primitiveShort=0; primitiveInt=0; primitiveLong=0; primitiveFloat=0.0; "
             + "primitiveDouble=0.0; wrapperBoolean=false; wrapperByte=0; wrapperCharacter=\u0000; "

@@ -93,103 +93,103 @@ class VolcanoPlannerTest {
    * Tests transformation of a leaf from NONE to PHYS.
    */
   @Test void testTransformLeaf() {
-    VolcanoPlanner planner = new VolcanoPlanner();
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
 
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             leafRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysLeafRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysLeafRel.class));  // 验证结果是PhysLeafRel类型
   }
 
   /**
    * Tests transformation of a single+leaf from NONE to PHYS.
    */
   @Test void testTransformSingleGood() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysSingleRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysSingleRel.class));  // 验证结果是PhysSingleRel类型
   }
 
   @Test void testMemoizeInputRelNodes() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
 
     // The rule that triggers the assert rule
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
 
     // Leaf RelNode
-    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");
+    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");  // 创建NONE约定的叶子关系表达式
     RelNode leafPhy = planner
-        .changeTraits(leafRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));
+        .changeTraits(leafRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
 
     // RelNode with leaf RelNode as single input
-    NoneSingleRel singleRel = new NoneSingleRel(cluster, leafPhy);
+    NoneSingleRel singleRel = new NoneSingleRel(cluster, leafPhy);  // 创建NONE约定的单输入关系表达式
     RelNode singlePhy = planner
-        .changeTraits(singleRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));
+        .changeTraits(singleRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
 
     // Binary RelNode with identical input on either side
     PhysBiRel parent =
-        new PhysBiRel(cluster, cluster.traitSetOf(PHYS_CALLING_CONVENTION),
+        new PhysBiRel(cluster, cluster.traitSetOf(PHYS_CALLING_CONVENTION),  // 目标特征集为PHYS约定
             singlePhy, singlePhy);
     planner.setRoot(parent);
 
-    RelNode result = planner.chooseDelegate().findBestExp();
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
 
     // Expect inputs to remain identical
     assertThat(result.getInput(1), is(result.getInput(0)));
   }
 
   @Test void testPlanToDot() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
 
     StringWriter sw = new StringWriter();
     PrintWriter pw = new PrintWriter(sw);
@@ -209,25 +209,25 @@ class VolcanoPlannerTest {
    * VolcanoRuleCall should look at RelSubset rather than RelSet
    * when checking child ordinal of a parent operand</a>. */
   @Test void testMatchedOperandsDifferent() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
 
     // The rule that triggers the assert rule
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
 
     // The rule asserting that the matched operands are different
     planner.addRule(AssertOperandsDifferentRule.INSTANCE);
 
     // Construct two children in the same set and a parent RelNode
-    NoneLeafRel leftRel = new NoneLeafRel(cluster, "a");
+    NoneLeafRel leftRel = new NoneLeafRel(cluster, "a");  // 初始化叶子节点
     RelNode leftPhy = planner
-        .changeTraits(leftRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));
+        .changeTraits(leftRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
     PhysLeafRel rightPhy =
         new PhysLeafRel(cluster, PHYS_CALLING_CONVENTION_2, "b");
 
     PhysBiRel parent =
-        new PhysBiRel(cluster, cluster.traitSetOf(PHYS_CALLING_CONVENTION),
+        new PhysBiRel(cluster, cluster.traitSetOf(PHYS_CALLING_CONVENTION),  // 目标特征集为PHYS约定
             leftPhy, rightPhy);
     planner.setRoot(parent);
 
@@ -271,27 +271,27 @@ class VolcanoPlannerTest {
   }
 
   @Test void testMultiInputsParentOpMatching() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
 
     // The trigger rule that generates PhysLeafRel from NoneLeafRel
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
 
     // The rule with third child op matching PhysLeafRel, which should not be
     // matched at all
     planner.addRule(ThreeInputsUnionRule.INSTANCE);
 
     // Construct a union with only two children
-    NoneLeafRel leftRel = new NoneLeafRel(cluster, "b");
+    NoneLeafRel leftRel = new NoneLeafRel(cluster, "b");  // 初始化叶子节点
     RelNode leftPhy = planner
-        .changeTraits(leftRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));
+        .changeTraits(leftRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
     PhysLeafRel rightPhy =
         new PhysLeafRel(cluster, PHYS_CALLING_CONVENTION, "b");
 
     planner.setRoot(
         new EnumerableUnion(cluster,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION),
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION),  // 目标特征集为PHYS约定
             Arrays.asList(leftPhy, rightPhy), false));
 
     planner.chooseDelegate().findBestExp();
@@ -302,36 +302,36 @@ class VolcanoPlannerTest {
    * once per rel in a set or rel in a subset.)
    */
   @Test void testSubsetRule() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
     planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
 
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
     List<String> buf = new ArrayList<>();
     SubsetRule.Config config = SubsetRule.config(buf);
     planner.addRule(config.toRule());
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.changeTraits(leafRel,
-        cluster.traitSetOf(PHYS_CALLING_CONVENTION)
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.changeTraits(leafRel,  // 从NONE约定转换为PHYS约定
+        cluster.traitSetOf(PHYS_CALLING_CONVENTION)  // 目标特征集为PHYS约定
         .plus(RelCollations.of(0)));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
 
     buf = config.buf();
-    assertThat(result, instanceOf(PhysSingleRel.class));
+    assertThat(result, instanceOf(PhysSingleRel.class));  // 验证结果是PhysSingleRel类型
     assertThat(sort(buf),
         equalTo(
             sort(
@@ -341,20 +341,20 @@ class VolcanoPlannerTest {
   }
 
   @Test void testTypeMismatch() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
     planner.addRule(MockPhysLeafRule.INSTANCE);
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             leafRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
 
     RuntimeException ex =
         assertThrows(RuntimeException.class, () ->
@@ -388,26 +388,26 @@ class VolcanoPlannerTest {
    * on the subsets that are merged into the RelSets.
    */
   @Test void testSetMergeMatchSubsetRule() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
     planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
 
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
     planner.addRule(PhysSingleInputSetMergeRule.INSTANCE);
     List<String> buf = new ArrayList<>();
     PhysSingleSubsetRule.Config config = PhysSingleSubsetRule.config(buf);
     planner.addRule(config.toRule());
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");
-    NoneSingleRel singleRel = new NoneSingleRel(cluster, leafRel);
-    RelNode convertedRel = planner
-        .changeTraits(singleRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");  // 创建NONE约定的叶子关系表达式
+    NoneSingleRel singleRel = new NoneSingleRel(cluster, leafRel);  // 创建NONE约定的单输入关系表达式
+    RelNode convertedRel = planner  // 转换叶子节点的特征
+        .changeTraits(singleRel, cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
     buf = config.buf();
-    assertThat(result, instanceOf(PhysSingleRel.class));
+    assertThat(result, instanceOf(PhysSingleRel.class));  // 验证结果是PhysSingleRel类型
     assertThat(sort(buf),
         equalTo(
             sort("PhysSingleRel:RelSubset#0.PHYS.[]",
@@ -420,46 +420,46 @@ class VolcanoPlannerTest {
    */
   @Disabled // broken, because ReformedSingleRule matches child traits strictly
   @Test void testTransformSingleReformed() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
     planner.addRule(ReformedSingleRule.INSTANCE);
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysSingleRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysSingleRel.class));  // 验证结果是PhysSingleRel类型
   }
 
   private void removeTrivialProject(boolean useRule) {
-    VolcanoPlanner planner = new VolcanoPlanner();
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
 
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
     if (useRule) {
       planner.addRule(CoreRules.PROJECT_REMOVE);
     }
 
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
     planner.addRule(PhysProjectRule.INSTANCE);
 
     planner.addRule(PhysToIteratorRule.INSTANCE);
 
-    RelOptCluster cluster = newCluster(planner);
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
     PhysLeafRel leafRel =
         new PhysLeafRel(
             cluster,
@@ -470,16 +470,16 @@ class VolcanoPlannerTest {
         relBuilder.push(leafRel)
             .project(relBuilder.alias(relBuilder.field(0), "this"))
             .build();
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             projectRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
             cluster.traitSetOf(EnumerableConvention.INSTANCE));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
     assertThat(result, instanceOf(PhysToIteratorConverter.class));
   }
 
@@ -500,28 +500,28 @@ class VolcanoPlannerTest {
    */
   @Disabled // broken, because ReformedSingleRule matches child traits strictly
   @Test void testRemoveSingleReformed() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
     planner.addRule(ReformedRemoveSingleRule.INSTANCE);
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysLeafRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysLeafRel.class));  // 验证结果是PhysLeafRel类型
     PhysLeafRel resultLeaf = (PhysLeafRel) result;
     assertThat(resultLeaf.label, is("c"));
   }
@@ -532,36 +532,36 @@ class VolcanoPlannerTest {
    * first).
    */
   @Test void testRemoveSingleGood() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
-    planner.addRule(GoodSingleRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
+    planner.addRule(GoodSingleRule.INSTANCE);  // 添加GoodSingleRule规则，用于将NoneSingleRel转换为PhysSingleRel
     planner.addRule(GoodRemoveSingleRule.INSTANCE);
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    NoneSingleRel singleRel =
-        new NoneSingleRel(
+    NoneSingleRel singleRel =  // 创建NONE约定的单输入关系表达式
+        new NoneSingleRel(  // 初始化单输入节点
             cluster,
             leafRel);
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             singleRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysLeafRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysLeafRel.class));  // 验证结果是PhysLeafRel类型
     PhysLeafRel resultLeaf = (PhysLeafRel) result;
     assertThat(resultLeaf.label, is("c"));
   }
 
   @Test void testMergeJoin() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
     // Below two lines are important for the planner to use collation trait and generate merge join
     planner.addRelTraitDef(RelCollationTraitDef.INSTANCE);
@@ -571,7 +571,7 @@ class VolcanoPlannerTest {
     planner.addRule(EnumerableRules.ENUMERABLE_VALUES_RULE);
     planner.addRule(EnumerableRules.ENUMERABLE_SORT_RULE);
 
-    RelOptCluster cluster = newCluster(planner);
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
 
     RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(cluster, null);
     RelNode logicalPlan = relBuilder
@@ -582,7 +582,7 @@ class VolcanoPlannerTest {
 
     RelTraitSet desiredTraits =
         cluster.traitSet().replace(EnumerableConvention.INSTANCE);
-    final RelNode newRoot = planner.changeTraits(logicalPlan, desiredTraits);
+    final RelNode newRoot = planner.changeTraits(logicalPlan, desiredTraits);  // 从NONE约定转换为PHYS约定
     planner.setRoot(newRoot);
 
     RelNode bestExp = planner.findBestExp();
@@ -597,14 +597,14 @@ class VolcanoPlannerTest {
   }
 
   @Test void testPruneNode() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
     planner.setRoot(leafRel);
@@ -636,25 +636,25 @@ class VolcanoPlannerTest {
   @Test void testListener() {
     TestListener listener = new TestListener();
 
-    VolcanoPlanner planner = new VolcanoPlanner();
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
     planner.addListener(listener);
 
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
 
-    planner.addRule(PhysLeafRule.INSTANCE);
+    planner.addRule(PhysLeafRule.INSTANCE);  // 添加PhysLeafRule规则，用于将NoneLeafRel转换为PhysLeafRel
 
-    RelOptCluster cluster = newCluster(planner);
-    NoneLeafRel leafRel =
-        new NoneLeafRel(
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
+    NoneLeafRel leafRel =  // 创建NONE约定的叶子关系表达式
+        new NoneLeafRel(  // 初始化叶子节点
             cluster,
             "a");
-    RelNode convertedRel =
-        planner.changeTraits(
+    RelNode convertedRel =  // 转换叶子节点的特征
+        planner.changeTraits(  // 从NONE约定转换为PHYS约定
             leafRel,
-            cluster.traitSetOf(PHYS_CALLING_CONVENTION));
-    planner.setRoot(convertedRel);
-    RelNode result = planner.chooseDelegate().findBestExp();
-    assertThat(result, instanceOf(PhysLeafRel.class));
+            cluster.traitSetOf(PHYS_CALLING_CONVENTION));  // 目标特征集为PHYS约定
+    planner.setRoot(convertedRel);  // 设置优化器的根节点
+    RelNode result = planner.chooseDelegate().findBestExp();  // 执行优化，找到最优执行计划
+    assertThat(result, instanceOf(PhysLeafRel.class));  // 验证结果是PhysLeafRel类型
 
     List<RelOptListener.RelEvent> eventList = listener.getEventList();
 
@@ -738,13 +738,13 @@ class VolcanoPlannerTest {
    * should merge the less popular/smaller/younger set into the more
    * popular/bigger/older one. */
   @Test void testSetMergeWithCycle() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
 
-    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");
-    NoneSingleRel singleRelA = new NoneSingleRel(cluster, leafRel);
-    NoneSingleRel singleRelB = new NoneSingleRel(cluster, singleRelA);
+    NoneLeafRel leafRel = new NoneLeafRel(cluster, "a");  // 创建NONE约定的叶子关系表达式
+    NoneSingleRel singleRelA = new NoneSingleRel(cluster, leafRel);  // 初始化单输入节点
+    NoneSingleRel singleRelB = new NoneSingleRel(cluster, singleRelA);  // 初始化单输入节点
 
     planner.setRoot(singleRelA);
     RelSet setA = planner.ensureRegistered(singleRelA, null).getSet();
@@ -767,9 +767,9 @@ class VolcanoPlannerTest {
    * after adding break to the inner loop.
    */
   @Test void testGetParents() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
     RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(cluster, null);
     RelNode joinRel = relBuilder
         .values(new String[]{"id", "name"}, "2", "a", "1", "b")
@@ -788,9 +788,9 @@ class VolcanoPlannerTest {
    * after adding break to the inner loop.
    */
   @Test void testGetParentSubsets() {
-    VolcanoPlanner planner = new VolcanoPlanner();
-    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
-    RelOptCluster cluster = newCluster(planner);
+    VolcanoPlanner planner = new VolcanoPlanner();  // 创建VolcanoPlanner优化器实例
+    planner.addRelTraitDef(ConventionTraitDef.INSTANCE);  // 注册调用约定特征定义
+    RelOptCluster cluster = newCluster(planner);  // 创建关系优化集群
     RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(cluster, null);
     RelNode joinRel = relBuilder
         .values(new String[]{"id", "name"}, "2", "a", "1", "b")
@@ -1008,7 +1008,7 @@ class VolcanoPlannerTest {
     }
 
     @Override public void onMatch(RelOptRuleCall call) {
-      NoneSingleRel singleRel = call.rel(0);
+      NoneSingleRel singleRel = call.rel(0);  // 创建NONE约定的单输入关系表达式
       RelNode childRel = call.rel(1);
       RelNode physInput =
           convert(
@@ -1126,7 +1126,7 @@ class VolcanoPlannerTest {
     }
 
     @Override public void onMatch(RelOptRuleCall call) {
-      NoneSingleRel singleRel = call.rel(0);
+      NoneSingleRel singleRel = call.rel(0);  // 创建NONE约定的单输入关系表达式
       PhysLeafRel leafRel = call.rel(1);
       call.transformTo(
           new PhysLeafRel(

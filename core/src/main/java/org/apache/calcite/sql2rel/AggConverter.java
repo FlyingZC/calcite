@@ -372,8 +372,8 @@ class AggConverter implements SqlVisitor<Void> {
       return;
 
     case COUNTIF:
-      // COUNTIF(b)  ==> COUNT(*) FILTER (WHERE b)
-      // COUNTIF(b) FILTER (WHERE b2)  ==> COUNT(*) FILTER (WHERE b2 AND b)
+      // COUNTIF(b)  =-> COUNT(*) FILTER (WHERE b)
+      // COUNTIF(b) FILTER (WHERE b2)  =-> COUNT(*) FILTER (WHERE b2 AND b)
       call2 =
           SqlStdOperatorTable.COUNT.createCall(pos, SqlIdentifier.star(pos));
       final SqlNode filter2 = SqlUtil.andExpressions(filter, call.operand(0));

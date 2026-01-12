@@ -34,6 +34,8 @@ import static com.google.common.base.Preconditions.checkArgument; // 参数检�
  * 支持的功能包括：添加规则类、规则集合、规则实例、规则组、转换规则、公共子表达式规则、匹配顺序控制、匹配限制控制、子程序等
  */
   //~ Instance fields --------------------------------------------------------
+public class HepProgramBuilder {
+  //~ Instance fields --------------------------------------------------------
 
   private final List<HepInstruction> instructions = new ArrayList<>(); // 存储优化程序的所有指令列表，每个指令代表一个优化操作，如添加规则、设置匹配顺序等
 

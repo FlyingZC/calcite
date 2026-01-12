@@ -68,7 +68,7 @@ import java.util.List;
  * <pre>{@code
  * LogicalProject(ENAME=[CAST($0):VARCHAR])
  *   LogicalAggregate(group=[{0}])
- *     LogicalJoin(condition=[<=>(CAST($0):VARCHAR, CAST($1):VARCHAR)], joinType=[semi])
+ *     LogicalJoin(condition=[<->(CAST($0):VARCHAR, CAST($1):VARCHAR)], joinType=[semi])
  *       LogicalJoin(condition=[=(CAST($0):VARCHAR, $1)], joinType=[semi])
  *         LogicalProject(ENAME=[$1])
  *           LogicalFilter(condition=[=($7, 10)])

@@ -2061,7 +2061,7 @@ SELECT STRPOS("abcabc", "bc") as result;
 #####################################################################
 # CONTAINS_SUBSTR
 #
-# CONTAINS_SUBSTR(expression, search_value_literal[, json_scope=>json_scope_value])
+# CONTAINS_SUBSTR(expression, search_value_literal[, json_scope->json_scope_value])
 #
 # Performs a normalized, case-insensitive search to see if a value
 # exists as a substring in an expression. Returns TRUE if the value
@@ -2165,7 +2165,7 @@ SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch") AS result;
 
 !ok
 
-SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope=>"JSON_KEYS") AS result;
+SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope->"JSON_KEYS") AS result;
 +--------+
 | result |
 +--------+
@@ -2175,7 +2175,7 @@ SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope=>"JSON_KEYS") AS 
 
 !ok
 
-SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope=>"JSON_VALUES") AS result;
+SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope->"JSON_VALUES") AS result;
 +--------+
 | result |
 +--------+
@@ -2185,7 +2185,7 @@ SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope=>"JSON_VALUES") A
 
 !ok
 
-SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope=>"JSON_KEYS_AND_VALUES") AS result;
+SELECT CONTAINS_SUBSTR('{"lunch":"soup"}', "lunch", json_scope->"JSON_KEYS_AND_VALUES") AS result;
 +--------+
 | result |
 +--------+

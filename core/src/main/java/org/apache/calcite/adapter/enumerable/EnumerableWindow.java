@@ -357,13 +357,13 @@ public class EnumerableWindow extends Window implements EnumerableRel { // 类�
                 ? startUnchecked // 直接使用未检查的起始位置
                 : builder4.append("startTmp", // 否则需要用max确保不小于最小索引
                     Expressions.call(null, BuiltInMethod.MATH_MAX.method, // 调用Math.max方法
-                        startUnchecked, minX))); // 取startUnchecked和minX的较大值
+                        startUnchecked, minX)); // 取startUnchecked和minX的较大值
         Expression endTmp = // 计算临时结束位置
             group.upperBound.isUnbounded() || endUnchecked == i_ // 如果上边界无界或等于当前行
                 ? endUnchecked // 直接使用未检查的结束位置
                 : builder4.append("endTmp", // 否则需要用min确保不大于最大索引
                     Expressions.call(null, BuiltInMethod.MATH_MIN.method, // 调用Math.min方法
-                        endUnchecked, maxX))); // 取endUnchecked和maxX的较小值
+                        endUnchecked, maxX)); // 取endUnchecked和maxX的较小值
 
         ParameterExpression startPe = // 声明经过检查的起始位置变量
             Expressions.parameter(0, int.class, builder4.newName("startChecked")); // 类型为int，名称自动生成
@@ -405,7 +405,7 @@ public class EnumerableWindow extends Window implements EnumerableRel { // 类�
         frameRowCount = // 根据窗口是否有效返回行数或0
             builder4.append("totalRows", // 添加到代码块4中，命名为"totalRows"
                 Expressions.condition(hasRows, rowCountWhenNonEmpty, // 如果窗口有效，返回计算的行数
-                    Expressions.constant(0)))); // 否则返回0
+                    Expressions.constant(0))); // 否则返回0
       }
 
       ParameterExpression actualStart = // 声明实际起始位置变量，用于优化窗口计算
@@ -442,7 +442,7 @@ public class EnumerableWindow extends Window implements EnumerableRel { // 类�
         builder5.add( // 优化：直接使用条件表达式设置actualStart，避免不必要的if语句
             Expressions.declare(0, actualStart, // 声明actualStart变量
                 Expressions.condition(needRecomputeWindow, startX, // 如果需要重新计算，使用startX
-                    Expressions.add(prevEnd, Expressions.constant(1)))))); // 否则从上一个结束位置的下一位开始
+                    Expressions.add(prevEnd, Expressions.constant(1))))); // 否则从上一个结束位置的下一位开始
       } else { // 如果重置代码块有多个语句
         builder5.add( // 需要使用if语句来决定是否执行重置代码
             Expressions.declare(0, actualStart, null)); // 声明actualStart变量，初始值为null
@@ -451,7 +451,7 @@ public class EnumerableWindow extends Window implements EnumerableRel { // 类�
                 resetWindowState, // 执行重置代码块
                 Expressions.statement( // 否则只更新actualStart
                     Expressions.assign(actualStart, // actualStart =
-                        Expressions.add(prevEnd, Expressions.constant(1))))))); // prevEnd + 1
+                        Expressions.add(prevEnd, Expressions.constant(1)))))); // prevEnd + 1
       }
 
       if (lowerBoundCanChange instanceof BinaryExpression) { // 如果下边界可能会变化（不是常量false）
@@ -787,11 +787,11 @@ public class EnumerableWindow extends Window implements EnumerableRel { // 类�
 
                 Expressions.call(source_, BuiltInMethod.ENUMERABLE_FOREACH.method, // 调用源数据的foreach方法
 
-    
+
 
                     Expressions.lambda(builder2.toBlock(), v_)))); // 传入lambda表达式（builder2的代码块）
 
-    
+
 
         return Pair.of(multiMap_, // 返回键值对：多重映射和迭代器
 

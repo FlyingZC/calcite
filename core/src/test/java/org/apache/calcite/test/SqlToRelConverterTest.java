@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.test;
+package org.apache.calcite.test; // 包声明:该类位于org.apache.calcite.test包下,用于测试Calcite框架的SQL到关系代数转换功能
 
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
 import org.apache.calcite.config.CalciteConnectionProperty;
@@ -102,164 +102,149 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     return LOCAL_FIXTURE;
   }
 
-  /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6350">[CALCITE-6350]
-   * Unexpected result from UNION with literals expression</a>. */
-  @Test void testUnionLiterals() {
-    final String sql = "select * from (select 'word' i union all select 'w' i) t1 where i='w'";
-    sql(sql).ok();
+  /** 测试用例:验证UNION操作与字面量表达式的正确性,JIRA:CALCITE-6350 */
+  @Test void testUnionLiterals() { // 测试方法:testUnionLiterals - 测试UNION ALL与字面量
+    final String sql = "select * from (select 'word' i union all select 'w' i) t1 where i='w'"; // 定义测试SQL:UNION ALL字面量查询并过滤
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保字面量UNION能正确转换
   }
 
-  @Test void testDotLiteralAfterNestedRow() {
-    final String sql = "select ((1,2),(3,4,5)).\"EXPR$1\".\"EXPR$2\" from emp";
-    sql(sql).ok();
+  @Test void testDotLiteralAfterNestedRow() { // 测试方法:testDotLiteralAfterNestedRow - 测试嵌套行类型后点号访问
+    final String sql = "select ((1,2),(3,4,5)).\"EXPR$1\".\"EXPR$2\" from emp"; // 定义测试SQL:访问嵌套行字面量的字段
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保嵌套行字段访问能正确转换
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-3679">[CALCITE-3679]
-   * Allow lambda expressions in SQL queries</a>. */
-  @Test void testLambdaExpression() {
-    final String sql = "select higher_order_function(1, (x, y) -> y + 1)";
-    fixture()
-        .withFactory(c ->
-            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend()))
-        .withSql(sql)
-        .ok();
+  /** 测试用例:验证SQL查询中的Lambda表达式支持,JIRA:CALCITE-3679 */
+  @Test void testLambdaExpression() { // 测试方法:testLambdaExpression - 测试Lambda表达式
+    final String sql = "select higher_order_function(1, (x, y) -> y + 1)"; // 定义测试SQL:Lambda表达式作为函数参数
+    fixture() // 获取测试fixture
+        .withFactory(c -> // 配置测试工厂
+            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend())) // 扩展标准操作符表以支持自定义函数
+        .withSql(sql) // 设置测试SQL
+        .ok(); // 验证结果正确,确保Lambda表达式能正确解析和转换
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-3679">[CALCITE-3679]
-   * Allow lambda expressions in SQL queries</a>. */
-  @Test void testLambdaExpression2() {
-    final String sql = "select higher_order_function2(1, () -> -1)";
-    fixture()
-        .withFactory(c ->
-            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend()))
-        .withSql(sql)
-        .ok();
+  /** 测试用例:验证无参数Lambda表达式的支持,JIRA:CALCITE-3679 */
+  @Test void testLambdaExpression2() { // 测试方法:testLambdaExpression2 - 测试无参数Lambda表达式
+    final String sql = "select higher_order_function2(1, () -> -1)"; // 定义测试SQL:无参数Lambda表达式
+    fixture() // 获取测试fixture
+        .withFactory(c -> // 配置测试工厂
+            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend())) // 扩展标准操作符表
+        .withSql(sql) // 设置测试SQL
+        .ok(); // 验证结果正确,确保无参数Lambda表达式能正确处理
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-3679">[CALCITE-3679]
-   * Allow lambda expressions in SQL queries</a>. */
-  @Test void testLambdaExpression3() {
-    final String sql = "select higher_order_function(deptno, (x, deptno) -> deptno + 1) from emp";
-    fixture()
-        .withFactory(c ->
-            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend()))
-        .withSql(sql)
-        .ok();
+  /** 测试用例:验证Lambda表达式与列引用的混合使用,JIRA:CALCITE-3679 */
+  @Test void testLambdaExpression3() { // 测试方法:testLambdaExpression3 - 测试Lambda表达式与列名冲突
+    final String sql = "select higher_order_function(deptno, (x, deptno) -> deptno + 1) from emp"; // 定义测试SQL:Lambda参数与列名同名
+    fixture() // 获取测试fixture
+        .withFactory(c -> // 配置测试工厂
+            c.withOperatorTable(t -> MockSqlOperatorTable.standard().extend())) // 扩展标准操作符表
+        .withSql(sql) // 设置测试SQL
+        .ok(); // 验证结果正确,确保参数作用域正确区分
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-6116">[CALCITE-6116]
-   * Add EXISTS function (enabled in Spark library)</a>. */
-  @Test void testExistsFunctionInSpark() {
-    final String sql = "select \"EXISTS\"(array(1,2,3), x -> false)";
-    fixture()
-        .withFactory(c ->
-            c.withOperatorTable(t -> SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
-        .withSql(sql)
-        .ok();
+  /** 测试用例:验证EXISTS函数在Spark库中的支持,JIRA:CALCITE-6116 */
+  @Test void testExistsFunctionInSpark() { // 测试方法:testExistsFunctionInSpark - 测试Spark库的EXISTS函数
+    final String sql = "select \"EXISTS\"(array(1,2,3), x -> false)"; // 定义测试SQL:EXISTS函数调用
+    fixture() // 获取测试fixture
+        .withFactory(c -> // 配置测试工厂
+            c.withOperatorTable(t -> SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK))) // 使用Spark操作符表
+        .withSql(sql) // 设置测试SQL
+        .ok(); // 验证结果正确,确保EXISTS函数能正确转换
   }
 
-  @Test void testDotLiteralAfterRow() {
-    final String sql = "select row(1,2).\"EXPR$1\" from emp";
-    sql(sql).ok();
+  @Test void testDotLiteralAfterRow() { // 测试方法:testDotLiteralAfterRow - 测试行类型后点号访问
+    final String sql = "select row(1,2).\"EXPR$1\" from emp"; // 定义测试SQL:访问行字面量的字段
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testDotAfterParenthesizedIdentifier() {
-    final String sql = "select (home_address).city from emp_address";
-    sql(sql).ok();
+  @Test void testDotAfterParenthesizedIdentifier() { // 测试方法:testDotAfterParenthesizedIdentifier - 测试括号标识符后点号访问
+    final String sql = "select (home_address).city from emp_address"; // 定义测试SQL:访问结构化类型的字段
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testRowValueConstructorWithSubQuery() {
-    final String sql = "select ROW("
-        + "(select deptno\n"
-        + "from dept\n"
-        + "where dept.deptno = emp.deptno), emp.ename)\n"
-        + "from emp";
-    sql(sql).ok();
+  @Test void testRowValueConstructorWithSubQuery() { // 测试方法:testRowValueConstructorWithSubQuery - 测试行值构造器包含子查询
+    final String sql = "select ROW(" // 定义测试SQL:行值构造器包含子查询和列引用
+        + "(select deptno\n" // 子查询:选择deptno
+        + "from dept\n" // 从dept表
+        + "where dept.deptno = emp.deptno), emp.ename)\n" // 相关子查询条件和ename列
+        + "from emp"; // 从emp表
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保行值构造器能正确处理子查询
   }
 
-  @Test void testIntegerLiteral() {
-    final String sql = "select 1 from emp";
-    sql(sql).ok();
+  @Test void testIntegerLiteral() { // 测试方法:testIntegerLiteral - 测试整数字面量
+    final String sql = "select 1 from emp"; // 定义测试SQL:选择整数字面量
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testIntervalLiteralYearToMonth() {
-    final String sql = "select\n"
-        + "  cast(empno as Integer) * (INTERVAL '1-1' YEAR TO MONTH)\n"
-        + "from emp";
-    sql(sql).ok();
+  @Test void testIntervalLiteralYearToMonth() { // 测试方法:testIntervalLiteralYearToMonth - 测试年月间隔字面量
+    final String sql = "select\n" // 定义测试SQL:年月间隔字面量运算
+        + "  cast(empno as Integer) * (INTERVAL '1-1' YEAR TO MONTH)\n" // 类型转换后乘以间隔字面量
+        + "from emp"; // 从emp表
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testIntervalLiteralHourToMinute() {
-    final String sql = "select\n"
-        + " cast(empno as Integer) * (INTERVAL '1:1' HOUR TO MINUTE)\n"
-        + "from emp";
-    sql(sql).ok();
+  @Test void testIntervalLiteralHourToMinute() { // 测试方法:testIntervalLiteralHourToMinute - 测试时分间隔字面量
+    final String sql = "select\n" // 定义测试SQL:时分间隔字面量运算
+        + " cast(empno as Integer) * (INTERVAL '1:1' HOUR TO MINUTE)\n" // 类型转换后乘以间隔字面量
+        + "from emp"; // 从emp表
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testIntervalExpression() {
-    sql("select interval mgr hour as h from emp").ok();
+  @Test void testIntervalExpression() { // 测试方法:testIntervalExpression - 测试间隔表达式
+    sql("select interval mgr hour as h from emp").ok(); // 执行SQL并验证结果正确,测试间隔表达式转换
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-6115">[CALCITE-6115]
-   * Interval type specifier with zero fractional second precision does not pass validation</a>.
-   */
-  @Test void testIntervalSecondNoFractionalPart() {
-    sql("select interval '1' second(1,0) as h from emp").ok();
+  /** 测试用例:验证零小数秒精度的间隔类型说明符,JIRA:CALCITE-6115 */
+  @Test void testIntervalSecondNoFractionalPart() { // 测试方法:testIntervalSecondNoFractionalPart - 测试无小数秒的间隔
+    sql("select interval '1' second(1,0) as h from emp").ok(); // 执行SQL并验证结果正确
   }
 
-  @Test void testAliasList() {
-    final String sql = "select a + b from (\n"
-        + "  select deptno, 1 as uno, name from dept\n"
-        + ") as d(a, b, c)\n"
-        + "where c like 'X%'";
-    sql(sql).ok();
+  @Test void testAliasList() { // 测试方法:testAliasList - 测试别名列表
+    final String sql = "select a + b from (\n" // 定义测试SQL:使用别名列表
+        + "  select deptno, 1 as uno, name from dept\n" // 子查询:选择deptno、字面量和name
+        + ") as d(a, b, c)\n" // 别名列表:deptno->a, uno->b, name->c
+        + "where c like 'X%'"; // 使用别名c进行过滤
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保别名列表能正确应用
   }
 
-  @Test void testAliasList2() {
-    final String sql = "select * from (\n"
-        + "  select a, b, c from (values (1, 2, 3)) as t (c, b, a)\n"
-        + ") join dept on dept.deptno = c\n"
-        + "order by c + a";
-    sql(sql).ok();
+  @Test void testAliasList2() { // 测试方法:testAliasList2 - 测试别名列表与JOIN
+    final String sql = "select * from (\n" // 定义测试SQL:别名列表用于重排字段
+        + "  select a, b, c from (values (1, 2, 3)) as t (c, b, a)\n" // 值表使用别名列表重排字段
+        + ") join dept on dept.deptno = c\n" // 使用重排后的字段c进行连接
+        + "order by c + a"; // 使用重排后的字段进行排序
+    sql(sql).ok(); // 执行SQL并验证结果正确
   }
 
-  /** Test case for
-   * <a href="https://issues.apache.org/jira/browse/CALCITE-2468">[CALCITE-2468]
-   * struct type alias should not cause IndexOutOfBoundsException</a>.
-   */
-  @Test void testStructTypeAlias() {
-    final String sql = "select t.r AS myRow\n"
-        + "from (select row(row(1)) r from dept) t";
-    sql(sql).ok();
+  /** 测试用例:验证结构体类型别名不会导致IndexOutOfBoundsException,JIRA:CALCITE-2468 */
+  @Test void testStructTypeAlias() { // 测试方法:testStructTypeAlias - 测试结构体类型别名
+    final String sql = "select t.r AS myRow\n" // 定义测试SQL:结构体类型别名
+        + "from (select row(row(1)) r from dept) t"; // 嵌套行类型
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保结构体类型别名能正确处理
   }
 
-  @Test void testJoinUsingDynamicTable() {
-    final String sql = "select * from SALES.NATION t1\n"
-        + "join SALES.NATION t2\n"
-        + "using (n_nationkey)";
-    sql(sql).withDynamicTable().ok();
+  @Test void testJoinUsingDynamicTable() { // 测试方法:testJoinUsingDynamicTable - 测试动态表的USING连接
+    final String sql = "select * from SALES.NATION t1\n" // 定义测试SQL:动态表USING连接
+        + "join SALES.NATION t2\n" // 连接两个SALES.NATION表
+        + "using (n_nationkey)"; // 使用USING指定连接列
+    sql(sql).withDynamicTable().ok(); // 使用动态表配置执行SQL并验证结果正确
   }
 
   /**
-   * Tests that AND(x, AND(y, z)) gets flattened to AND(x, y, z).
+   * 测试嵌套AND表达式会被扁平化,AND(x, AND(y, z))转换为AND(x, y, z)
    */
-  @Test void testMultiAnd() {
-    final String sql = "select * from emp\n"
-        + "where deptno < 10\n"
-        + "and deptno > 5\n"
-        + "and (deptno = 8 or empno < 100)";
-    sql(sql).ok();
+  @Test void testMultiAnd() { // 测试方法:testMultiAnd - 测试多个AND条件
+    final String sql = "select * from emp\n" // 定义测试SQL:多个AND条件
+        + "where deptno < 10\n" // 第一个条件
+        + "and deptno > 5\n" // 第二个条件
+        + "and (deptno = 8 or empno < 100)"; // 第三个条件(包含OR)
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保AND表达式能正确扁平化
   }
 
-  @Test void testJoinOn() {
-    final String sql = "SELECT * FROM emp\n"
-        + "JOIN dept on emp.deptno = dept.deptno";
-    sql(sql).ok();
+  @Test void testJoinOn() { // 测试方法:testJoinOn - 测试基本INNER JOIN ON
+    final String sql = "SELECT * FROM emp\n" // 定义测试SQL:INNER JOIN ON
+        + "JOIN dept on emp.deptno = dept.deptno"; // 连接条件:部门编号相等
+    sql(sql).ok(); // 执行SQL并验证结果正确,确保JOIN ON能正确转换
   }
 
   /** Test case for
@@ -2370,9 +2355,9 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "tumble(\n"
-        + "  DATA => table Shipments,\n"
-        + "  TIMECOL => descriptor(rowtime),\n"
-        + "  SIZE => INTERVAL '1' MINUTE))";
+        + "  DATA -> table Shipments,\n"
+        + "  TIMECOL -> descriptor(rowtime),\n"
+        + "  SIZE -> INTERVAL '1' MINUTE))";
     sql(sql).ok();
   }
 
@@ -2380,9 +2365,9 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "tumble(\n"
-        + "  DATA => table Shipments,\n"
-        + "  SIZE => INTERVAL '1' MINUTE,\n"
-        + "  TIMECOL => descriptor(rowtime)))";
+        + "  DATA -> table Shipments,\n"
+        + "  SIZE -> INTERVAL '1' MINUTE,\n"
+        + "  TIMECOL -> descriptor(rowtime)))";
     sql(sql).ok();
   }
 
@@ -2419,10 +2404,10 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "hop(\n"
-        + "  DATA => table Shipments,\n"
-        + "  TIMECOL => descriptor(rowtime),\n"
-        + "  SLIDE => INTERVAL '1' MINUTE,\n"
-        + "  SIZE => INTERVAL '2' MINUTE))";
+        + "  DATA -> table Shipments,\n"
+        + "  TIMECOL -> descriptor(rowtime),\n"
+        + "  SLIDE -> INTERVAL '1' MINUTE,\n"
+        + "  SIZE -> INTERVAL '2' MINUTE))";
     sql(sql).ok();
   }
 
@@ -2430,10 +2415,10 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "hop(\n"
-        + "  DATA => table Shipments,\n"
-        + "  SLIDE => INTERVAL '1' MINUTE,\n"
-        + "  TIMECOL => descriptor(rowtime),\n"
-        + "  SIZE => INTERVAL '2' MINUTE))";
+        + "  DATA -> table Shipments,\n"
+        + "  SLIDE -> INTERVAL '1' MINUTE,\n"
+        + "  TIMECOL -> descriptor(rowtime),\n"
+        + "  SIZE -> INTERVAL '2' MINUTE))";
     sql(sql).ok();
   }
 
@@ -2448,10 +2433,10 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "session(\n"
-        + "  DATA => table Shipments,\n"
-        + "  TIMECOL => descriptor(rowtime),\n"
-        + "  KEY => descriptor(orderId),\n"
-        + "  SIZE => INTERVAL '10' MINUTE))";
+        + "  DATA -> table Shipments,\n"
+        + "  TIMECOL -> descriptor(rowtime),\n"
+        + "  KEY -> descriptor(orderId),\n"
+        + "  SIZE -> INTERVAL '10' MINUTE))";
     sql(sql).ok();
   }
 
@@ -2459,10 +2444,10 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "session(\n"
-        + "  DATA => table Shipments,\n"
-        + "  KEY => descriptor(orderId),\n"
-        + "  TIMECOL => descriptor(rowtime),\n"
-        + "  SIZE => INTERVAL '10' MINUTE))";
+        + "  DATA -> table Shipments,\n"
+        + "  KEY -> descriptor(orderId),\n"
+        + "  TIMECOL -> descriptor(rowtime),\n"
+        + "  SIZE -> INTERVAL '10' MINUTE))";
     sql(sql).ok();
   }
 
@@ -2556,8 +2541,8 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "topn(\n"
-        + "  DATA => table orders partition by productid order by orderId,\n"
-        + "  COL => 3))";
+        + "  DATA -> table orders partition by productid order by orderId,\n"
+        + "  COL -> 3))";
     sql(sql).ok();
   }
 
@@ -2572,8 +2557,8 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "topn(\n"
-        + "  DATA => select * from orders partition by productid order by orderId nulls first,\n"
-        + "  COL => 3))";
+        + "  DATA -> select * from orders partition by productid order by orderId nulls first,\n"
+        + "  COL -> 3))";
     sql(sql).ok();
   }
 
@@ -2590,8 +2575,8 @@ class SqlToRelConverterTest extends SqlToRelTestBase {
     final String sql = "select *\n"
         + "from table(\n"
         + "similarlity(\n"
-        + "  LTABLE => table emp partition by deptno order by empno nulls first,\n"
-        + "  RTABLE => table emp_b partition by deptno order by empno nulls first))";
+        + "  LTABLE -> table emp partition by deptno order by empno nulls first,\n"
+        + "  RTABLE -> table emp_b partition by deptno order by empno nulls first))";
     sql(sql).ok();
   }
 

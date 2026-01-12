@@ -17,14 +17,14 @@
 
 /** Equivalent to
  * {@link org.apache.calcite.examples.foodmart.java.JdbcExample.Employee}, but
- * belongs to the unnamed (root) package. */
-public class RootEmployee {
-  public final int empid;
-  public final String name;
+ * belongs to the unnamed (root) package. */ // 等价于 org.apache.calcite.examples.foodmart.java.JdbcExample.Employee 类，但属于未命名（根）包，用于测试 Calcite 在处理根包类时的行为
+public class RootEmployee { // 定义一个名为 RootEmployee 的公共类，用于表示员工信息，属于根包（未命名包）
+  public final int empid; // 员工ID，使用 public final 修饰表示该字段是公共的且不可变，一旦初始化后不能被修改
+  public final String name; // 员工姓名，使用 public final 修饰表示该字段是公共的且不可变，一旦初始化后不能被修改
 
-  /** Creates a RootEmployee. */
-  public RootEmployee(int empid, String name) {
-    this.empid = empid;
-    this.name = name;
+  /** Creates a RootEmployee. */ // 创建一个 RootEmployee 对象的构造方法
+  public RootEmployee(int empid, String name) { // 构造方法，接收员工ID和姓名两个参数
+    this.empid = empid; // 将传入的 empid 参数值赋给当前对象的 empid 成员变量，使用 this 关键字区分成员变量和参数
+    this.name = name; // 将传入的 name 参数值赋给当前对象的 name 成员变量，使用 this 关键字区分成员变量和参数
   }
 }

@@ -361,7 +361,7 @@ public class PhysTypeImpl implements PhysType { // 定义PhysTypeImpl类,实现P
                   null, // 返回值为null(表示从当前方法返回)
                   descending // 判断是否降序
                       ? Expressions.negate(parameterC) // 如果降序则返回-c
-                      : parameterC)))); // 否则返回c
+                      : parameterC))); // 否则返回c
     } // 排序规则遍历结束
     body.add( // 添加返回语句
         Expressions.return_(null, Expressions.constant(0))); // 所有字段都相等则返回0
@@ -394,7 +394,7 @@ public class PhysTypeImpl implements PhysType { // 定义PhysTypeImpl类,实现P
                       javaRowClass), // 目标类型为当前Java行类
                   Expressions.convert_( // 转换第二个参数
                       parameterO1, // 源参数为o1
-                      javaRowClass))))); // 目标类型为当前Java行类
+                      javaRowClass)))); // 目标类型为当前Java行类
       memberDeclarations.add( // 添加桥接方法声明
           overridingMethodDecl( // 创建覆盖方法声明
               BuiltInMethod.COMPARATOR_COMPARE.method, // 覆盖的方法为Comparator的compare方法
@@ -478,7 +478,7 @@ public class PhysTypeImpl implements PhysType { // 定义PhysTypeImpl类,实现P
                   null, // 返回值为null
                   descending // 判断是否降序
                       ? Expressions.negate(parameterC) // 如果降序则返回-c
-                      : parameterC)))); // 否则返回c
+                      : parameterC))); // 否则返回c
     } // 排序规则遍历结束
     body.add( // 添加返回语句
         Expressions.return_(null, Expressions.constant(0))); // 所有字段都相等则返回0
@@ -510,7 +510,7 @@ public class PhysTypeImpl implements PhysType { // 定义PhysTypeImpl类,实现P
                       javaRowClass), // 目标类型为当前Java行类
                   Expressions.convert_( // 转换第二个参数
                       parameterO1, // 源参数为o1
-                      javaRowClass))))); // 目标类型为当前Java行类
+                      javaRowClass)))); // 目标类型为当前Java行类
       memberDeclarations.add( // 添加桥接方法声明
           overridingMethodDecl( // 创建覆盖方法声明
               BuiltInMethod.COMPARATOR_COMPARE.method, // 覆盖的方法为Comparator的compare方法

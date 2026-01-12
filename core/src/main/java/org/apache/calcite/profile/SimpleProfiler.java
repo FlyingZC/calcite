@@ -49,6 +49,7 @@ import static java.util.Objects.requireNonNull; // 导入Java Objects类的requi
 /**
  * Basic implementation of {@link Profiler}. // 简单分析器的基本实现，用于分析数据表的统计信息，包括唯一键、函数依赖和分布情况
  */
+public class SimpleProfiler implements Profiler {
 
   @Override public Profile profile(Iterable<List<Comparable>> rows, // 重写profile方法，分析数据行的统计信息，rows为要分析的数据行集合，columns为列定义，initialGroups为初始分组（本分析器忽略此参数）
       final List<Column> columns, Collection<ImmutableBitSet> initialGroups) { // columns为数据列的定义集合，initialGroups为初始的列分组集合
@@ -145,7 +146,7 @@ import static java.util.Objects.requireNonNull; // 导入Java Objects类的requi
       // Populate unique keys // 填充唯一键信息
       // If [x, y] is a key, // 如果[x, y]是一个唯一键
       // then [x, y, z] is a key but not intersecting, // 那么[x, y, z]也是键但不相交（包含更多列）
-      // and [x, y] => [a] is a functional dependency but not interesting, // [x, y] => [a]是函数依赖但不有趣（因为a已被唯一键确定）
+      // and [x, y] -> [a] is a functional dependency but not interesting, // [x, y] -> [a]是函数依赖但不有趣（因为a已被唯一键确定）
       // and [x, y, z] is not an interesting distribution. // [x, y, z]不是一个有趣的分布（因为它是超集）
       final Map<ImmutableBitSet, Distribution> distributions = new HashMap<>(); // 创建分布映射表，存储列组合到分布对象的映射
       for (Space space : spaces) { // 遍历所有列组合空间

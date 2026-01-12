@@ -88,7 +88,7 @@ public class MaterializationService { // 物化视图服务类,单例模式,管�
           // Unknown is worse than known // 未知比已知更差
           return 1; // 返回正值,将未知行数的表排在后面
         } else { // 否则第二个表行数未知(rowCount1 == null)
-          // rowCount1 == null => Unknown is worse than known // 未知比已知更差
+          // rowCount1 == null -> Unknown is worse than known // 未知比已知更差
           return -1; // 返回负值,将已知行数的表排在前面
         }
         // Tie-break based on table name. // 基于表名进行决胜

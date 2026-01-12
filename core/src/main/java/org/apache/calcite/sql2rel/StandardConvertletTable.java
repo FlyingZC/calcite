@@ -1685,11 +1685,11 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
         final RelDataType varType,
         final SqlRexContext cx,
         boolean biased) {
-      // covar_pop(x1, x2) ==>
+      // covar_pop(x1, x2) =->
       //     (sum(x1 * x2) - sum(x2) * sum(x1) / count(x1, x2))
       //     / count(x1, x2)
       //
-      // covar_samp(x1, x2) ==>
+      // covar_samp(x1, x2) =->
       //     (sum(x1 * x2) - sum(x1) * sum(x2) / count(x1, x2))
       //     / (count(x1, x2) - 1)
       final SqlParserPos pos = SqlParserPos.ZERO;
@@ -1836,23 +1836,23 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
         final SqlRexContext cx,
         boolean biased,
         boolean sqrt) {
-      // stddev_pop(x) ==>
+      // stddev_pop(x) =->
       //   power(
       //     (sum(x * x) - sum(x) * sum(x) / count(x))
       //     / count(x),
       //     .5)
       //
-      // stddev_samp(x) ==>
+      // stddev_samp(x) =->
       //   power(
       //     (sum(x * x) - sum(x) * sum(x) / count(x))
       //     / (count(x) - 1),
       //     .5)
       //
-      // var_pop(x) ==>
+      // var_pop(x) =->
       //     (sum(x * x) - sum(x) * sum(x) / count(x))
       //     / count(x)
       //
-      // var_samp(x) ==>
+      // var_samp(x) =->
       //     (sum(x * x) - sum(x) * sum(x) / count(x))
       //     / (count(x) - 1)
       final SqlParserPos pos = SqlParserPos.ZERO;
@@ -2279,9 +2279,9 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   private static class TimestampAddConvertlet implements SqlRexConvertlet {
     @Override public RexNode convertCall(SqlRexContext cx, SqlCall call) {
       // TIMESTAMPADD(unit, count, timestamp)
-      //  => timestamp + count * INTERVAL '1' UNIT
+      //  -> timestamp + count * INTERVAL '1' UNIT
       // TIMESTAMP_ADD(timestamp, interval)
-      //  => timestamp + interval
+      //  -> timestamp + interval
       // "timestamp" may be of type TIMESTAMP or TIMESTAMP WITH LOCAL TIME ZONE.
       final RexBuilder rexBuilder = cx.getRexBuilder();
       final SqlParserPos pos = call.getParserPosition();
@@ -2381,7 +2381,7 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
   private static class TimestampSubConvertlet implements SqlRexConvertlet {
     @Override public RexNode convertCall(SqlRexContext cx, SqlCall call) {
       // TIMESTAMP_SUB(timestamp, interval)
-      //  => timestamp - count * INTERVAL '1' UNIT
+      //  -> timestamp - count * INTERVAL '1' UNIT
       final RexBuilder rexBuilder = cx.getRexBuilder();
       final SqlParserPos pos = call.getParserPosition();
       SqlIntervalQualifier qualifier;
@@ -2444,9 +2444,9 @@ public class StandardConvertletTable extends ReflectiveConvertletTable {
       // results.
       //
       // TIMESTAMPDIFF(unit, t1, t2)
-      //    => (t2 - t1) UNIT
+      //    -> (t2 - t1) UNIT
       // TIMESTAMP_DIFF(t1, t2, unit)
-      //    => (t1 - t2) UNIT
+      //    -> (t1 - t2) UNIT
       SqlIntervalQualifier qualifier;
       final boolean preTruncate;
       final RexNode op1;

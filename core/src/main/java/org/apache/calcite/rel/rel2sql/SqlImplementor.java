@@ -1285,10 +1285,10 @@ public abstract class SqlImplementor {
 
       // Handle filter on dialects that do support FILTER by generating CASE.
       if (filterArg >= 0 && !dialect.supportsAggregateFunctionFilter()) {
-        // SUM(x) FILTER(WHERE b)  ==>  SUM(CASE WHEN b THEN x END)
-        // COUNT(*) FILTER(WHERE b)  ==>  COUNT(CASE WHEN b THEN 1 END)
-        // COUNT(x) FILTER(WHERE b)  ==>  COUNT(CASE WHEN b THEN x END)
-        // COUNT(x, y) FILTER(WHERE b)  ==>  COUNT(CASE WHEN b THEN x END, y)
+        // SUM(x) FILTER(WHERE b)  =->  SUM(CASE WHEN b THEN x END)
+        // COUNT(*) FILTER(WHERE b)  =->  COUNT(CASE WHEN b THEN 1 END)
+        // COUNT(x) FILTER(WHERE b)  =->  COUNT(CASE WHEN b THEN x END)
+        // COUNT(x, y) FILTER(WHERE b)  =->  COUNT(CASE WHEN b THEN x END, y)
         final SqlNodeList whenList = SqlNodeList.of(field(filterArg));
         final SqlNodeList thenList =
             SqlNodeList.of(operandList.isEmpty()

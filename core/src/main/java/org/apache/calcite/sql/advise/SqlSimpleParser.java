@@ -204,7 +204,7 @@ public class SqlSimpleParser {
           // Combine SELECT ... UNION SELECT..., so keep trying consumeSelect
           break;
         default:
-          // Unknown token detected => end of query detected
+          // Unknown token detected -> end of query detected
           iter.previous();
           return;
         }
