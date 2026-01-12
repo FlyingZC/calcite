@@ -1,40 +1,20 @@
-<!--
-{% comment %}
-Licensed to the Apache Software Foundation (ASF) under one or more
-contributor license agreements.  See the NOTICE file distributed with
-this work for additional information regarding copyright ownership.
-The ASF licenses this file to you under the Apache License, Version 2.0
-(the "License"); you may not use this file except in compliance with
-the License.  You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-{% endcomment %}
--->
-
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.calcite/calcite-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.apache.calcite/calcite-core)
-[![CI Status](https://github.com/apache/calcite/workflows/CI/badge.svg?branch=main)](https://github.com/apache/calcite/actions?query=branch%3Amain)
-
 # Apache Calcite
 
-Apache Calcite is a dynamic data management framework.
+## 编译和安装到本地 Maven 仓库
 
-It contains many of the pieces that comprise a typical
-database management system but omits the storage primitives.
-It provides an industry standard SQL parser and validator,
-a customisable optimizer with pluggable rules and cost functions,
-logical and physical algebraic operators, various transformation
-algorithms from SQL to algebra (and the opposite), and many
-adapters for executing SQL queries over Cassandra, Druid,
-Elasticsearch, MongoDB, Kafka, and others, with minimal
-configuration.
+执行以下命令将项目编译并安装到本地 Maven 仓库：
 
-For more details, see the [home page](http://calcite.apache.org).
+```bash
+./gradlew publishToMavenLocal -x checkstyleMain -x checkstyleTest -x javadoc
+```
 
-The project uses [JIRA](https://issues.apache.org/jira/browse/CALCITE)
-for issue tracking. For further information, please see the [JIRA accounts guide](https://calcite.apache.org/develop/#jira-accounts).
+### 命令说明
+
+- `publishToMavenLocal`: 将项目发布到本地 Maven 仓库（通常是 `~/.m2/repository`）
+- `-x checkstyleMain`: 跳过 checkstyle 主代码检查
+- `-x checkstyleTest`: 跳过 checkstyle 测试代码检查
+- `-x javadoc`: 跳过 javadoc 生成
+
+## 版本信息
+
+当前版本：`1.4.0.0-dev`

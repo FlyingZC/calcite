@@ -92,31 +92,42 @@ import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static java.util.Objects.requireNonNull;
 
 /**
- * A <code>SqlParserTest</code> is a unit-test for
- * {@link SqlParser the SQL parser}.
+ * SqlParserTest是SQL解析器的单元测试类。
  *
- * <p>To reuse this test for an extension parser, override the
- * {@link #fixture()} method,
- * calling {@link SqlParserFixture#withConfig(UnaryOperator)}
- * and then {@link SqlParser.Config#withParserFactory(SqlParserImplFactory)}.
+ * <p>此类用于测试Calcite的SQL解析功能，包含大量的测试方法来验证解析器能够正确地
+ * 解析各种SQL语句，包括SELECT、INSERT、UPDATE、DELETE、MERGE等DML语句，以及各种
+ * SQL表达式、函数调用、JOIN操作、子查询、窗口函数、CTE（WITH子句）等复杂SQL特性。
+ *
+ * <p>要为扩展解析器重用此测试，需要覆盖 {@link #fixture()} 方法，
+ * 调用 {@link SqlParserFixture#withConfig(UnaryOperator)}，
+ * 然后调用 {@link SqlParser.Config#withParserFactory(SqlParserImplFactory)}。
+ *
+ * <p>测试方法使用 {@link SqlParserFixture} 提供的流畅API来编写测试，
+ * 例如：sql("SELECT * FROM emp").ok("SELECT * FROM `EMP`")。
  *
  * @see SqlParserFixture
  * @see SqlParserListFixture
  */
 public class SqlParserTest {
   /**
-   * List of reserved keywords.
+   * 保留关键字列表。
    *
-   * <p>Each keyword is followed by tokens indicating whether it is reserved in
-   * the SQL:92, SQL:99, SQL:2003, SQL:2011, SQL:2014 standards and in Calcite.
+   * <p>每个关键字后面跟着标记，指示它在SQL:92、SQL:99、SQL:2003、SQL:2011、SQL:2014标准
+   * 以及在Calcite中是否为保留关键字。
    *
-   * <p>The standard keywords are derived from
+   * <p>标准关键字来源于
    * <a href="https://developer.mimer.com/wp-content/uploads/standard-sql-reserved-words-summary.pdf">Mimer</a>
-   * and from the specification.
+   * 和规范文档。
    *
-   * <p>If a new <b>reserved</b> keyword is added to the parser, include it in
-   * this list, flagged "c". If the keyword is not intended to be a reserved
-   * keyword, add it to the non-reserved keyword list in the parser.
+   * <p>如果向解析器添加了新的<b>保留</b>关键字，必须将其包含在此列表中，并标记为"c"。
+   * 如果关键字不打算作为保留关键字，则将其添加到解析器中的非保留关键字列表中。
+   *
+   * <p>格式说明：
+   * <ul>
+   * <li>每个关键字占一行</li>
+   * <li>关键字后面跟着标准版本标记："92"、"99"、"2003"、"2011"、"2014"</li>
+   * <li>"c"表示该关键字在Calcite中是保留的</li>
+   * </ul>
    */
   private static final String[] RESERVED_KEYWORDS = {
       "ABS",                                               "2011", "2014", "c",
@@ -604,8 +615,11 @@ public class SqlParserTest {
       "ZONE",                          "92", "99",
   };
 
+  // 正则表达式，匹配任意字符串（包括换行符）
   private static final String ANY = "(?s).*";
 
+  // SQL写入器配置，用于测试SQL的反解析（unparse）
+  // 配置包括：始终使用括号、UPDATE SET列表不分新行、FROM子句使用高折叠方式、缩进为0
   private static final SqlWriterConfig SQL_WRITER_CONFIG =
       SqlPrettyWriter.config()
           .withAlwaysUseParentheses(true)
@@ -613,42 +627,70 @@ public class SqlParserTest {
           .withFromFolding(SqlWriterConfig.LineFolding.TALL)
           .withIndentation(0);
 
+  // BigQuery方言（Google的云数据仓库）
   protected static final SqlDialect BIG_QUERY =
       SqlDialect.DatabaseProduct.BIG_QUERY.getDialect();
+  // Calcite默认方言
   private static final SqlDialect CALCITE =
       SqlDialect.DatabaseProduct.CALCITE.getDialect();
+  // Microsoft SQL Server方言
   private static final SqlDialect MSSQL =
       SqlDialect.DatabaseProduct.MSSQL.getDialect();
+  // MySQL方言
   private static final SqlDialect MYSQL =
       SqlDialect.DatabaseProduct.MYSQL.getDialect();
+  // Oracle方言
   private static final SqlDialect ORACLE =
       SqlDialect.DatabaseProduct.ORACLE.getDialect();
+  // PostgreSQL方言
   private static final SqlDialect POSTGRESQL =
       SqlDialect.DatabaseProduct.POSTGRESQL.getDialect();
+  // Amazon Redshift方言
   private static final SqlDialect REDSHIFT =
       SqlDialect.DatabaseProduct.REDSHIFT.getDialect();
 
-  /** Creates the test fixture that determines the behavior of tests.
-   * Sub-classes that, say, test different parser implementations should
-   * override. */
+  /**
+   * 创建测试夹具（fixture），该夹具决定了测试的行为。
+   *
+   * <p>测试夹具用于配置解析器的行为，包括：
+   * <ul>
+   * <li>解析器配置（如SQL规范兼容性、标识符引用方式等）</li>
+   * <li>是否进行验证</li>
+   * <li>是否进行反解析测试</li>
+   * </ul>
+   *
+   * <p>子类如果需要测试不同的解析器实现，应该覆盖此方法。
+   *
+   * @return 测试夹具实例
+   */
   public SqlParserFixture fixture() {
     return SqlParserFixture.DEFAULT;
   }
 
+  // 创建一个SQL语句测试夹具
   protected SqlParserFixture sql(String sql) {
     return fixture().sql(sql);
   }
 
+  // 创建一个表达式测试夹具（将expression标志设置为true）
   protected SqlParserFixture expr(String sql) {
     return sql(sql).expression(true);
   }
 
-  /** Converts a string to linux format (LF line endings rather than CR-LF),
-   * except if disabled in {@link SqlParserFixture#convertToLinux}. */
+  /**
+   * 将字符串转换为Linux格式（LF换行符而不是CR-LF），
+   * 除非在 {@link SqlParserFixture#convertToLinux} 中禁用了此功能。
+   *
+   * <p>此方法用于处理不同操作系统之间的换行符差异，确保测试结果的一致性。
+   *
+   * @param convertToLinux 是否转换为Linux格式
+   * @return 字符串转换器操作符
+   */
   static UnaryOperator<String> linux(boolean convertToLinux) {
     return convertToLinux ? Util::toLinux : UnaryOperator.identity();
   }
 
+  // 创建SQL解析器实例
   protected static SqlParser sqlParser(Reader source,
       UnaryOperator<SqlParser.Config> transform) {
     final SqlParser.Config config = transform.apply(SqlParser.Config.DEFAULT);
@@ -656,7 +698,7 @@ public class SqlParserTest {
   }
 
   /** Returns a {@link Matcher} that succeeds if the given {@link SqlNode} is a
-   * DDL statement. */
+   * DDL statement. */ // 返回一个匹配器，如果给定的SqlNode是DDL语句则匹配成功
   public static Matcher<SqlNode> isDdl() {
     return new BaseMatcher<SqlNode>() {
       @Override public boolean matches(Object item) {
@@ -670,9 +712,14 @@ public class SqlParserTest {
     };
   }
 
-  /** Returns a {@link Matcher} that succeeds if the given {@link SqlNode} is a
-   * VALUES that contains a ROW that contains an identifier whose {@code i}th
-   * element is quoted. */
+  /**
+   * 返回一个匹配器，如果给定的 {@link SqlNode} 是一个VALUES子句，
+   * 该VALUES包含一个ROW，该ROW包含一个标识符，该标识符的第i个元素是否被引号引用。
+   *
+   * @param i 标识符的索引位置
+   * @param quoted 是否期望被引号引用
+   * @return 引用状态匹配器
+   */
   private static Matcher<SqlNode> isQuoted(final int i,
       final boolean quoted) {
     return new CustomTypeSafeMatcher<SqlNode>("quoting") {
@@ -687,7 +734,7 @@ public class SqlParserTest {
 
   /** Returns a {@link Matcher} that calls a consumer and then succeeds.
    * The consumer should contain custom code, and should fail if it doesn't
-   * like what it sees. */
+   * like what it sees. */ // 返回一个匹配器，该匹配器调用一个消费者然后匹配成功
   public static Matcher<SqlNode> customMatches(String description,
       Consumer<SqlNode> consumer) {
     return new CustomTypeSafeMatcher<SqlNode>(description) {
@@ -698,19 +745,19 @@ public class SqlParserTest {
     };
   }
 
-  protected SortedSet<String> getReservedKeywords() {
+  protected SortedSet<String> getReservedKeywords() { // 获取保留关键字集合
     return keywords("c");
   }
 
   /** Returns whether a word is reserved in this parser. This method can be
    * used to disable tests that behave differently with different collections
-   * of reserved words. */
+   * of reserved words. */ // 返回单词在此解析器中是否为保留关键字
   protected boolean isReserved(String word) {
     SqlAbstractParserImpl.Metadata metadata = fixture().parser().getMetadata();
     return metadata.isReservedWord(word.toUpperCase(Locale.ROOT));
   }
 
-  protected static SortedSet<String> keywords(@Nullable String dialect) {
+  protected static SortedSet<String> keywords(@Nullable String dialect) { // 根据方言获取关键字集合
     final ImmutableSortedSet.Builder<String> builder =
         ImmutableSortedSet.naturalOrder();
     String r = null;
@@ -744,7 +791,7 @@ public class SqlParserTest {
    * "ABSOLUTE" (which naturally arise whenever a production uses
    * "&lt;IDENTIFIER&gt;") are removed, but reserved words such as "AND"
    * remain.
-   */
+   */ // 测试当发生错误时，非保留关键字如"A"、"ABSOLUTE"会被移除，但保留字如"AND"会保留
   @Test void testExceptionCleanup() {
     sql("select 0.5e1^.1^ from sales.emps")
         .fails("(?s).*Encountered \".1\" at line 1, column 13.\n"
@@ -756,7 +803,7 @@ public class SqlParserTest {
   }
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-5997">[CALCITE-5997]
-   * OFFSET operator is incorrectly unparsed</a>. */
+   * OFFSET operator is incorrectly unparsed</a>. */ // 测试OFFSET操作符的反解析
   @Test void testOffset() {
     sql("SELECT ARRAY[2,4,6][2]")
         .ok("SELECT (ARRAY[2, 4, 6])[2]");
@@ -776,6 +823,7 @@ public class SqlParserTest {
     // All these tests work without BIG_QUERY as well.
     // The SQL parser accepts this syntax, so we need to be
     // able to unparse it into something.
+    // 所有这些测试在没有BIG_QUERY的情况下也能工作。SQL解析器接受这种语法，所以我们需要能够将其反解析成某种形式
     sql("SELECT ARRAY[2,4,6][ORDINAL(2)]")
         .ok("SELECT (ARRAY[2, 4, 6])[ORDINAL(2)]");
     sql("SELECT ARRAY[2,4,6][OFFSET(2)]")
@@ -2277,14 +2325,14 @@ public class SqlParserTest {
   }
 
   @Test void testFunctionNamedArgument() {
-    expr("foo(x => 1)")
-        .ok("`FOO`(`X` => 1)");
-    expr("foo(x => 1, \"y\" => 'a', z => x <= y)")
-        .ok("`FOO`(`X` => 1, `y` => 'a', `Z` => (`X` <= `Y`))");
-    expr("foo(x.y ^=>^ 1)")
-        .fails("(?s).*Encountered \"=>\" at .*");
-    expr("foo(a => 1, x.y ^=>^ 2, c => 3)")
-        .fails("(?s).*Encountered \"=>\" at .*");
+    expr("foo(x -> 1)")
+        .ok("`FOO`(`X` -> 1)");
+    expr("foo(x -> 1, \"y\" -> 'a', z -> x <= y)")
+        .ok("`FOO`(`X` -> 1, `y` -> 'a', `Z` -> (`X` <= `Y`))");
+    expr("foo(x.y ^->^ 1)")
+        .fails("(?s).*Encountered \"->\" at .*");
+    expr("foo(a -> 1, x.y ^->^ 2, c -> 3)")
+        .fails("(?s).*Encountered \"->\" at .*");
   }
 
   @Test void testFunctionDefaultArgument() {
@@ -2292,12 +2340,12 @@ public class SqlParserTest {
         .ok("`FOO`(1, DEFAULT, DEFAULT, 'default', `default`, 3)");
     sql("foo(DEFAULT)").expression()
         .ok("`FOO`(DEFAULT)");
-    sql("foo(x => 1, DEFAULT)").expression()
-        .ok("`FOO`(`X` => 1, DEFAULT)");
-    sql("foo(y => DEFAULT, x => 1)").expression()
-        .ok("`FOO`(`Y` => DEFAULT, `X` => 1)");
-    sql("foo(x => 1, y => DEFAULT)").expression()
-        .ok("`FOO`(`X` => 1, `Y` => DEFAULT)");
+    sql("foo(x -> 1, DEFAULT)").expression()
+        .ok("`FOO`(`X` -> 1, DEFAULT)");
+    sql("foo(y -> DEFAULT, x -> 1)").expression()
+        .ok("`FOO`(`Y` -> DEFAULT, `X` -> 1)");
+    sql("foo(x -> 1, y -> DEFAULT)").expression()
+        .ok("`FOO`(`X` -> 1, `Y` -> DEFAULT)");
     sql("select sum(DISTINCT DEFAULT) from t group by x")
         .ok("SELECT SUM(DISTINCT DEFAULT)\n"
             + "FROM `T`\n"
@@ -4749,9 +4797,9 @@ public class SqlParserTest {
 
   @Test void testTableFunctionWithNamedArgAndPartitionKey() {
     final String sql = "select * "
-        + "from table(topn(data=>table orders partition by (productid), col=>3))";
+        + "from table(topn(data->table orders partition by (productid), col->3))";
     final String expected = "SELECT *\n"
-        + "FROM TABLE(`TOPN`(`DATA` => (TABLE `ORDERS`) PARTITION BY `PRODUCTID`, `COL` => 3))";
+        + "FROM TABLE(`TOPN`(`DATA` -> (TABLE `ORDERS`) PARTITION BY `PRODUCTID`, `COL` -> 3))";
     sql(sql).ok(expected);
   }
 

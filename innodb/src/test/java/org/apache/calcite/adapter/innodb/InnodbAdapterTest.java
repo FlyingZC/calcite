@@ -174,9 +174,9 @@ public class InnodbAdapterTest {
             + "CREATE_DATETIME=[$10], CREATE_TIME=[$11], UPSERT_TIME=[$12])\n"
             + "    InnodbFilter(condition=[(PK_POINT_QUERY, index=PRIMARY_KEY, EMPNO=7499)])\n"
             + "      InnodbTableScan(table=[[test, EMP]])\n")
-        .returns("ENAME=ALLEN; EMPNO=7499; JOB=SALESMAN; AGE=24; MGR=7698; HIREDATE=1981-02-20; "
-            + "SAL=1600.00; COMM=300.00; DEPTNO=30; EMAIL=allen@calcite; "
-            + "CREATE_DATETIME=2018-04-09 09:00:00; CREATE_TIME=09:00:00; "
+        .returns("ENAME=ALLEN; EMPNO=7499; JOB=SALESMAN; AGE=24; MGR=7698; HIREDATE=1981-02-20 "
+            + "SAL=1600.00; COMM=300.00; DEPTNO=30; EMAIL=allen@calcite "
+            + "CREATE_DATETIME=2018-04-09 09:00:00; CREATE_TIME=09:00:00 "
             + "UPSERT_TIME=" + expectedLocalTime("2018-04-09 09:00:00") + "\n");
   }
 
@@ -626,10 +626,10 @@ public class InnodbAdapterTest {
   }
 
   @Test void testSelectBySkTimestamp() {
-    sql("SELECT * FROM \"EMP\" WHERE UPSERT_TIME = '"
+    sql("SELECT * FROM \"EMP\" WHERE UPSERT_TIME = '" 
         + expectedLocalTime("2018-09-02 12:12:56") + "'")
         .explainContains("PLAN=InnodbToEnumerableConverter\n"
-            + "  InnodbFilter(condition=[(SK_POINT_QUERY, index=UPSERT_TIME_KEY, UPSERT_TIME="
+            + "  InnodbFilter(condition=[(SK_POINT_QUERY, index=UPSERT_TIME_KEY, UPSERT_TIME=" 
             + expectedLocalTime("2018-09-02 12:12:56") + ")])\n"
             + "    InnodbTableScan(table=[[test, EMP]])\n")
         .returns(some(7654));
@@ -642,33 +642,33 @@ public class InnodbAdapterTest {
             + "    InnodbFilter(condition=[(SK_RANGE_QUERY, index=UPSERT_TIME_KEY, "
             + "UPSERT_TIME>=2000-01-01 00:00:00)])\n"
             + "      InnodbTableScan(table=[[test, EMP]])\n")
-        .returns("EMPNO=7566; ENAME=JONES; UPSERT_TIME="
+        .returns("EMPNO=7566; ENAME=JONES; UPSERT_TIME=" 
             + expectedLocalTime("2015-03-09 22:16:30") + "\n"
-            + "EMPNO=7934; ENAME=MILLER; UPSERT_TIME="
+            + "EMPNO=7934; ENAME=MILLER; UPSERT_TIME=" 
             + expectedLocalTime("2016-09-02 23:15:01") + "\n"
-            + "EMPNO=7844; ENAME=TURNER; UPSERT_TIME="
+            + "EMPNO=7844; ENAME=TURNER; UPSERT_TIME=" 
             + expectedLocalTime("2017-08-17 22:01:37") + "\n"
-            + "EMPNO=7876; ENAME=ADAMS; UPSERT_TIME="
+            + "EMPNO=7876; ENAME=ADAMS; UPSERT_TIME=" 
             + expectedLocalTime("2017-08-18 23:11:06") + "\n"
-            + "EMPNO=7499; ENAME=ALLEN; UPSERT_TIME="
+            + "EMPNO=7499; ENAME=ALLEN; UPSERT_TIME=" 
             + expectedLocalTime("2018-04-09 09:00:00") + "\n"
-            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME="
+            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME=" 
             + expectedLocalTime("2018-06-01 14:45:00") + "\n"
-            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME="
+            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME=" 
             + expectedLocalTime("2018-09-02 12:12:56") + "\n"
-            + "EMPNO=7902; ENAME=FORD; UPSERT_TIME="
+            + "EMPNO=7902; ENAME=FORD; UPSERT_TIME=" 
             + expectedLocalTime("2019-05-29 00:00:00") + "\n"
-            + "EMPNO=7839; ENAME=KING; UPSERT_TIME="
+            + "EMPNO=7839; ENAME=KING; UPSERT_TIME=" 
             + expectedLocalTime("2019-06-08 15:15:15") + "\n"
-            + "EMPNO=7788; ENAME=SCOTT; UPSERT_TIME="
+            + "EMPNO=7788; ENAME=SCOTT; UPSERT_TIME=" 
             + expectedLocalTime("2019-07-28 12:12:12") + "\n"
-            + "EMPNO=7782; ENAME=CLARK; UPSERT_TIME="
+            + "EMPNO=7782; ENAME=CLARK; UPSERT_TIME=" 
             + expectedLocalTime("2019-09-30 02:14:56") + "\n"
-            + "EMPNO=7521; ENAME=WARD; UPSERT_TIME="
+            + "EMPNO=7521; ENAME=WARD; UPSERT_TIME=" 
             + expectedLocalTime("2019-11-16 10:26:40") + "\n"
-            + "EMPNO=7369; ENAME=SMITH; UPSERT_TIME="
+            + "EMPNO=7369; ENAME=SMITH; UPSERT_TIME=" 
             + expectedLocalTime("2020-01-01 18:35:40") + "\n"
-            + "EMPNO=7900; ENAME=JAMES; UPSERT_TIME="
+            + "EMPNO=7900; ENAME=JAMES; UPSERT_TIME=" 
             + expectedLocalTime("2020-01-02 12:19:00") + "\n");
   }
 
@@ -679,37 +679,37 @@ public class InnodbAdapterTest {
             + "    InnodbFilter(condition=[(SK_RANGE_QUERY, index=UPSERT_TIME_KEY, "
             + "UPSERT_TIME<=2018-09-04 12:12:56)])\n"
             + "      InnodbTableScan(table=[[test, EMP]])\n")
-        .returns("EMPNO=7566; ENAME=JONES; UPSERT_TIME="
+        .returns("EMPNO=7566; ENAME=JONES; UPSERT_TIME=" 
             + expectedLocalTime("2015-03-09 22:16:30") + "\n"
-            + "EMPNO=7934; ENAME=MILLER; UPSERT_TIME="
+            + "EMPNO=7934; ENAME=MILLER; UPSERT_TIME=" 
             + expectedLocalTime("2016-09-02 23:15:01") + "\n"
-            + "EMPNO=7844; ENAME=TURNER; UPSERT_TIME="
+            + "EMPNO=7844; ENAME=TURNER; UPSERT_TIME=" 
             + expectedLocalTime("2017-08-17 22:01:37") + "\n"
-            + "EMPNO=7876; ENAME=ADAMS; UPSERT_TIME="
+            + "EMPNO=7876; ENAME=ADAMS; UPSERT_TIME=" 
             + expectedLocalTime("2017-08-18 23:11:06") + "\n"
-            + "EMPNO=7499; ENAME=ALLEN; UPSERT_TIME="
+            + "EMPNO=7499; ENAME=ALLEN; UPSERT_TIME=" 
             + expectedLocalTime("2018-04-09 09:00:00") + "\n"
-            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME="
+            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME=" 
             + expectedLocalTime("2018-06-01 14:45:00") + "\n"
-            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME="
+            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME=" 
             + expectedLocalTime("2018-09-02 12:12:56") + "\n");
   }
 
   @Test void testSelectBySkTimestampRangeQueryGtLteProjectSomeFields() {
-    sql("SELECT EMPNO,ENAME,UPSERT_TIME FROM \"EMP\" WHERE UPSERT_TIME > '"
-        + expectedLocalTime("2017-08-18 23:11:06")
+    sql("SELECT EMPNO,ENAME,UPSERT_TIME FROM \"EMP\" WHERE UPSERT_TIME > '" 
+        + expectedLocalTime("2017-08-18 23:11:06") 
         + "' AND UPSERT_TIME <= '" + expectedLocalTime("2018-09-02 12:12:56") + "'")
         .explainContains("PLAN=InnodbToEnumerableConverter\n"
             + "  InnodbProject(EMPNO=[$0], ENAME=[$1], UPSERT_TIME=[$12])\n"
-            + "    InnodbFilter(condition=[(SK_RANGE_QUERY, index=UPSERT_TIME_KEY, UPSERT_TIME>"
-            + expectedLocalTime("2017-08-18 23:11:06") + ", UPSERT_TIME<="
+            + "    InnodbFilter(condition=[(SK_RANGE_QUERY, index=UPSERT_TIME_KEY, UPSERT_TIME>" 
+            + expectedLocalTime("2017-08-18 23:11:06") + ", UPSERT_TIME<=" 
             + expectedLocalTime("2018-09-02 12:12:56") + ")])\n"
             + "      InnodbTableScan(table=[[test, EMP]])\n")
-        .returns("EMPNO=7499; ENAME=ALLEN; UPSERT_TIME="
+        .returns("EMPNO=7499; ENAME=ALLEN; UPSERT_TIME=" 
             + expectedLocalTime("2018-04-09 09:00:00") + "\n"
-            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME="
+            + "EMPNO=7698; ENAME=BLAKE; UPSERT_TIME=" 
             + expectedLocalTime("2018-06-01 14:45:00") + "\n"
-            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME="
+            + "EMPNO=7654; ENAME=MARTIN; UPSERT_TIME=" 
             + expectedLocalTime("2018-09-02 12:12:56") + "\n");
   }
 

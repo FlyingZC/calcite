@@ -77,43 +77,55 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementations of methods in the {@link Enumerable} interface.
+ * // Enumerable接口中方法的默认实现类
+ * // 这个类提供了LINQ(Language Integrated Query)操作的标准实现
+ * // 包括聚合、过滤、投影、连接、排序等常用操作
+ * // 所有方法都是静态的,可以直接通过类名调用,无需实例化
+ * // 这个类是Calcite框架中linq4j模块的核心类之一
+ * // 提供了类似.NET LINQ的查询操作符实现
  */
 public abstract class EnumerableDefaults {
 
   /**
    * Applies an accumulator function over a sequence.
+   * // 对序列应用累加器函数
+   * // 这是最简单的聚合操作,从第一个元素开始,依次对每个元素应用累加器函数
+   * // 如果序列为空,返回null
    */
-  public static <TSource> @Nullable TSource aggregate(Enumerable<TSource> source,
-      Function2<@Nullable TSource, TSource, TSource> func) {
-    try (Enumerator<TSource> os = source.enumerator()) {
-      if (!os.moveNext()) {
-        return null;
+  public static <TSource> @Nullable TSource aggregate(Enumerable<TSource> source, // 源序列
+      Function2<@Nullable TSource, TSource, TSource> func) { // 累加器函数,接收当前累加值和下一个元素,返回新的累加值
+    try (Enumerator<TSource> os = source.enumerator()) { // 获取序列的枚举器,使用try-with-resources确保资源释放
+      if (!os.moveNext()) { // 尝试移动到第一个元素
+        return null; // 如果序列为空,返回null
       }
-      TSource result = os.current();
-      while (os.moveNext()) {
-        TSource o = os.current();
-        result = func.apply(result, o);
+      TSource result = os.current(); // 获取第一个元素作为初始累加值
+      while (os.moveNext()) { // 遍历剩余的元素
+        TSource o = os.current(); // 获取当前元素
+        result = func.apply(result, o); // 应用累加器函数,更新累加值
       }
-      return result;
-    }
+      return result; // 返回最终的累加值
+    } // 枚举器自动关闭
   }
 
   /**
    * Applies an accumulator function over a
    * sequence. The specified seed value is used as the initial
    * accumulator value.
+   * // 对序列应用累加器函数,使用指定的种子值作为初始累加值
+   * // 种子值允许累加值的类型与源序列元素的类型不同
    */
-  public static <TSource, TAccumulate> TAccumulate aggregate(
-      Enumerable<TSource> source, TAccumulate seed,
-      Function2<TAccumulate, TSource, TAccumulate> func) {
-    TAccumulate result = seed;
-    try (Enumerator<TSource> os = source.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        result = func.apply(result, o);
+  public static <TSource, TAccumulate> TAccumulate aggregate( // TSource:源元素类型,TAccumulate:累加值类型
+      Enumerable<TSource> source, // 源序列
+      TAccumulate seed, // 种子值,作为初始累加值
+      Function2<TAccumulate, TSource, TAccumulate> func) { // 累加器函数,接收当前累加值和下一个元素
+    TAccumulate result = seed; // 使用种子值初始化累加结果
+    try (Enumerator<TSource> os = source.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        result = func.apply(result, o); // 应用累加器函数,更新累加值
       }
-      return result;
-    }
+      return result; // 返回最终的累加值
+    } // 枚举器自动关闭
   }
 
   /**
@@ -121,61 +133,71 @@ public abstract class EnumerableDefaults {
    * sequence. The specified seed value is used as the initial
    * accumulator value, and the specified function is used to select
    * the result value.
+   * // 对序列应用累加器函数,使用指定的种子值作为初始累加值,并使用指定函数选择结果值
+   * // 这是最灵活的聚合形式,允许累加值类型、源元素类型和结果类型都不同
    */
-  public static <TSource, TAccumulate, TResult> TResult aggregate(
-      Enumerable<TSource> source, TAccumulate seed,
-      Function2<TAccumulate, TSource, TAccumulate> func,
-      Function1<TAccumulate, TResult> selector) {
-    TAccumulate accumulate = seed;
-    try (Enumerator<TSource> os = source.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        accumulate = func.apply(accumulate, o);
+  public static <TSource, TAccumulate, TResult> TResult aggregate( // TSource:源元素类型,TAccumulate:累加值类型,TResult:结果类型
+      Enumerable<TSource> source, // 源序列
+      TAccumulate seed, // 种子值,作为初始累加值
+      Function2<TAccumulate, TSource, TAccumulate> func, // 累加器函数,接收当前累加值和下一个元素
+      Function1<TAccumulate, TResult> selector) { // 结果选择器函数,将最终累加值转换为结果
+    TAccumulate accumulate = seed; // 使用种子值初始化累加值
+    try (Enumerator<TSource> os = source.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        accumulate = func.apply(accumulate, o); // 应用累加器函数,更新累加值
       }
-      return selector.apply(accumulate);
-    }
+      return selector.apply(accumulate); // 应用结果选择器,将累加值转换为最终结果
+    } // 枚举器自动关闭
   }
 
   /**
    * Determines whether all elements of a sequence
    * satisfy a condition.
+   * // 确定序列中的所有元素是否都满足条件
+   * // 如果序列为空,返回true(空集合的所有元素都满足任何条件)
+   * // 一旦发现不满足条件的元素,立即返回false(短路求值)
    */
-  public static <TSource> boolean all(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        if (!predicate.apply(o)) {
-          return false;
+  public static <TSource> boolean all(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试每个元素是否满足条件
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        if (!predicate.apply(o)) { // 测试元素是否满足条件
+          return false; // 如果不满足,立即返回false
         }
       }
-      return true;
-    }
+      return true; // 所有元素都满足条件,返回true
+    } // 枚举器自动关闭
   }
 
   /**
    * Determines whether a sequence contains any
    * elements.
+   * // 确定序列是否包含任何元素
+   * // 等价于检查序列长度是否大于0
    */
-  public static boolean any(Enumerable enumerable) {
-    return enumerable.enumerator().moveNext();
+  public static boolean any(Enumerable enumerable) { // 源序列
+    return enumerable.enumerator().moveNext(); // 尝试移动到第一个元素,返回是否成功
   }
 
   /**
    * Determines whether any element of a sequence
    * satisfies a condition.
+   * // 确定序列中是否有任何元素满足条件
+   * // 一旦发现满足条件的元素,立即返回true(短路求值)
    */
-  public static <TSource> boolean any(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        if (predicate.apply(o)) {
-          return true;
+  public static <TSource> boolean any(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试每个元素是否满足条件
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        if (predicate.apply(o)) { // 测试元素是否满足条件
+          return true; // 如果满足,立即返回true
         }
       }
-      return false;
-    }
+      return false; // 没有元素满足条件,返回false
+    } // 枚举器自动关闭
   }
 
   /**
@@ -184,6 +206,9 @@ public abstract class EnumerableDefaults {
    * <p>This method has no effect other than to change the compile-time type of
    * source from a type that implements {@code Enumerable<TSource>} to
    * {@code Enumerable<TSource>} itself.
+   * // 返回输入的Enumerable<TSource>类型
+   * // 这个方法除了改变编译时类型外没有其他效果
+   * // 当一个类型实现了Enumerable<TSource>但有自己的查询方法时,可以使用此方法隐藏自定义方法
    *
    * <p>{@code AsEnumerable<TSource>(Enumerable<TSource>)} can be used to choose
    * between query implementations when a sequence implements
@@ -199,358 +224,391 @@ public abstract class EnumerableDefaults {
    * a local method, the {@code asEnumerable<TSource>} method can be used to
    * hide the custom methods and instead make the standard query operators
    * available.
+   * // 例如,数据库表类可能有自己的where方法将谓词转换为SQL执行
+   * // 如果不想远程执行(比如谓词调用本地方法),可以使用asEnumerable隐藏自定义方法
    */
-  public static <TSource> Enumerable<TSource> asEnumerable(
-      Enumerable<TSource> enumerable) {
-    return enumerable;
+  public static <TSource> Enumerable<TSource> asEnumerable( // 返回Enumerable<TSource>类型
+      Enumerable<TSource> enumerable) { // 源序列
+    return enumerable; // 直接返回输入,仅改变编译时类型
   }
 
   /**
    * Converts an Enumerable to an IQueryable.
    *
    * <p>Analogous to the LINQ's Enumerable.AsQueryable extension method.
+   * // 将Enumerable转换为IQueryable
+   * // 类似于LINQ的Enumerable.AsQueryable扩展方法
+   * // IQueryable允许构建表达式树用于远程查询(如数据库查询)
    *
    * @param enumerable Enumerable
    * @param <TSource> Element type
    *
    * @return A queryable
    */
-  public static <TSource> Queryable<TSource> asQueryable(
-      Enumerable<TSource> enumerable) {
-    throw Extensions.todo();
+  public static <TSource> Queryable<TSource> asQueryable( // 返回IQueryable<TSource>类型
+      Enumerable<TSource> enumerable) { // 源序列
+    throw Extensions.todo(); // 尚未实现
   }
 
   /**
    * Computes the average of a sequence of Decimal
    * values that are obtained by invoking a transform function on
    * each element of the input sequence.
+   * // 计算序列中BigDecimal值的平均值
+   * // 通过对输入序列的每个元素调用转换函数获得BigDecimal值
    */
-  public static <TSource> BigDecimal average(Enumerable<TSource> source,
-      BigDecimalFunction1<TSource> selector) {
-    return sum(source, selector).divide(BigDecimal.valueOf(longCount(source)));
+  public static <TSource> BigDecimal average(Enumerable<TSource> source, // 源序列
+      BigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为BigDecimal
+    return sum(source, selector).divide(BigDecimal.valueOf(longCount(source))); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of nullable
    * Decimal values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   * // 计算序列中可空BigDecimal值的平均值
    */
-  public static <TSource> BigDecimal average(Enumerable<TSource> source,
-      NullableBigDecimalFunction1<TSource> selector) {
-    return sum(source, selector).divide(BigDecimal.valueOf(longCount(source)));
+  public static <TSource> BigDecimal average(Enumerable<TSource> source, // 源序列
+      NullableBigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空BigDecimal
+    return sum(source, selector).divide(BigDecimal.valueOf(longCount(source))); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of Double
    * values that are obtained by invoking a transform function on
    * each element of the input sequence.
+   * // 计算序列中double值的平均值
    */
-  public static <TSource> double average(Enumerable<TSource> source,
-      DoubleFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> double average(Enumerable<TSource> source, // 源序列
+      DoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为double
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of nullable
    * Double values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   * // 计算序列中可空Double值的平均值
    */
-  public static <TSource> Double average(Enumerable<TSource> source,
-      NullableDoubleFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> Double average(Enumerable<TSource> source, // 源序列
+      NullableDoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Double
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of int values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   * // 计算序列中int值的平均值
    */
-  public static <TSource> int average(Enumerable<TSource> source,
-      IntegerFunction1<TSource> selector) {
-    return sum(source, selector) / count(source);
+  public static <TSource> int average(Enumerable<TSource> source, // 源序列
+      IntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为int
+    return sum(source, selector) / count(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of nullable
    * int values that are obtained by invoking a transform function
    * on each element of the input sequence.
+   * // 计算序列中可空Integer值的平均值
    */
-  public static <TSource> Integer average(Enumerable<TSource> source,
-      NullableIntegerFunction1<TSource> selector) {
-    return sum(source, selector) / count(source);
+  public static <TSource> Integer average(Enumerable<TSource> source, // 源序列
+      NullableIntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Integer
+    return sum(source, selector) / count(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of long values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   * // 计算序列中long值的平均值
    */
-  public static <TSource> long average(Enumerable<TSource> source,
-      LongFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> long average(Enumerable<TSource> source, // 源序列
+      LongFunction1<TSource> selector) { // 转换函数,将每个元素转换为long
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of nullable
    * long values that are obtained by invoking a transform function
    * on each element of the input sequence.
+   * // 计算序列中可空Long值的平均值
    */
-  public static <TSource> Long average(Enumerable<TSource> source,
-      NullableLongFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> Long average(Enumerable<TSource> source, // 源序列
+      NullableLongFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Long
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of Float
    * values that are obtained by invoking a transform function on
    * each element of the input sequence.
+   * // 计算序列中float值的平均值
    */
-  public static <TSource> float average(Enumerable<TSource> source,
-      FloatFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> float average(Enumerable<TSource> source, // 源序列
+      FloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为float
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Computes the average of a sequence of nullable
    * Float values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   * // 计算序列中可空Float值的平均值
    */
-  public static <TSource> Float average(Enumerable<TSource> source,
-      NullableFloatFunction1<TSource> selector) {
-    return sum(source, selector) / longCount(source);
+  public static <TSource> Float average(Enumerable<TSource> source, // 源序列
+      NullableFloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Float
+    return sum(source, selector) / longCount(source); // 总和除以元素数量
   }
 
   /**
    * Analogous to LINQ's Enumerable.Cast extension method.
+   * // 类似于LINQ的Enumerable.Cast扩展方法
+   * // 将序列中的元素转换为指定类型
    *
    * @param clazz Target type
    * @param <T2> Target type
    *
    * @return Collection of T2
    */
-  public static <TSource, T2> Enumerable<T2> cast(
-      final Enumerable<TSource> source, final Class<T2> clazz) {
-    return new AbstractEnumerable<T2>() {
-      @Override public Enumerator<T2> enumerator() {
-        return new CastingEnumerator<>(source.enumerator(), clazz);
+  public static <TSource, T2> Enumerable<T2> cast( // 返回指定类型的序列
+      final Enumerable<TSource> source, final Class<T2> clazz) { // 源序列和目标类型
+    return new AbstractEnumerable<T2>() { // 创建抽象的可枚举对象
+      @Override public Enumerator<T2> enumerator() { // 创建枚举器
+        return new CastingEnumerator<>(source.enumerator(), clazz); // 返回类型转换枚举器
       }
     };
   }
 
   /**
    * Concatenates two sequences.
+   * // 连接两个序列
+   * // 将两个序列按顺序合并为一个序列
    */
-  public static <TSource> Enumerable<TSource> concat(
-      Enumerable<TSource> enumerable0, Enumerable<TSource> enumerable1) {
+  public static <TSource> Enumerable<TSource> concat( // 返回连接后的序列
+      Enumerable<TSource> enumerable0, Enumerable<TSource> enumerable1) { // 两个要连接的序列
     //noinspection unchecked
-    return Linq4j.concat(
-        Arrays.asList(enumerable0, enumerable1));
+    return Linq4j.concat( // 使用Linq4j的concat方法连接序列
+        Arrays.asList(enumerable0, enumerable1)); // 将两个序列作为列表传递
   }
 
   /**
    * Determines whether a sequence contains a specified
    * element by using the default equality comparer.
+   * // 确定序列是否包含指定元素,使用默认相等比较器
    */
-  public static <TSource> boolean contains(Enumerable<TSource> enumerable,
-      TSource element) {
+  public static <TSource> boolean contains(Enumerable<TSource> enumerable, // 源序列
+      TSource element) { // 要查找的元素
     // Implementations of Enumerable backed by a Collection call
     // Collection.contains, which may be more efficient, not this method.
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        if (Objects.equals(o, element)) {
-          return true;
+    // 由Collection支持的Enumerable实现会调用Collection.contains,可能更高效
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        if (Objects.equals(o, element)) { // 使用Objects.equals比较元素是否相等
+          return true; // 找到匹配元素,返回true
         }
       }
-      return false;
-    }
+      return false; // 未找到匹配元素,返回false
+    } // 枚举器自动关闭
   }
 
   /**
    * Determines whether a sequence contains a specified
    * element by using a specified {@code EqualityComparer<TSource>}.
+   * // 确定序列是否包含指定元素,使用指定的相等比较器
    */
-  public static <TSource> boolean contains(Enumerable<TSource> enumerable,
-      TSource element, EqualityComparer<TSource> comparer) {
-    for (TSource o : enumerable) {
-      if (comparer.equal(o, element)) {
-        return true;
+  public static <TSource> boolean contains(Enumerable<TSource> enumerable, // 源序列
+      TSource element, EqualityComparer<TSource> comparer) { // 要查找的元素和相等比较器
+    for (TSource o : enumerable) { // 遍历所有元素
+      if (comparer.equal(o, element)) { // 使用指定的比较器比较元素
+        return true; // 找到匹配元素,返回true
       }
     }
-    return false;
+    return false; // 未找到匹配元素,返回false
   }
 
   /**
    * Returns the number of elements in a
    * sequence.
+   * // 返回序列中的元素数量
    */
-  public static <TSource> int count(Enumerable<TSource> enumerable) {
-    return (int) longCount(enumerable, Functions.truePredicate1());
+  public static <TSource> int count(Enumerable<TSource> enumerable) { // 源序列
+    return (int) longCount(enumerable, Functions.truePredicate1()); // 调用longCount并强制转换为int
   }
 
   /**
    * Returns a number that represents how many elements
    * in the specified sequence satisfy a condition.
+   * // 返回指定序列中满足条件的元素数量
    */
-  public static <TSource> int count(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
-    return (int) longCount(enumerable, predicate);
+  public static <TSource> int count(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试元素是否满足条件
+    return (int) longCount(enumerable, predicate); // 调用longCount并强制转换为int
   }
 
   /**
    * Returns the elements of the specified sequence or
    * the type parameter's default value in a singleton collection if
    * the sequence is empty.
+   * // 返回指定序列的元素,如果序列为空则返回类型参数的默认值
    */
-  public static <TSource> Enumerable<@Nullable TSource> defaultIfEmpty(
-      Enumerable<TSource> enumerable) {
-    return defaultIfEmpty(enumerable, null);
+  public static <TSource> Enumerable<@Nullable TSource> defaultIfEmpty( // 返回可空的序列
+      Enumerable<TSource> enumerable) { // 源序列
+    return defaultIfEmpty(enumerable, null); // 调用重载方法,默认值为null
   }
 
   /**
    * Returns the elements of the specified sequence or
    * the specified value in a singleton collection if the sequence
    * is empty.
+   * // 返回指定序列的元素,如果序列为空则返回指定值
    *
    * <p>If {@code value} is not null, the result is never null.
+   * // 如果value不为null,结果永远不会为null
    */
   @SuppressWarnings("return.type.incompatible")
-  public static <TSource> Enumerable<@PolyNull TSource> defaultIfEmpty(
-      Enumerable<TSource> enumerable,
-      @PolyNull TSource value) {
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      if (os.moveNext()) {
-        return Linq4j.<TSource>asEnumerable(() -> new Iterator<TSource>() {
+  public static <TSource> Enumerable<@PolyNull TSource> defaultIfEmpty( // 返回序列
+      Enumerable<TSource> enumerable, // 源序列
+      @PolyNull TSource value) { // 如果序列为空时返回的默认值
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      if (os.moveNext()) { // 尝试移动到第一个元素
+        return Linq4j.<TSource>asEnumerable(() -> new Iterator<TSource>() { // 序列不为空,返回原始序列
 
-          private boolean nonFirst;
+          private boolean nonFirst; // 标记是否已经处理过第一个元素
 
-          private @Nullable Iterator<TSource> rest;
+          private @Nullable Iterator<TSource> rest; // 剩余元素的迭代器
 
-          @Override public boolean hasNext() {
-            return !nonFirst || requireNonNull(rest, "rest").hasNext();
+          @Override public boolean hasNext() { // 检查是否还有下一个元素
+            return !nonFirst || requireNonNull(rest, "rest").hasNext(); // 第一个元素或剩余元素
           }
 
-          @Override public TSource next() {
-            if (nonFirst) {
-              return requireNonNull(rest, "rest").next();
-            } else {
-              final TSource first = os.current();
-              nonFirst = true;
-              rest = Linq4j.enumeratorIterator(os);
-              return first;
+          @Override public TSource next() { // 获取下一个元素
+            if (nonFirst) { // 如果不是第一个元素
+              return requireNonNull(rest, "rest").next(); // 从剩余迭代器获取
+            } else { // 如果是第一个元素
+              final TSource first = os.current(); // 获取第一个元素
+              nonFirst = true; // 标记已处理第一个元素
+              rest = Linq4j.enumeratorIterator(os); // 创建剩余元素的迭代器
+              return first; // 返回第一个元素
             }
           }
 
-          @Override public void remove() {
-            throw new UnsupportedOperationException("remove");
+          @Override public void remove() { // 不支持删除操作
+            throw new UnsupportedOperationException("remove"); // 抛出异常
           }
         });
-      } else {
-        return Linq4j.singletonEnumerable(value);
+      } else { // 序列为空
+        return Linq4j.singletonEnumerable(value); // 返回只包含默认值的单元素序列
       }
-    }
+    } // 枚举器自动关闭
   }
 
   /**
    * Returns distinct elements from a sequence by using
    * the default {@link EqualityComparer} to compare values.
+   * // 返回序列中的不同元素,使用默认相等比较器比较值
    */
-  public static <TSource> Enumerable<TSource> distinct(
-      Enumerable<TSource> enumerable) {
-    final Enumerator<TSource> os = enumerable.enumerator();
-    final Set<TSource> set = new HashSet<>();
-    while (os.moveNext()) {
-      set.add(os.current());
+  public static <TSource> Enumerable<TSource> distinct( // 返回去重后的序列
+      Enumerable<TSource> enumerable) { // 源序列
+    final Enumerator<TSource> os = enumerable.enumerator(); // 获取序列的枚举器
+    final Set<TSource> set = new HashSet<>(); // 创建HashSet用于去重
+    while (os.moveNext()) { // 遍历所有元素
+      set.add(os.current()); // 将元素添加到Set中,自动去重
     }
-    os.close();
-    return Linq4j.asEnumerable(set);
+    os.close(); // 关闭枚举器
+    return Linq4j.asEnumerable(set); // 将Set转换为Enumerable返回
   }
 
   /**
    * Returns distinct elements from a sequence by using
    * a specified {@link EqualityComparer} to compare values.
+   * // 返回序列中的不同元素,使用指定的相等比较器比较值
    */
-  public static <TSource> Enumerable<TSource> distinct(
-      Enumerable<TSource> enumerable, EqualityComparer<TSource> comparer) {
-    if (comparer == Functions.identityComparer()) {
-      return distinct(enumerable);
+  public static <TSource> Enumerable<TSource> distinct( // 返回去重后的序列
+      Enumerable<TSource> enumerable, EqualityComparer<TSource> comparer) { // 源序列和相等比较器
+    if (comparer == Functions.identityComparer()) { // 如果使用默认比较器
+      return distinct(enumerable); // 调用不带比较器的版本
     }
-    final Set<Wrapped<TSource>> set = new HashSet<>();
-    Function1<TSource, Wrapped<TSource>> wrapper = wrapperFor(comparer);
-    Function1<Wrapped<TSource>, TSource> unwrapper = unwrapper();
-    enumerable.select(wrapper).into(set);
-    return Linq4j.asEnumerable(set).select(unwrapper);
+    final Set<Wrapped<TSource>> set = new HashSet<>(); // 创建包装元素的Set
+    Function1<TSource, Wrapped<TSource>> wrapper = wrapperFor(comparer); // 创建包装函数
+    Function1<Wrapped<TSource>, TSource> unwrapper = unwrapper(); // 创建解包函数
+    enumerable.select(wrapper).into(set); // 将元素包装后添加到Set中
+    return Linq4j.asEnumerable(set).select(unwrapper); // 解包后返回
   }
 
   /**
    * Returns the element at a specified index in a
    * sequence.
+   * // 返回序列中指定索引处的元素
    */
-  public static <TSource> TSource elementAt(Enumerable<TSource> enumerable,
-      int index) {
-    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable
-        ? ((ListEnumerable<TSource>) enumerable)
-        : null;
-    if (list != null) {
-      return list.toList().get(index);
+  public static <TSource> TSource elementAt(Enumerable<TSource> enumerable, // 源序列
+      int index) { // 要获取的元素索引
+    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable // 检查是否为ListEnumerable
+        ? ((ListEnumerable<TSource>) enumerable) // 如果是,转换为ListEnumerable
+        : null; // 否则为null
+    if (list != null) { // 如果是ListEnumerable
+      return list.toList().get(index); // 直接从列表中获取元素,效率更高
     }
-    if (index < 0) {
-      throw new IndexOutOfBoundsException();
+    if (index < 0) { // 如果索引为负数
+      throw new IndexOutOfBoundsException(); // 抛出索引越界异常
     }
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      while (true) {
-        if (!os.moveNext()) {
-          throw new IndexOutOfBoundsException();
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      while (true) { // 无限循环
+        if (!os.moveNext()) { // 如果没有下一个元素
+          throw new IndexOutOfBoundsException(); // 抛出索引越界异常
         }
-        if (index == 0) {
-          return os.current();
+        if (index == 0) { // 如果索引减到0
+          return os.current(); // 返回当前元素
         }
-        index--;
+        index--; // 索引减1
       }
-    }
+    } // 枚举器自动关闭
   }
 
   /**
    * Returns the element at a specified index in a
    * sequence or a default value if the index is out of
    * range.
+   * // 返回序列中指定索引处的元素,如果索引超出范围则返回默认值
    */
-  public static <TSource> @Nullable TSource elementAtOrDefault(
-      Enumerable<TSource> enumerable, int index) {
-    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable
-        ? ((ListEnumerable<TSource>) enumerable)
-        : null;
-    if (index >= 0) {
-      if (list != null) {
-        final List<TSource> rawList = list.toList();
-        if (index < rawList.size()) {
-          return rawList.get(index);
+  public static <TSource> @Nullable TSource elementAtOrDefault( // 返回可空的元素
+      Enumerable<TSource> enumerable, int index) { // 源序列和索引
+    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable // 检查是否为ListEnumerable
+        ? ((ListEnumerable<TSource>) enumerable) // 如果是,转换为ListEnumerable
+        : null; // 否则为null
+    if (index >= 0) { // 如果索引非负
+      if (list != null) { // 如果是ListEnumerable
+        final List<TSource> rawList = list.toList(); // 转换为列表
+        if (index < rawList.size()) { // 如果索引在列表范围内
+          return rawList.get(index); // 返回指定索引的元素
         }
-      } else {
-        try (Enumerator<TSource> os = enumerable.enumerator()) {
-          while (true) {
-            if (!os.moveNext()) {
-              break;
+      } else { // 如果不是ListEnumerable
+        try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+          while (true) { // 无限循环
+            if (!os.moveNext()) { // 如果没有下一个元素
+              break; // 跳出循环
             }
-            if (index == 0) {
-              return os.current();
+            if (index == 0) { // 如果索引减到0
+              return os.current(); // 返回当前元素
             }
-            index--;
+            index--; // 索引减1
           }
-        }
+        } // 枚举器自动关闭
       }
     }
-    return null;
+    return null; // 索引超出范围,返回null
   }
 
   /**
    * Produces the set difference of two sequences by
    * using the default equality comparer to compare values,
    * eliminate duplicates. (Defined by Enumerable.)
+   * // 生成两个序列的集合差集,使用默认相等比较器比较值,消除重复项
    */
-  public static <TSource> Enumerable<TSource> except(
-      Enumerable<TSource> source0, Enumerable<TSource> source1) {
-    return except(source0, source1, false);
+  public static <TSource> Enumerable<TSource> except( // 返回差集序列
+      Enumerable<TSource> source0, Enumerable<TSource> source1) { // 第一个序列和第二个序列
+    return except(source0, source1, false); // 调用重载方法,不保留重复项
   }
 
   /**
@@ -558,143 +616,153 @@ public abstract class EnumerableDefaults {
    * using the default equality comparer to compare values,
    * using {@code all} to indicate whether to eliminate duplicates.
    * (Defined by Enumerable.)
+   * // 生成两个序列的集合差集,使用默认相等比较器比较值,all参数指示是否消除重复项
    */
-  public static <TSource> Enumerable<TSource> except(
-      Enumerable<TSource> source0, Enumerable<TSource> source1, boolean all) {
-    Collection<TSource> collection = all ? HashMultiset.create() : new HashSet<>();
-    source0.into(collection);
-    try (Enumerator<TSource> os = source1.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
+  public static <TSource> Enumerable<TSource> except( // 返回差集序列
+      Enumerable<TSource> source0, Enumerable<TSource> source1, boolean all) { // 两个序列和是否保留重复项
+    Collection<TSource> collection = all ? HashMultiset.create() : new HashSet<>(); // 根据all创建集合
+    source0.into(collection); // 将第一个序列的所有元素添加到集合中
+    try (Enumerator<TSource> os = source1.enumerator()) { // 获取第二个序列的枚举器
+      while (os.moveNext()) { // 遍历第二个序列的所有元素
+        TSource o = os.current(); // 获取当前元素
         @SuppressWarnings("argument.type.incompatible")
-        boolean unused = collection.remove(o);
+        boolean unused = collection.remove(o); // 从集合中移除该元素(如果存在)
       }
-      return Linq4j.asEnumerable(collection);
-    }
+      return Linq4j.asEnumerable(collection); // 返回剩余元素的序列
+    } // 枚举器自动关闭
   }
 
   /**
    * Produces the set difference of two sequences by
    * using the specified {@code EqualityComparer<TSource>} to compare
    * values, eliminate duplicates.
+   * // 生成两个序列的集合差集,使用指定的相等比较器比较值,消除重复项
    */
-  public static <TSource> Enumerable<TSource> except(
-      Enumerable<TSource> source0, Enumerable<TSource> source1,
-      EqualityComparer<TSource> comparer) {
-    return except(source0, source1, comparer, false);
+  public static <TSource> Enumerable<TSource> except( // 返回差集序列
+      Enumerable<TSource> source0, Enumerable<TSource> source1, // 两个序列
+      EqualityComparer<TSource> comparer) { // 相等比较器
+    return except(source0, source1, comparer, false); // 调用重载方法,不保留重复项
   }
 
   /**
    * Produces the set difference of two sequences by
    * using the specified {@code EqualityComparer<TSource>} to compare
    * values, using {@code all} to indicate whether to eliminate duplicates.
+   * // 生成两个序列的集合差集,使用指定的相等比较器比较值,all参数指示是否消除重复项
    */
-  public static <TSource> Enumerable<TSource> except(
-      Enumerable<TSource> source0, Enumerable<TSource> source1,
-      EqualityComparer<TSource> comparer, boolean all) {
-    if (comparer == Functions.identityComparer()) {
-      return except(source0, source1, all);
+  public static <TSource> Enumerable<TSource> except( // 返回差集序列
+      Enumerable<TSource> source0, Enumerable<TSource> source1, // 两个序列
+      EqualityComparer<TSource> comparer, boolean all) { // 相等比较器和是否保留重复项
+    if (comparer == Functions.identityComparer()) { // 如果使用默认比较器
+      return except(source0, source1, all); // 调用不带比较器的版本
     }
-    Collection<Wrapped<TSource>> collection = all ? HashMultiset.create() : new HashSet<>();
-    Function1<TSource, Wrapped<TSource>> wrapper = wrapperFor(comparer);
-    source0.select(wrapper).into(collection);
-    try (Enumerator<Wrapped<TSource>> os =
+    Collection<Wrapped<TSource>> collection = all ? HashMultiset.create() : new HashSet<>(); // 创建包装元素的集合
+    Function1<TSource, Wrapped<TSource>> wrapper = wrapperFor(comparer); // 创建包装函数
+    source0.select(wrapper).into(collection); // 将第一个序列的元素包装后添加到集合
+    try (Enumerator<Wrapped<TSource>> os = // 获取第二个序列包装后的枚举器
              source1.select(wrapper).enumerator()) {
-      while (os.moveNext()) {
-        Wrapped<TSource> o = os.current();
-        collection.remove(o);
+      while (os.moveNext()) { // 遍历所有元素
+        Wrapped<TSource> o = os.current(); // 获取当前包装元素
+        collection.remove(o); // 从集合中移除该元素
       }
-    }
-    Function1<Wrapped<TSource>, TSource> unwrapper = unwrapper();
-    return Linq4j.asEnumerable(collection).select(unwrapper);
+    } // 枚举器自动关闭
+    Function1<Wrapped<TSource>, TSource> unwrapper = unwrapper(); // 创建解包函数
+    return Linq4j.asEnumerable(collection).select(unwrapper); // 解包后返回
   }
 
   /**
    * Returns the first element of a sequence. (Defined
    * by Enumerable.)
+   * // 返回序列的第一个元素
    */
-  public static <TSource> TSource first(Enumerable<TSource> enumerable) {
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      if (os.moveNext()) {
-        return os.current();
+  public static <TSource> TSource first(Enumerable<TSource> enumerable) { // 源序列
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      if (os.moveNext()) { // 尝试移动到第一个元素
+        return os.current(); // 返回第一个元素
       }
-      throw new NoSuchElementException();
-    }
+      throw new NoSuchElementException(); // 序列为空,抛出异常
+    } // 枚举器自动关闭
   }
 
   /**
    * Returns the first element in a sequence that
    * satisfies a specified condition.
+   * // 返回序列中满足指定条件的第一个元素
    */
-  public static <TSource> TSource first(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
-    for (TSource o : enumerable) {
-      if (predicate.apply(o)) {
-        return o;
+  public static <TSource> TSource first(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试元素是否满足条件
+    for (TSource o : enumerable) { // 遍历所有元素
+      if (predicate.apply(o)) { // 测试元素是否满足条件
+        return o; // 返回第一个满足条件的元素
       }
     }
-    throw new NoSuchElementException();
+    throw new NoSuchElementException(); // 没有元素满足条件,抛出异常
   }
 
   /**
    * Returns the first element of a sequence, or a
    * default value if the sequence contains no elements.
+   * // 返回序列的第一个元素,如果序列不包含元素则返回默认值
    */
-  public static <TSource> @Nullable TSource firstOrDefault(
-        Enumerable<TSource> enumerable) {
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      if (os.moveNext()) {
-        return os.current();
+  public static <TSource> @Nullable TSource firstOrDefault( // 返回可空的第一个元素
+        Enumerable<TSource> enumerable) { // 源序列
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      if (os.moveNext()) { // 尝试移动到第一个元素
+        return os.current(); // 返回第一个元素
       }
-      return null;
-    }
+      return null; // 序列为空,返回null
+    } // 枚举器自动关闭
   }
 
   /**
    * Returns the first element of the sequence that
    * satisfies a condition or a default value if no such element is
    * found.
+   * // 返回序列中满足指定条件的第一个元素,如果没有找到则返回默认值
    */
-  public static <TSource> @Nullable TSource firstOrDefault(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
-    for (TSource o : enumerable) {
-      if (predicate.apply(o)) {
-        return o;
+  public static <TSource> @Nullable TSource firstOrDefault(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试元素是否满足条件
+    for (TSource o : enumerable) { // 遍历所有元素
+      if (predicate.apply(o)) { // 测试元素是否满足条件
+        return o; // 返回第一个满足条件的元素
       }
     }
-    return null;
+    return null; // 没有元素满足条件,返回null
   }
 
   /**
    * Groups the elements of a sequence according to a
    * specified key selector function.
+   * // 根据指定的键选择器函数对序列的元素进行分组
    */
-  public static <TSource, TKey> Enumerable<Grouping<TKey, TSource>> groupBy(
-      final Enumerable<TSource> enumerable,
-      final Function1<TSource, TKey> keySelector) {
-    return enumerable.toLookup(keySelector);
+  public static <TSource, TKey> Enumerable<Grouping<TKey, TSource>> groupBy( // 返回分组序列
+      final Enumerable<TSource> enumerable, // 源序列
+      final Function1<TSource, TKey> keySelector) { // 键选择器函数,从每个元素提取分组键
+    return enumerable.toLookup(keySelector); // 调用toLookup方法创建查找表
   }
 
   /**
    * Groups the elements of a sequence according to a
    * specified key selector function and compares the keys by using
    * a specified comparer.
+   * // 根据指定的键选择器函数对序列的元素进行分组,并使用指定的比较器比较键
    */
-  public static <TSource, TKey> Enumerable<Grouping<TKey, TSource>> groupBy(
-      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector,
-      EqualityComparer<TKey> comparer) {
-    return enumerable.toLookup(keySelector, comparer);
+  public static <TSource, TKey> Enumerable<Grouping<TKey, TSource>> groupBy( // 返回分组序列
+      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector, // 源序列和键选择器
+      EqualityComparer<TKey> comparer) { // 键相等比较器
+    return enumerable.toLookup(keySelector, comparer); // 调用toLookup方法创建查找表
   }
 
   /**
    * Groups the elements of a sequence according to a
    * specified key selector function and projects the elements for
    * each group by using a specified function.
+   * // 根据指定的键选择器函数对序列的元素进行分组,并使用指定的函数投影每个组的元素
    */
-  public static <TSource, TKey, TElement> Enumerable<Grouping<TKey, TElement>> groupBy(
-      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector,
-      Function1<TSource, TElement> elementSelector) {
-    return enumerable.toLookup(keySelector, elementSelector);
+  public static <TSource, TKey, TElement> Enumerable<Grouping<TKey, TElement>> groupBy( // 返回分组序列
+      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector, // 源序列和键选择器
+      Function1<TSource, TElement> elementSelector) { // 元素选择器函数,投影每个元素
+    return enumerable.toLookup(keySelector, elementSelector); // 调用toLookup方法创建查找表
   }
 
   /**
@@ -702,24 +770,26 @@ public abstract class EnumerableDefaults {
    * key selector function. The keys are compared by using a
    * comparer and each group's elements are projected by using a
    * specified function.
+   * // 根据键选择器函数对序列的元素进行分组,使用比较器比较键,并使用指定的函数投影每个组的元素
    */
-  public static <TSource, TKey, TElement> Enumerable<Grouping<TKey, TElement>> groupBy(
-      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector,
-      Function1<TSource, TElement> elementSelector,
-      EqualityComparer<TKey> comparer) {
-    return enumerable.toLookup(keySelector, elementSelector, comparer);
+  public static <TSource, TKey, TElement> Enumerable<Grouping<TKey, TElement>> groupBy( // 返回分组序列
+      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector, // 源序列和键选择器
+      Function1<TSource, TElement> elementSelector, // 元素选择器函数
+      EqualityComparer<TKey> comparer) { // 键相等比较器
+    return enumerable.toLookup(keySelector, elementSelector, comparer); // 调用toLookup方法创建查找表
   }
 
   /**
    * Groups the elements of a sequence according to a
    * specified key selector function and creates a result value from
    * each group and its key.
+   * // 根据指定的键选择器函数对序列的元素进行分组,并从每个组及其键创建结果值
    */
-  public static <TSource, TKey, TResult> Enumerable<TResult> groupBy(
-      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector,
-      final Function2<TKey, Enumerable<TSource>, TResult> resultSelector) {
-    return enumerable.toLookup(keySelector)
-        .select(group -> resultSelector.apply(group.getKey(), group));
+  public static <TSource, TKey, TResult> Enumerable<TResult> groupBy( // 返回结果序列
+      Enumerable<TSource> enumerable, Function1<TSource, TKey> keySelector, // 源序列和键选择器
+      final Function2<TKey, Enumerable<TSource>, TResult> resultSelector) { // 结果选择器函数
+    return enumerable.toLookup(keySelector) // 创建查找表
+        .select(group -> resultSelector.apply(group.getKey(), group)); // 对每个组应用结果选择器
   }
 
   /**
@@ -1804,29 +1874,30 @@ public abstract class EnumerableDefaults {
   /**
    * Returns the last element of a sequence. (Defined
    * by Enumerable.)
+   * // 返回序列的最后一个元素
    */
-  public static <TSource> TSource last(Enumerable<TSource> enumerable) {
-    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable
-        ? ((ListEnumerable<TSource>) enumerable)
-        : null;
-    if (list != null) {
-      final List<TSource> rawList = list.toList();
-      final int count = rawList.size();
-      if (count > 0) {
-        return rawList.get(count - 1);
+  public static <TSource> TSource last(Enumerable<TSource> enumerable) { // 源序列
+    final ListEnumerable<TSource> list = enumerable instanceof ListEnumerable // 检查是否为ListEnumerable
+        ? ((ListEnumerable<TSource>) enumerable) // 如果是,转换为ListEnumerable
+        : null; // 否则为null
+    if (list != null) { // 如果是ListEnumerable
+      final List<TSource> rawList = list.toList(); // 转换为列表
+      final int count = rawList.size(); // 获取列表大小
+      if (count > 0) { // 如果列表不为空
+        return rawList.get(count - 1); // 返回最后一个元素
       }
-    } else {
-      try (Enumerator<TSource> os = enumerable.enumerator()) {
-        if (os.moveNext()) {
-          TSource result;
-          do {
-            result = os.current();
-          } while (os.moveNext());
-          return result;
+    } else { // 如果不是ListEnumerable
+      try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+        if (os.moveNext()) { // 尝试移动到第一个元素
+          TSource result; // 保存最后一个元素
+          do { // 循环遍历所有元素
+            result = os.current(); // 更新为当前元素
+          } while (os.moveNext()); // 继续移动到下一个元素
+          return result; // 返回最后一个元素
         }
-      }
+      } // 枚举器自动关闭
     }
-    throw new NoSuchElementException();
+    throw new NoSuchElementException(); // 序列为空,抛出异常
   }
 
   /**
@@ -2549,166 +2620,182 @@ public abstract class EnumerableDefaults {
   /**
    * Returns an long that represents the total number
    * of elements in a sequence.
+   * // 返回一个long值,表示序列中的元素总数
    */
-  public static <TSource> long longCount(Enumerable<TSource> source) {
-    return longCount(source, Functions.truePredicate1());
+  public static <TSource> long longCount(Enumerable<TSource> source) { // 源序列
+    return longCount(source, Functions.truePredicate1()); // 调用重载方法,使用总是返回true的谓词
   }
 
   /**
    * Returns an long that represents how many elements
    * in a sequence satisfy a condition.
+   * // 返回一个long值,表示序列中满足条件的元素数量
    */
-  public static <TSource> long longCount(Enumerable<TSource> enumerable,
-      Predicate1<TSource> predicate) {
+  public static <TSource> long longCount(Enumerable<TSource> enumerable, // 源序列
+      Predicate1<TSource> predicate) { // 谓词函数,用于测试元素是否满足条件
     // Shortcut if this is a collection and the predicate is always true.
-    if (predicate == Predicate1.TRUE && enumerable instanceof Collection) {
-      return ((Collection) enumerable).size();
+    // 如果是集合且谓词总是为true,使用快捷方式直接返回集合大小
+    if (predicate == Predicate1.TRUE && enumerable instanceof Collection) { // 检查是否为集合且谓词总是为true
+      return ((Collection) enumerable).size(); // 直接返回集合大小
     }
-    int n = 0;
-    try (Enumerator<TSource> os = enumerable.enumerator()) {
-      while (os.moveNext()) {
-        TSource o = os.current();
-        if (predicate.apply(o)) {
-          ++n;
+    int n = 0; // 计数器
+    try (Enumerator<TSource> os = enumerable.enumerator()) { // 获取序列的枚举器
+      while (os.moveNext()) { // 遍历所有元素
+        TSource o = os.current(); // 获取当前元素
+        if (predicate.apply(o)) { // 测试元素是否满足条件
+          ++n; // 计数器加1
         }
       }
-    }
-    return n;
+    } // 枚举器自动关闭
+    return n; // 返回计数结果
   }
 
   /**
    * Returns the maximum value in a generic
    * sequence.
+   * // 返回泛型序列中的最大值
    */
-  public static <TSource extends Comparable<TSource>> TSource max(
-      Enumerable<TSource> source) {
-    return aggregate(source, maxFunction());
+  public static <TSource extends Comparable<TSource>> TSource max( // 返回最大值
+      Enumerable<TSource> source) { // 源序列
+    return aggregate(source, maxFunction()); // 使用聚合函数和max函数计算最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum Decimal value.
+   * // 对序列的每个元素调用转换函数,返回最大的BigDecimal值
    */
-  public static <TSource> BigDecimal max(Enumerable<TSource> source,
-      BigDecimalFunction1<TSource> selector) {
-    return aggregate(source.select(selector), maxFunction());
+  public static <TSource> BigDecimal max(Enumerable<TSource> source, // 源序列
+      BigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为BigDecimal
+    return aggregate(source.select(selector), maxFunction()); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum nullable Decimal
    * value.
+   * // 对序列的每个元素调用转换函数,返回最大的可空BigDecimal值
    */
-  public static <TSource> BigDecimal max(Enumerable<TSource> source,
-      NullableBigDecimalFunction1<TSource> selector) {
-    return aggregate(source.select(selector), maxFunction());
+  public static <TSource> BigDecimal max(Enumerable<TSource> source, // 源序列
+      NullableBigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空BigDecimal
+    return aggregate(source.select(selector), maxFunction()); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum Double value.
+   * // 对序列的每个元素调用转换函数,返回最大的double值
    */
-  public static <TSource> double max(Enumerable<TSource> source,
-      DoubleFunction1<TSource> selector) {
-    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.DOUBLE_MAX));
+  public static <TSource> double max(Enumerable<TSource> source, // 源序列
+      DoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为double
+    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.DOUBLE_MAX)); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum nullable Double
    * value.
+   * // 对序列的每个元素调用转换函数,返回最大的可空Double值
    */
-  public static <TSource> Double max(Enumerable<TSource> source,
-      NullableDoubleFunction1<TSource> selector) {
-    return aggregate(source.select(selector), Extensions.DOUBLE_MAX);
+  public static <TSource> Double max(Enumerable<TSource> source, // 源序列
+      NullableDoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Double
+    return aggregate(source.select(selector), Extensions.DOUBLE_MAX); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum int value.
+   * // 对序列的每个元素调用转换函数,返回最大的int值
    */
-  public static <TSource> int max(Enumerable<TSource> source,
-      IntegerFunction1<TSource> selector) {
-    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.INTEGER_MAX));
+  public static <TSource> int max(Enumerable<TSource> source, // 源序列
+      IntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为int
+    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.INTEGER_MAX)); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum nullable int value. (Defined
    * by Enumerable.)
+   * // 对序列的每个元素调用转换函数,返回最大的可空Integer值
    */
-  public static <TSource> Integer max(Enumerable<TSource> source,
-      NullableIntegerFunction1<TSource> selector) {
-    return aggregate(source.select(selector), Extensions.INTEGER_MAX);
+  public static <TSource> Integer max(Enumerable<TSource> source, // 源序列
+      NullableIntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Integer
+    return aggregate(source.select(selector), Extensions.INTEGER_MAX); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum long value.
+   * // 对序列的每个元素调用转换函数,返回最大的long值
    */
-  public static <TSource> long max(Enumerable<TSource> source,
-      LongFunction1<TSource> selector) {
-    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.LONG_MAX));
+  public static <TSource> long max(Enumerable<TSource> source, // 源序列
+      LongFunction1<TSource> selector) { // 转换函数,将每个元素转换为long
+    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.LONG_MAX)); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum nullable long value. (Defined
    * by Enumerable.)
+   // 对序列的每个元素调用转换函数,返回最大的可空Long值
    */
-  public static <TSource> @Nullable Long max(Enumerable<TSource> source,
-      NullableLongFunction1<TSource> selector) {
-    return aggregate(source.select(selector), Extensions.LONG_MAX);
+  public static <TSource> @Nullable Long max(Enumerable<TSource> source, // 源序列
+      NullableLongFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Long
+    return aggregate(source.select(selector), Extensions.LONG_MAX); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum Float value.
+   * // 对序列的每个元素调用转换函数,返回最大的float值
    */
-  public static <TSource> float max(Enumerable<TSource> source,
-      FloatFunction1<TSource> selector) {
-    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.FLOAT_MAX));
+  public static <TSource> float max(Enumerable<TSource> source, // 源序列
+      FloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为float
+    return requireNonNull(aggregate(source.select(adapt(selector)), Extensions.FLOAT_MAX)); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * sequence and returns the maximum nullable Float
    * value.
+   * // 对序列的每个元素调用转换函数,返回最大的可空Float值
    */
-  public static <TSource> @Nullable Float max(Enumerable<TSource> source,
-      NullableFloatFunction1<TSource> selector) {
-    return aggregate(source.select(selector), Extensions.FLOAT_MAX);
+  public static <TSource> @Nullable Float max(Enumerable<TSource> source, // 源序列
+      NullableFloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Float
+    return aggregate(source.select(selector), Extensions.FLOAT_MAX); // 先转换再聚合求最大值
   }
 
   /**
    * Invokes a transform function on each element of a
    * generic sequence and returns the maximum resulting
    * value.
+   * // 对泛型序列的每个元素调用转换函数,返回最大的结果值
    */
-  public static <TSource, TResult extends Comparable<TResult>> @Nullable TResult max(
-      Enumerable<TSource> source, Function1<TSource, TResult> selector) {
-    return aggregate(source.select(selector), maxFunction());
+  public static <TSource, TResult extends Comparable<TResult>> @Nullable TResult max( // 返回最大值
+      Enumerable<TSource> source, Function1<TSource, TResult> selector) { // 源序列和转换函数
+    return aggregate(source.select(selector), maxFunction()); // 先转换再聚合求最大值
   }
 
   /**
    * Returns the minimum value in a generic
    * sequence.
+   * // 返回泛型序列中的最小值
    */
-  public static <TSource extends Comparable<TSource>> @Nullable TSource min(
-      Enumerable<TSource> source) {
-    return aggregate(source, minFunction());
+  public static <TSource extends Comparable<TSource>> @Nullable TSource min( // 返回最小值
+      Enumerable<TSource> source) { // 源序列
+    return aggregate(source, minFunction()); // 使用聚合函数和min函数计算最小值
   }
 
   @SuppressWarnings("unchecked")
   private static <TSource extends Comparable<TSource>> Function2<TSource, TSource, TSource>
-      minFunction() {
-    return (Function2<TSource, TSource, TSource>) (Function2) Extensions.COMPARABLE_MIN;
+      minFunction() { // 返回最小值函数
+    return (Function2<TSource, TSource, TSource>) (Function2) Extensions.COMPARABLE_MIN; // 使用Extensions中的最小值函数
   }
 
   @SuppressWarnings("unchecked")
   private static <TSource extends Comparable<TSource>> Function2<TSource, TSource, TSource>
-      maxFunction() {
-    return (Function2<TSource, TSource, TSource>) (Function2) Extensions.COMPARABLE_MAX;
+      maxFunction() { // 返回最大值函数
+    return (Function2<TSource, TSource, TSource>) (Function2) Extensions.COMPARABLE_MAX; // 使用Extensions中的最大值函数
   }
 
   /**
@@ -3004,33 +3091,35 @@ public abstract class EnumerableDefaults {
 
   /**
    * Projects each element of a sequence into a new form.
+   * // 将序列中的每个元素投影为新形式
+   // 这是LINQ中最常用的操作之一,用于转换数据
    */
-  public static <TSource, TResult> Enumerable<TResult> select(
-      final Enumerable<TSource> source,
-      final Function1<TSource, TResult> selector) {
-    if (selector == Functions.identitySelector()) {
+  public static <TSource, TResult> Enumerable<TResult> select( // 返回投影后的序列
+      final Enumerable<TSource> source, // 源序列
+      final Function1<TSource, TResult> selector) { // 选择器函数,将每个元素转换为新形式
+    if (selector == Functions.identitySelector()) { // 如果选择器是恒等函数(不改变元素)
       //noinspection unchecked
-      return (Enumerable<TResult>) source;
+      return (Enumerable<TResult>) source; // 直接返回源序列,避免不必要的转换
     }
-    return new AbstractEnumerable<TResult>() {
-      @Override public Enumerator<TResult> enumerator() {
-        return new Enumerator<TResult>() {
-          final Enumerator<TSource> enumerator = source.enumerator();
+    return new AbstractEnumerable<TResult>() { // 创建抽象的可枚举对象
+      @Override public Enumerator<TResult> enumerator() { // 创建枚举器
+        return new Enumerator<TResult>() { // 创建新的枚举器
+          final Enumerator<TSource> enumerator = source.enumerator(); // 获取源序列的枚举器
 
-          @Override public TResult current() {
-            return selector.apply(enumerator.current());
+          @Override public TResult current() { // 获取当前元素
+            return selector.apply(enumerator.current()); // 应用选择器函数转换当前元素
           }
 
-          @Override public boolean moveNext() {
-            return enumerator.moveNext();
+          @Override public boolean moveNext() { // 移动到下一个元素
+            return enumerator.moveNext(); // 委托给源枚举器
           }
 
-          @Override public void reset() {
-            enumerator.reset();
+          @Override public void reset() { // 重置枚举器
+            enumerator.reset(); // 委托给源枚举器
           }
 
-          @Override public void close() {
-            enumerator.close();
+          @Override public void close() { // 关闭枚举器
+            enumerator.close(); // 委托给源枚举器
           }
         };
       }
@@ -3040,35 +3129,37 @@ public abstract class EnumerableDefaults {
   /**
    * Projects each element of a sequence into a new
    * form by incorporating the element's index.
+   * // 将序列中的每个元素投影为新形式,并包含元素的索引
+   // 索引从0开始
    */
-  public static <TSource, TResult> Enumerable<TResult> select(
-      final Enumerable<TSource> source,
-      final Function2<TSource, Integer, TResult> selector) {
-    return new AbstractEnumerable<TResult>() {
-      @Override public Enumerator<TResult> enumerator() {
-        return new Enumerator<TResult>() {
-          final Enumerator<TSource> enumerator = source.enumerator();
-          int n = -1;
+  public static <TSource, TResult> Enumerable<TResult> select( // 返回投影后的序列
+      final Enumerable<TSource> source, // 源序列
+      final Function2<TSource, Integer, TResult> selector) { // 选择器函数,接收元素和索引
+    return new AbstractEnumerable<TResult>() { // 创建抽象的可枚举对象
+      @Override public Enumerator<TResult> enumerator() { // 创建枚举器
+        return new Enumerator<TResult>() { // 创建新的枚举器
+          final Enumerator<TSource> enumerator = source.enumerator(); // 获取源序列的枚举器
+          int n = -1; // 索引计数器,初始值为-1
 
-          @Override public TResult current() {
-            return selector.apply(enumerator.current(), n);
+          @Override public TResult current() { // 获取当前元素
+            return selector.apply(enumerator.current(), n); // 应用选择器函数,传入元素和索引
           }
 
-          @Override public boolean moveNext() {
-            if (enumerator.moveNext()) {
-              ++n;
-              return true;
-            } else {
-              return false;
+          @Override public boolean moveNext() { // 移动到下一个元素
+            if (enumerator.moveNext()) { // 如果源枚举器能移动到下一个元素
+              ++n; // 索引加1
+              return true; // 返回true表示成功移动
+            } else { // 如果源枚举器没有下一个元素
+              return false; // 返回false表示已到达末尾
             }
           }
 
-          @Override public void reset() {
-            enumerator.reset();
+          @Override public void reset() { // 重置枚举器
+            enumerator.reset(); // 委托给源枚举器
           }
 
-          @Override public void close() {
-            enumerator.close();
+          @Override public void close() { // 关闭枚举器
+            enumerator.close(); // 委托给源枚举器
           }
         };
       }
@@ -3468,102 +3559,113 @@ public abstract class EnumerableDefaults {
    * Computes the sum of the sequence of Decimal values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   * // 计算序列中BigDecimal值的总和
+   // 通过对输入序列的每个元素调用转换函数获得BigDecimal值
    */
-  public static <TSource> BigDecimal sum(Enumerable<TSource> source,
-      BigDecimalFunction1<TSource> selector) {
-    return aggregate(source.select(selector), BigDecimal.ZERO,
-        Extensions.BIG_DECIMAL_SUM);
+  public static <TSource> BigDecimal sum(Enumerable<TSource> source, // 源序列
+      BigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为BigDecimal
+    return aggregate(source.select(selector), BigDecimal.ZERO, // 转换后从0开始聚合求和
+        Extensions.BIG_DECIMAL_SUM); // 使用BigDecimal求和函数
   }
 
   /**
    * Computes the sum of the sequence of nullable
    * Decimal values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   * // 计算序列中可空BigDecimal值的总和
    */
-  public static <TSource> BigDecimal sum(Enumerable<TSource> source,
-      NullableBigDecimalFunction1<TSource> selector) {
-    return aggregate(source.select(selector), BigDecimal.ZERO,
-        Extensions.BIG_DECIMAL_SUM);
+  public static <TSource> BigDecimal sum(Enumerable<TSource> source, // 源序列
+      NullableBigDecimalFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空BigDecimal
+    return aggregate(source.select(selector), BigDecimal.ZERO, // 转换后从0开始聚合求和
+        Extensions.BIG_DECIMAL_SUM); // 使用BigDecimal求和函数
   }
 
   /**
    * Computes the sum of the sequence of Double values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   * // 计算序列中double值的总和
    */
-  public static <TSource> double sum(Enumerable<TSource> source,
-      DoubleFunction1<TSource> selector) {
-    return aggregate(source.select(adapt(selector)), 0d, Extensions.DOUBLE_SUM);
+  public static <TSource> double sum(Enumerable<TSource> source, // 源序列
+      DoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为double
+    return aggregate(source.select(adapt(selector)), 0d, Extensions.DOUBLE_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of nullable
    * Double values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   // 计算序列中可空Double值的总和
    */
-  public static <TSource> Double sum(Enumerable<TSource> source,
-      NullableDoubleFunction1<TSource> selector) {
-    return aggregate(source.select(selector), 0d, Extensions.DOUBLE_SUM);
+  public static <TSource> Double sum(Enumerable<TSource> source, // 源序列
+      NullableDoubleFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Double
+    return aggregate(source.select(selector), 0d, Extensions.DOUBLE_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of int values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   // 计算序列中int值的总和
    */
-  public static <TSource> int sum(Enumerable<TSource> source,
-      IntegerFunction1<TSource> selector) {
-    return aggregate(source.select(adapt(selector)), 0, Extensions.INTEGER_SUM);
+  public static <TSource> int sum(Enumerable<TSource> source, // 源序列
+      IntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为int
+    return aggregate(source.select(adapt(selector)), 0, Extensions.INTEGER_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of nullable int
    * values that are obtained by invoking a transform function on
    * each element of the input sequence.
+   // 计算序列中可空Integer值的总和
    */
-  public static <TSource> Integer sum(Enumerable<TSource> source,
-      NullableIntegerFunction1<TSource> selector) {
-    return aggregate(source.select(selector), 0, Extensions.INTEGER_SUM);
+  public static <TSource> Integer sum(Enumerable<TSource> source, // 源序列
+      NullableIntegerFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Integer
+    return aggregate(source.select(selector), 0, Extensions.INTEGER_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of long values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   // 计算序列中long值的总和
    */
-  public static <TSource> long sum(Enumerable<TSource> source,
-      LongFunction1<TSource> selector) {
-    return aggregate(source.select(adapt(selector)), 0L, Extensions.LONG_SUM);
+  public static <TSource> long sum(Enumerable<TSource> source, // 源序列
+      LongFunction1<TSource> selector) { // 转换函数,将每个元素转换为long
+    return aggregate(source.select(adapt(selector)), 0L, Extensions.LONG_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of nullable long
    * values that are obtained by invoking a transform function on
    * each element of the input sequence.
+   // 计算序列中可空Long值的总和
    */
-  public static <TSource> Long sum(Enumerable<TSource> source,
-      NullableLongFunction1<TSource> selector) {
-    return aggregate(source.select(selector), 0L, Extensions.LONG_SUM);
+  public static <TSource> Long sum(Enumerable<TSource> source, // 源序列
+      NullableLongFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Long
+    return aggregate(source.select(selector), 0L, Extensions.LONG_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of Float values
    * that are obtained by invoking a transform function on each
    * element of the input sequence.
+   // 计算序列中float值的总和
    */
-  public static <TSource> float sum(Enumerable<TSource> source,
-      FloatFunction1<TSource> selector) {
-    return aggregate(source.select(adapt(selector)), 0F, Extensions.FLOAT_SUM);
+  public static <TSource> float sum(Enumerable<TSource> source, // 源序列
+      FloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为float
+    return aggregate(source.select(adapt(selector)), 0F, Extensions.FLOAT_SUM); // 转换后从0开始聚合求和
   }
 
   /**
    * Computes the sum of the sequence of nullable
    * Float values that are obtained by invoking a transform
    * function on each element of the input sequence.
+   // 计算序列中可空Float值的总和
    */
-  public static <TSource> Float sum(Enumerable<TSource> source,
-      NullableFloatFunction1<TSource> selector) {
-    return aggregate(source.select(selector), 0F, Extensions.FLOAT_SUM);
+  public static <TSource> Float sum(Enumerable<TSource> source, // 源序列
+      NullableFloatFunction1<TSource> selector) { // 转换函数,将每个元素转换为可空Float
+    return aggregate(source.select(selector), 0F, Extensions.FLOAT_SUM); // 转换后从0开始聚合求和
   }
 
   /**
@@ -3887,41 +3989,43 @@ public abstract class EnumerableDefaults {
   /**
    * Filters a sequence of values based on a
    * predicate.
+   * // 基于谓词过滤序列中的值
+   // 只保留满足谓词条件的元素
    */
-  public static <TSource> Enumerable<TSource> where(
-      final Enumerable<TSource> source, final Predicate1<TSource> predicate) {
-    requireNonNull(predicate, "predicate");
-    return new AbstractEnumerable<TSource>() {
-      @Override public Enumerator<TSource> enumerator() {
-        final Enumerator<TSource> enumerator = source.enumerator();
-        return EnumerableDefaults.where(enumerator, predicate);
+  public static <TSource> Enumerable<TSource> where( // 返回过滤后的序列
+      final Enumerable<TSource> source, final Predicate1<TSource> predicate) { // 源序列和谓词函数
+    requireNonNull(predicate, "predicate"); // 确保谓词不为null
+    return new AbstractEnumerable<TSource>() { // 创建抽象的可枚举对象
+      @Override public Enumerator<TSource> enumerator() { // 创建枚举器
+        final Enumerator<TSource> enumerator = source.enumerator(); // 获取源序列的枚举器
+        return EnumerableDefaults.where(enumerator, predicate); // 调用私有的where方法创建过滤枚举器
       }
     };
   }
 
-  private static <TSource> Enumerator<TSource> where(
-      final Enumerator<TSource> enumerator,
-      final Predicate1<TSource> predicate) {
-    return new Enumerator<TSource>() {
-      @Override public TSource current() {
-        return enumerator.current();
+  private static <TSource> Enumerator<TSource> where( // 私有方法,创建过滤枚举器
+      final Enumerator<TSource> enumerator, // 源枚举器
+      final Predicate1<TSource> predicate) { // 谓词函数
+    return new Enumerator<TSource>() { // 创建新的枚举器
+      @Override public TSource current() { // 获取当前元素
+        return enumerator.current(); // 返回源枚举器的当前元素
       }
 
-      @Override public boolean moveNext() {
-        while (enumerator.moveNext()) {
-          if (predicate.apply(enumerator.current())) {
-            return true;
+      @Override public boolean moveNext() { // 移动到下一个元素
+        while (enumerator.moveNext()) { // 循环遍历源枚举器的所有元素
+          if (predicate.apply(enumerator.current())) { // 测试元素是否满足谓词条件
+            return true; // 满足条件,返回true
           }
         }
-        return false;
+        return false; // 没有更多满足条件的元素,返回false
       }
 
-      @Override public void reset() {
-        enumerator.reset();
+      @Override public void reset() { // 重置枚举器
+        enumerator.reset(); // 委托给源枚举器
       }
 
-      @Override public void close() {
-        enumerator.close();
+      @Override public void close() { // 关闭枚举器
+        enumerator.close(); // 委托给源枚举器
       }
     };
   }
@@ -3930,37 +4034,39 @@ public abstract class EnumerableDefaults {
    * Filters a sequence of values based on a
    * predicate. Each element's index is used in the logic of the
    * predicate function.
+   * // 基于谓词过滤序列中的值,谓词函数中使用每个元素的索引
+   // 索引从0开始
    */
-  public static <TSource> Enumerable<TSource> where(
-      final Enumerable<TSource> source,
-      final Predicate2<TSource, Integer> predicate) {
-    return new AbstractEnumerable<TSource>() {
-      @Override public Enumerator<TSource> enumerator() {
-        return new Enumerator<TSource>() {
-          final Enumerator<TSource> enumerator = source.enumerator();
-          int n = -1;
+  public static <TSource> Enumerable<TSource> where( // 返回过滤后的序列
+      final Enumerable<TSource> source, // 源序列
+      final Predicate2<TSource, Integer> predicate) { // 谓词函数,接收元素和索引
+    return new AbstractEnumerable<TSource>() { // 创建抽象的可枚举对象
+      @Override public Enumerator<TSource> enumerator() { // 创建枚举器
+        return new Enumerator<TSource>() { // 创建新的枚举器
+          final Enumerator<TSource> enumerator = source.enumerator(); // 获取源序列的枚举器
+          int n = -1; // 索引计数器,初始值为-1
 
-          @Override public TSource current() {
-            return enumerator.current();
+          @Override public TSource current() { // 获取当前元素
+            return enumerator.current(); // 返回源枚举器的当前元素
           }
 
-          @Override public boolean moveNext() {
-            while (enumerator.moveNext()) {
-              ++n;
-              if (predicate.apply(enumerator.current(), n)) {
-                return true;
+          @Override public boolean moveNext() { // 移动到下一个元素
+            while (enumerator.moveNext()) { // 循环遍历源枚举器的所有元素
+              ++n; // 索引加1
+              if (predicate.apply(enumerator.current(), n)) { // 测试元素和索引是否满足谓词条件
+                return true; // 满足条件,返回true
               }
             }
-            return false;
+            return false; // 没有更多满足条件的元素,返回false
           }
 
-          @Override public void reset() {
-            enumerator.reset();
-            n = -1;
+          @Override public void reset() { // 重置枚举器
+            enumerator.reset(); // 委托给源枚举器
+            n = -1; // 重置索引计数器
           }
 
-          @Override public void close() {
-            enumerator.close();
+          @Override public void close() { // 关闭枚举器
+            enumerator.close(); // 委托给源枚举器
           }
         };
       }

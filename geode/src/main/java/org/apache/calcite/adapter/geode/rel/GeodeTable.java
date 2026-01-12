@@ -261,17 +261,17 @@ public class GeodeTable extends AbstractQueryableTable implements TranslatableTa
     /**
      * Called via code-generation.
      */
-    @SuppressWarnings("UnusedDeclaration")
-    public Enumerable<Object> query(
-        List<Map.Entry<String, Class>> fields,
-        List<Map.Entry<String, String>> selectFields,
-        List<Map.Entry<String, String>> aggregateFunctions,
-        List<String> groupByFields,
-        List<String> predicates,
-        List<String> order,
-        Long limit) {
-      return getTable().query(getClientCache(), fields, selectFields,
-          aggregateFunctions, groupByFields, predicates, order, limit);
-    }
-  }
-}
+    @SuppressWarnings("UnusedDeclaration") // 抑制未使用声明警告,因为此方法通过反射/代码生成调用
+    public Enumerable<Object> query( // query方法,通过代码生成调用,执行实际查询
+        List<Map.Entry<String, Class>> fields, // 字段列表,包含字段名和Java类型
+        List<Map.Entry<String, String>> selectFields, // SELECT字段列表,包含字段名和别名
+        List<Map.Entry<String, String>> aggregateFunctions, // 聚合函数列表,包含表达式和别名
+        List<String> groupByFields, // GROUP BY字段列表
+        List<String> predicates, // WHERE谓词列表
+        List<String> order, // ORDER BY字段列表
+        Long limit) { // LIMIT限制值
+      return getTable().query(getClientCache(), fields, selectFields, // 委托给GeodeTable的query方法执行查询
+          aggregateFunctions, groupByFields, predicates, order, limit); // 传递所有参数
+    } // query方法结束
+  } // GeodeQueryable内部类结束
+} // GeodeTable类结束

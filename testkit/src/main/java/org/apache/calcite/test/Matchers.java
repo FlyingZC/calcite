@@ -14,155 +14,213 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.test;
+// Apache许可证头,声明版权和使用许可
+package org.apache.calcite.test; // 包声明,属于org.apache.calcite.test测试包
 
+// 导入Calcite核心类:RelOptUtil用于关系表达式工具方法,RelNode表示关系表达式节点
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.RelValidityChecker;
-import org.apache.calcite.rel.hint.Hintable;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlExplainLevel;
-import org.apache.calcite.util.TestUtil;
-import org.apache.calcite.util.Util;
+import org.apache.calcite.rel.RelValidityChecker; // 关系表达式有效性检查器
+import org.apache.calcite.rel.hint.Hintable; // 可提示接口,用于关系提示
+import org.apache.calcite.rex.RexNode; // 行表达式节点,表示SQL表达式
+import org.apache.calcite.sql.SqlExplainLevel; // SQL解释级别枚举
+import org.apache.calcite.util.TestUtil; // 测试工具类
+import org.apache.calcite.util.Util; // 通用工具类
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.RangeSet;
+// 导入Google Guava集合工具类
+import com.google.common.collect.Lists; // Lists工具类,提供便捷的List创建方法
+import com.google.common.collect.RangeSet; // 范围集合接口
 
+// 导入API Guard注解,用于标记API稳定性
 import org.apiguardian.api.API;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.CustomTypeSafeMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.hamcrest.TypeSafeMatcher;
-import org.hamcrest.core.Is;
-import org.hamcrest.core.StringContains;
+// 导入Hamcrest匹配器框架核心类
+import org.hamcrest.BaseMatcher; // 基础匹配器抽象类
+import org.hamcrest.CustomTypeSafeMatcher; // 自定义类型安全匹配器
+import org.hamcrest.Description; // 匹配器描述接口
+import org.hamcrest.Matcher; // 匹配器接口
+import org.hamcrest.TypeSafeMatcher; // 类型安全匹配器基类
+import org.hamcrest.core.Is; // Is匹配器,用于相等性判断
+import org.hamcrest.core.StringContains; // 字符串包含匹配器
 
-import java.lang.reflect.Array;
-import java.nio.charset.Charset;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.regex.Pattern;
-import java.util.stream.StreamSupport;
+// 导入Java标准库类
+import java.lang.reflect.Array; // 反射数组工具类
+import java.nio.charset.Charset; // 字符集类
+import java.sql.ResultSet; // JDBC结果集接口
+import java.sql.SQLException; // SQL异常类
+import java.util.ArrayList; // 动态数组列表
+import java.util.Arrays; // 数组工具类
+import java.util.Collections; // 集合工具类
+import java.util.List; // 列表接口
+import java.util.Objects; // 对象工具类,提供null安全方法
+import java.util.function.Function; // 函数式接口,表示一个转换函数
+import java.util.regex.Pattern; // 正则表达式编译类
+import java.util.stream.StreamSupport; // 流支持工具类
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
+// 静态导入,简化方法调用
+import static com.google.common.base.Preconditions.checkArgument; // 参数校验工具
+import static com.google.common.collect.ImmutableList.toImmutableList; // 转换为不可变列表
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.CoreMatchers.equalTo; // 相等匹配器
+import static org.hamcrest.CoreMatchers.is; // Is匹配器
+import static org.hamcrest.Matchers.closeTo; // 近似匹配器
 
 /**
  * Matchers for testing SQL queries.
+ * SQL查询测试的匹配器工具类
+ * 
+ * 这个类提供了大量的Hamcrest Matcher实现,用于在单元测试中验证SQL查询结果
+ * 主要功能包括:
+ * 1. 结果集匹配:验证JDBC ResultSet返回的数据是否符合预期
+ * 2. 关系表达式匹配:验证RelNode(关系代数树)的结构和内容
+ * 3. 行表达式匹配:验证RexNode(行表达式)的内容
+ * 4. 数值匹配:验证数值是否在指定范围内或近似相等
+ * 5. 字符串匹配:处理跨平台换行符问题
+ * 6. 集合匹配:验证集合元素(支持无序比较)
+ * 
+ * 使用场景:
+ * - Calcite集成测试中验证SQL执行结果
+ * - 验证查询优化器生成的执行计划
+ * - 测试SQL到关系代数的转换结果
+ * - 验证数据类型转换和表达式求值
+ * 
+ * 设计特点:
+ * - 基于Hamcrest框架,提供流畅的断言语法
+ * - 支持跨平台测试(处理Windows/Unix换行符差异)
+ * - 提供类型安全的匹配器实现
+ * - 使用ThreadLocal传递实际结果用于错误描述
  */
-public class Matchers {
+public class Matchers { // 测试匹配器工具类,所有方法都是静态工厂方法
 
-  private static final Pattern PATTERN = Pattern.compile(", id = [0-9]+");
+  // 正则表达式模式,用于匹配关系节点ID,格式如", id = 123"
+  // 用于去除执行计划中不稳定的节点ID,使测试更可靠
+  private static final Pattern PATTERN = Pattern.compile(", id = [0-9]+"); // 编译节点ID匹配模式
 
   /** A small positive value. */
-  public static final double EPSILON = 1.0e-5;
+  // 一个小的正数值,用于浮点数近似比较的容差值
+  // 在比较两个浮点数是否"几乎相等"时,如果差值小于EPSILON则认为相等
+  public static final double EPSILON = 1.0e-5; // 浮点数比较的容差值(0.00001)
 
-  private Matchers() {}
+  private Matchers() {} // 私有构造函数,防止实例化(工具类模式)
 
   /** Allows passing the actual result from the {@code matchesSafely} method to
    * the {@code describeMismatchSafely} method that will show the difference. */
-  private static final ThreadLocal<Object> THREAD_ACTUAL = new ThreadLocal<>();
+  // 线程局部变量,用于在matchesSafely方法和describeMismatchSafely方法之间传递实际结果
+  // 当匹配失败时,需要将实际值传递给错误描述方法,以便显示差异
+  // 使用ThreadLocal确保多线程环境下每个线程有自己独立的实际值
+  private static final ThreadLocal<Object> THREAD_ACTUAL = new ThreadLocal<>(); // 线程局部变量,存储实际匹配结果
 
   /**
    * Creates a matcher that matches if the examined result set returns the
    * given collection of rows in some order.
+   * 创建一个匹配器,验证结果集是否返回给定的行集合(顺序不重要)
    *
    * <p>Closes the result set after reading.
+   * 读取后会关闭结果集,避免资源泄漏
    *
    * <p>For example:
    * <pre>assertThat(statement.executeQuery("select empno from emp"),
    *   returnsUnordered("empno=1234", "empno=100"));</pre>
+   * 
+   * 使用示例:验证SQL查询返回的员工编号是否包含1234和100(顺序不限)
+   * 
+   * 工作原理:
+   * 1. 将预期的行字符串列表排序
+   * 2. 读取ResultSet并转换为字符串列表
+   * 3. 对实际结果排序
+   * 4. 比较排序后的列表是否相等
+   * 5. 使用ThreadLocal保存实际结果用于错误描述
+   * 
+   * @param lines 预期的行字符串数组,每行格式如"empno=1234"
+   * @return ResultSet匹配器,验证结果集内容
    */
-  public static Matcher<? super ResultSet> returnsUnordered(String... lines) {
-    final List<String> expectedList = Lists.newArrayList(lines);
-    Collections.sort(expectedList);
+  public static Matcher<? super ResultSet> returnsUnordered(String... lines) { // 创建无序结果集匹配器
+    final List<String> expectedList = Lists.newArrayList(lines); // 将预期行转换为可变列表
+    Collections.sort(expectedList); // 对预期列表排序,支持无序比较
 
-    return new CustomTypeSafeMatcher<ResultSet>(Arrays.toString(lines)) {
-      @Override protected void describeMismatchSafely(ResultSet item,
+    return new CustomTypeSafeMatcher<ResultSet>(Arrays.toString(lines)) { // 返回自定义类型安全匹配器
+      @Override protected void describeMismatchSafely(ResultSet item, // 描述匹配失败时的实际结果
           Description description) {
-        final Object value = THREAD_ACTUAL.get();
-        THREAD_ACTUAL.remove();
-        description.appendText("was ").appendValue(value);
+        final Object value = THREAD_ACTUAL.get(); // 从ThreadLocal获取实际结果
+        THREAD_ACTUAL.remove(); // 清除ThreadLocal,避免内存泄漏
+        description.appendText("was ").appendValue(value); // 添加实际值到描述
       }
 
-      @Override protected boolean matchesSafely(ResultSet resultSet) {
-        final List<String> actualList = new ArrayList<>();
+      @Override protected boolean matchesSafely(ResultSet resultSet) { // 安全匹配方法(类型已检查)
+        final List<String> actualList = new ArrayList<>(); // 创建实际结果列表
         try {
-          CalciteAssert.toStringList(resultSet, actualList);
-          resultSet.close();
-        } catch (SQLException e) {
-          throw TestUtil.rethrow(e);
+          CalciteAssert.toStringList(resultSet, actualList); // 将ResultSet转换为字符串列表
+          resultSet.close(); // 关闭结果集,释放资源
+        } catch (SQLException e) { // 捕获SQL异常
+          throw TestUtil.rethrow(e); // 重新抛出为运行时异常
         }
-        Collections.sort(actualList);
+        Collections.sort(actualList); // 对实际列表排序
 
-        THREAD_ACTUAL.set(actualList);
-        final boolean equals = actualList.equals(expectedList);
-        if (!equals) {
-          THREAD_ACTUAL.set(actualList);
+        THREAD_ACTUAL.set(actualList); // 将实际结果存入ThreadLocal
+        final boolean equals = actualList.equals(expectedList); // 比较实际和预期是否相等
+        if (!equals) { // 如果不相等
+          THREAD_ACTUAL.set(actualList); // 再次设置(可能重复,但确保有值)
         }
-        return equals;
+        return equals; // 返回匹配结果
       }
     };
   }
 
-  public static <E extends Comparable> Matcher<Iterable<E>> equalsUnordered(
-      E... lines) {
-    final List<String> expectedList =
-        Lists.newArrayList(toStringList(Arrays.asList(lines)));
-    Collections.sort(expectedList);
-    final String description = Util.lines(expectedList);
-    return new CustomTypeSafeMatcher<Iterable<E>>(description) {
-      @Override protected void describeMismatchSafely(Iterable<E> actuals,
+  public static <E extends Comparable> Matcher<Iterable<E>> equalsUnordered( // 创建可比较元素的无序相等匹配器
+      E... lines) { // 可变参数,预期元素列表
+    final List<String> expectedList = // 创建预期字符串列表
+        Lists.newArrayList(toStringList(Arrays.asList(lines))); // 将元素转换为字符串并收集
+    Collections.sort(expectedList); // 对预期列表排序
+    final String description = Util.lines(expectedList); // 将列表转换为多行字符串作为描述
+    return new CustomTypeSafeMatcher<Iterable<E>>(description) { // 返回自定义匹配器
+      @Override protected void describeMismatchSafely(Iterable<E> actuals, // 描述匹配失败
           Description description) {
-        final List<String> actualList =
-            Lists.newArrayList(toStringList(actuals));
-        Collections.sort(actualList);
-        description.appendText("was ")
-            .appendValue(Util.lines(actualList));
+        final List<String> actualList = // 创建实际字符串列表
+            Lists.newArrayList(toStringList(actuals)); // 转换实际元素为字符串
+        Collections.sort(actualList); // 对实际列表排序
+        description.appendText("was ") // 添加"was"前缀
+            .appendValue(Util.lines(actualList)); // 添加实际值的多行表示
       }
 
-      @Override protected boolean matchesSafely(Iterable<E> actuals) {
-        final List<String> actualList =
+      @Override protected boolean matchesSafely(Iterable<E> actuals) { // 安全匹配方法
+        final List<String> actualList = // 转换实际元素为字符串列表
             Lists.newArrayList(toStringList(actuals));
-        Collections.sort(actualList);
-        return actualList.equals(expectedList);
+        Collections.sort(actualList); // 排序实际列表
+        return actualList.equals(expectedList); // 比较排序后的列表
       }
     };
   }
 
-  private static <E> Iterable<String> toStringList(Iterable<E> items) {
-    return StreamSupport.stream(items.spliterator(), false)
-        .map(Object::toString)
-        .collect(toImmutableList());
+  private static <E> Iterable<String> toStringList(Iterable<E> items) { // 将元素集合转换为字符串集合
+    return StreamSupport.stream(items.spliterator(), false) // 创建流(非并行)
+        .map(Object::toString) // 将每个元素转换为字符串
+        .collect(toImmutableList()); // 收集为不可变列表
   }
 
   /**
    * Creates a matcher that matches when the examined object is within
    * {@code epsilon} of the specified {@code value}.
+   * 创建一个匹配器,验证对象是否在指定值的epsilon范围内
    *
    * @deprecated Use {@link org.hamcrest.Matchers#closeTo(double, double)}
+   * 已废弃,请使用Hamcrest的closeTo方法替代
    */
-  @Deprecated // to be removed before 1.39
-  public static <T extends Number> Matcher<T> within(T value, double epsilon) {
-    return new IsWithin<>(value, epsilon);
+  @Deprecated // to be removed before 1.39 // 标记为废弃,将在1.39版本前移除
+  public static <T extends Number> Matcher<T> within(T value, double epsilon) { // 创建数值范围匹配器
+    return new IsWithin<>(value, epsilon); // 返回IsWithin匹配器实例
   }
 
   /**
    * Creates a matcher that matches when the examined object is within
    * {@link #EPSILON} of the specified <code>operand</code>.
+   * 创建一个匹配器,验证Double类型对象是否在指定值的EPSILON范围内
+   * 
+   * EPSILON是类定义的常量(1.0e-5),用于处理浮点数精度问题
+   * 
+   * @param value 期望的数值
+   * @return Double匹配器,验证数值是否在容差范围内
    */
-  public static Matcher<Double> isAlmost(double value) {
-    return closeTo(value, EPSILON);
+  public static Matcher<Double> isAlmost(double value) { // 创建近似相等匹配器(使用默认EPSILON)
+    return closeTo(value, EPSILON); // 使用Hamcrest的closeTo匹配器
   }
 
   /**

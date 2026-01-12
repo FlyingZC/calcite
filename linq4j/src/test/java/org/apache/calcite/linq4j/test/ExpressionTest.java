@@ -73,23 +73,50 @@ import static org.hamcrest.Matchers.hasToString;
 /**
  * Unit test for {@link org.apache.calcite.linq4j.tree.Expression}
  * and subclasses.
+ * // 单元测试类,用于测试org.apache.calcite.linq4j.tree.Expression及其子类的功能
+ * // 这个类全面测试了Calcite的LINQ4J表达式树(Expression Tree)系统
+ * // 表达式树是Calcite用于动态生成Java代码的核心机制,允许在运行时构建、编译和执行表达式
+ * // 主要测试内容包括:
+ * // 1. Lambda表达式测试 - 测试各种类型的lambda表达式创建、编译和执行
+ * // 2. 二元运算测试 - 测试不同数据类型的算术运算(+,-,*,/)
+ * // 3. 表达式字符串化测试 - 验证表达式树能正确转换为Java源代码字符串
+ * // 4. 常量表达式测试 - 测试各种类型常量的表达式表示
+ * // 5. 控制流表达式测试 - 测试if、while、for、try-catch等控制流语句的表达式表示
+ * // 6. 类型系统测试 - 验证表达式类型推断的正确性
+ * // 7. 表达式编译测试 - 测试表达式树能否正确编译为可执行代码
+ * // 8. 代码块构建器测试 - 测试BlockBuilder用于优化和构建代码块的功能
+ * // 9. 集合字面量测试 - 测试List、Set、Map等集合类型的常量表达式
+ * // 10. 子表达式消除测试 - 验证公共子表达式消除优化
+ * // 这些测试确保Calcite能够正确地将SQL查询转换为可执行的Java代码
  */
 public class ExpressionTest {
 
   @Test void testLambdaCallsBinaryOpInt() {
     // A parameter for the lambda expression.
+    // 创建一个参数表达式,类型为int,参数名为"arg"
+    // ParameterExpression是表达式树中表示参数的节点
     ParameterExpression paramExpr =
         Expressions.parameter(Integer.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1 to the parameter value.
+    // 创建一个lambda表达式,该表达式接收一个int参数,返回参数值加2的结果
+    // Expressions.lambda()方法用于创建函数表达式
+    // Expressions.add()创建一个加法表达式,将参数和常量2相加
+    // Arrays.asList(paramExpr)指定lambda表达式的参数列表
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(2)),
             Arrays.asList(paramExpr));
 
     // Print out the expression.
+    // 将表达式树转换为Java源代码字符串
+    // Expressions.toString()方法会将表达式树序列化为可读的Java代码
+    // 这对于调试和代码生成非常有用
     String s = Expressions.toString(lambdaExpr);
+    // 验证生成的代码字符串是否符合预期
+    // 生成的代码是一个实现Function1接口的匿名类
+    // Function1是Calcite提供的函数式接口,表示接受一个参数的函数
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
             + "  public int apply(int arg) {\n"
@@ -107,30 +134,44 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1
+    // 编译lambda表达式并动态调用它
+    // compile()方法将表达式树编译为可执行的Java代码
+    // dynamicInvoke()方法动态调用编译后的函数,传入参数1
+    // 这是Calcite实现动态代码执行的关键机制
     Integer n = (Integer) lambdaExpr.compile().dynamicInvoke(1);
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3
+    // 验证结果不为null且等于3
+    // 这证明了表达式树能够正确编译和执行
     assertThat(n, notNullValue());
     assertThat(n, is(3));
   }
 
   @Test void testLambdaCallsBinaryOpShort() {
     // A parameter for the lambda expression.
+    // 创建一个short类型的参数表达式
+    // Short.TYPE表示基本类型short,而不是包装类Short
     ParameterExpression paramExpr =
         Expressions.parameter(Short.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1 to the parameter value.
+    // 定义short类型的常量2
     Short a = 2;
+    // 创建lambda表达式,对short参数执行加法运算
+    // 注意:short类型的运算会自动提升为int类型
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(a)),
             Arrays.asList(paramExpr));
 
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // 生成的代码中,short类型的常量需要显式类型转换:(short)2
+    // 返回类型为int,因为short运算会提升为int
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -149,30 +190,41 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1.
+    // 定义输入参数值为1
     Short b = 1;
+    // 编译并执行lambda表达式,传入short值1
+    // 结果应该是int类型的3
     Integer n = (Integer) lambdaExpr.compile().dynamicInvoke(b);
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3
+    // 验证结果正确
     assertThat(n, notNullValue());
     assertThat(n, is(3));
   }
 
   @Test void testLambdaCallsBinaryOpByte() {
     // A parameter for the lambda expression.
+    // 创建一个byte类型的参数表达式
+    // Byte.TYPE表示基本类型byte
     ParameterExpression paramExpr =
         Expressions.parameter(Byte.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1 to the parameter value.
+    // 创建lambda表达式,对byte参数执行加法运算
+    // 使用Byte.valueOf("2")创建Byte包装类对象
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(Byte.valueOf("2"))),
             Arrays.asList(paramExpr));
 
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // byte类型的常量需要显式类型转换:(byte)2
+    // 返回类型为int,因为byte运算会提升为int
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -191,29 +243,39 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1.
+    // 编译并执行lambda表达式,传入byte值1
+    // Byte.valueOf("1")将字符串"1"转换为Byte对象
     Integer n = (Integer) lambdaExpr.compile().dynamicInvoke(Byte.valueOf("1"));
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3
+    // 验证结果正确
     assertThat(n, notNullValue());
     assertThat(n, is(3));
   }
 
   @Test void testLambdaCallsBinaryOpDouble() {
     // A parameter for the lambda expression.
+    // 创建一个double类型的参数表达式
+    // Double.TYPE表示基本类型double
     ParameterExpression paramExpr =
         Expressions.parameter(Double.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1 to the parameter value.
+    // 创建lambda表达式,对double参数执行加法运算
+    // 2d表示double字面量2.0
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(2d)),
             Arrays.asList(paramExpr));
 
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // double类型的常量使用D后缀表示:2.0D
+    // 返回类型为double,保持浮点类型
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -232,28 +294,38 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1.5.
+    // 编译并执行lambda表达式,传入double值1.5
+    // 1.5d表示double字面量1.5
     Double n = (Double) lambdaExpr.compile().dynamicInvoke(1.5d);
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3.5
+    // 验证结果正确:1.5 + 2.0 = 3.5
     assertThat(n, notNullValue());
     assertThat(n, is(3.5D));
   }
 
   @Test void testLambdaCallsBinaryOpLong() {
     // A parameter for the lambda expression.
+    // 创建一个long类型的参数表达式
+    // Long.TYPE表示基本类型long
     ParameterExpression paramExpr =
         Expressions.parameter(Long.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1L to the parameter value.
+    // 创建lambda表达式,对long参数执行加法运算
+    // 2L表示long字面量2
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(2L)),
             Arrays.asList(paramExpr));
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // long类型的常量使用L后缀表示:2L
+    // 返回类型为long,保持长整型
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -272,28 +344,37 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1L.
+    // 编译并执行lambda表达式,传入long值1
     Long n = (Long) lambdaExpr.compile().dynamicInvoke(1L);
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3
+    // 验证结果正确:1L + 2L = 3L
     assertThat(n, notNullValue());
     assertThat(n, is(3L));
   }
 
   @Test void testLambdaCallsBinaryOpFloat() {
     // A parameter for the lambda expression.
+    // 创建一个float类型的参数表达式
+    // Float.TYPE表示基本类型float
     ParameterExpression paramExpr =
         Expressions.parameter(Float.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 1f to the parameter value.
+    // 创建lambda表达式,对float参数执行加法运算
+    // 2.0f表示float字面量2.0
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(2.0f)),
             Arrays.asList(paramExpr));
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // float类型的常量使用F后缀表示:2.0F
+    // 返回类型为float,保持单精度浮点类型
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -312,28 +393,37 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 1f
+    // 编译并执行lambda表达式,传入float值1.0
     Float n = (Float) lambdaExpr.compile().dynamicInvoke(1f);
 
     // This code example produces the following output:
     //
-    // arg => (arg +2)
+    // arg -> (arg +2)
     // 3.0
+    // 验证结果正确:1.0f + 2.0f = 3.0f
     assertThat(n, notNullValue());
     assertThat(n, is(3f));
   }
 
   @Test void testLambdaCallsBinaryOpMixType() {
     // A parameter for the lambda expression.
+    // 创建一个long类型的参数表达式
     ParameterExpression paramExpr =
         Expressions.parameter(Long.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds (int)10 to the parameter value.
+    // 创建lambda表达式,对long参数执行加法运算
+    // 这里测试混合类型运算:long参数 + int常量10
+    // 在Java中,int和long相加时,int会自动提升为long
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(10)),
             Arrays.asList(paramExpr));
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // int常量10在long运算中会被自动提升为long类型
+    // 返回类型为long
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -352,28 +442,34 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 5L.
+    // 编译并执行lambda表达式,传入long值5
     Long n = (Long) lambdaExpr.compile().dynamicInvoke(5L);
 
     // This code example produces the following output:
     //
-    // arg => (arg +10)
+    // arg -> (arg +10)
     // 15
+    // 验证结果正确:5L + 10 = 15L
     assertThat(n, notNullValue());
     assertThat(n, is(15L));
   }
 
   @Test void testLambdaCallsBinaryOpMixDoubleType() {
     // A parameter for the lambda expression.
+    // 创建一个double类型的参数表达式
     ParameterExpression paramExpr =
         Expressions.parameter(Double.TYPE, "arg");
 
     // This expression represents a lambda expression
     // that adds 10.1d to the parameter value.
+    // 创建lambda表达式,对double参数执行加法运算
+    // 这里测试混合浮点类型运算
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.add(paramExpr, Expressions.constant(10.1d)),
             Arrays.asList(paramExpr));
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function1() {\n"
@@ -392,23 +488,33 @@ public class ExpressionTest {
 
     // Compile and run the lambda expression.
     // The value of the parameter is 5.0f.
+    // 编译并执行lambda表达式,传入float值5.0
+    // 注意:传入的是float类型,但参数期望double类型
+    // float会自动提升为double
     Double n = (Double) lambdaExpr.compile().dynamicInvoke(5.0f);
 
     // This code example produces the following output:
     //
-    // arg => (arg +10.1d)
+    // arg -> (arg +10.1d)
     // 15.1d
+    // 验证结果正确:5.0 + 10.1 = 15.1
     assertThat(n, notNullValue());
     assertThat(n, is(15.1d));
   }
 
   @Test void testLambdaPrimitiveTwoArgs() {
     // Parameters for the lambda expression.
+    // 创建两个int类型的参数表达式
+    // 这个测试验证了多参数lambda表达式的支持
     ParameterExpression paramExpr =
         Expressions.parameter(int.class, "key");
     ParameterExpression param2Expr =
         Expressions.parameter(int.class, "key2");
 
+    // 创建一个接受两个参数的lambda表达式
+    // Expressions.block()创建一个代码块表达式
+    // Expressions.return_()创建一个return语句
+    // 这个lambda表达式只返回第一个参数,忽略第二个参数
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.block((Type) null,
@@ -416,6 +522,12 @@ public class ExpressionTest {
             Arrays.asList(paramExpr, param2Expr));
 
     // Print out the expression.
+    // 将表达式树转换为字符串并验证
+    // 生成的代码实现Function2接口,表示接受两个参数的函数
+    // Function2会生成三个重载方法:
+    // 1. apply(int key, int key2) - 基本类型版本
+    // 2. apply(Integer key, Integer key2) - 包装类型版本
+    // 3. apply(Object key, Object key2) - Object类型版本
     String s = Expressions.toString(lambdaExpr);
     assertThat(s,
         is("new org.apache.calcite.linq4j.function.Function2() {\n"
@@ -437,6 +549,10 @@ public class ExpressionTest {
 
   @Test void testLambdaCallsTwoArgMethod() throws NoSuchMethodException {
     // A parameter for the lambda expression.
+    // 创建三个参数表达式:
+    // 1. String类型的参数s,表示要截取的字符串
+    // 2. int类型的参数begin,表示开始索引
+    // 3. int类型的参数end,表示结束索引
     ParameterExpression paramS =
         Expressions.parameter(String.class, "s");
     ParameterExpression paramBegin =
@@ -446,6 +562,12 @@ public class ExpressionTest {
 
     // This expression represents a lambda expression
     // that adds 1 to the parameter value.
+    // 创建lambda表达式,调用String.substring(int beginIndex, int endIndex)方法
+    // Expressions.call()创建方法调用表达式
+    // 第一个参数paramS是方法调用的目标对象
+    // String.class.getMethod()通过反射获取substring方法
+    // paramBegin和paramEnd是方法调用的参数
+    // 最后三个参数指定lambda表达式的参数列表
     FunctionExpression lambdaExpr =
         Expressions.lambda(
             Expressions.call(
@@ -456,14 +578,21 @@ public class ExpressionTest {
                 paramEnd), paramS, paramBegin, paramEnd);
 
     // Compile and run the lambda expression.
+    // 编译并执行lambda表达式
+    // 传入参数:"hello world", 3, 7
+    // substring(3, 7)会返回"lo w"(从索引3开始,到索引7结束,不包括索引7)
     String s =
         (String) lambdaExpr.compile().dynamicInvoke("hello world", 3, 7);
 
+    // 验证结果正确
     assertThat(s, is("lo w"));
   }
 
   @Test void testFoldAnd() {
     // empty list yields true
+    // 测试空列表的foldAnd和foldOr操作
+    // 空列表的AND操作返回true(AND的幺元)
+    // 空列表的OR操作返回false(OR的幺元)
     final List<Expression> list0 = Collections.emptyList();
     assertThat(
         Expressions.toString(
@@ -474,6 +603,8 @@ public class ExpressionTest {
             Expressions.foldOr(list0)),
         is("false"));
 
+    // 创建包含多个表达式的列表
+    // 包含两个相等比较和一个true常量
     final List<Expression> list1 =
         Arrays.asList(
             Expressions.equal(Expressions.constant(1), Expressions.constant(2)),
@@ -482,19 +613,25 @@ public class ExpressionTest {
             Expressions.equal(Expressions.constant(5),
                 Expressions.constant(6)));
     // true is eliminated from AND
+    // foldAnd会优化表达式,消除AND操作中的true常量
+    // 因为 x && true 等价于 x
     assertThat(
         Expressions.toString(
             Expressions.foldAnd(list1)),
         is("1 == 2 && 3 == 4 && 5 == 6"));
     // a single true makes OR true
+    // foldOr会优化表达式,如果OR操作中有true,整个表达式就是true
+    // 因为 x || true 等价于 true
     assertThat(
         Expressions.toString(
             Expressions.foldOr(list1)),
         is("true"));
 
+    // 创建只包含true的列表
     final List<Expression> list2 =
         Collections.singletonList(
             Expressions.constant(true));
+    // 单个true的AND和OR都是true
     assertThat(
         Expressions.toString(
             Expressions.foldAnd(list2)),
@@ -504,6 +641,7 @@ public class ExpressionTest {
             Expressions.foldOr(list2)),
         is("true"));
 
+    // 创建包含false的列表
     final List<Expression> list3 =
         Arrays.asList(
             Expressions.equal(Expressions.constant(1), Expressions.constant(2)),
@@ -511,10 +649,14 @@ public class ExpressionTest {
             Expressions.equal(Expressions.constant(5),
                 Expressions.constant(6)));
     // false causes whole list to be false
+    // foldAnd会优化表达式,如果AND操作中有false,整个表达式就是false
+    // 因为 x && false 等价于 false
     assertThat(
         Expressions.toString(
             Expressions.foldAnd(list3)),
         is("false"));
+    // foldOr会优化表达式,消除OR操作中的false常量
+    // 因为 x || false 等价于 x
     assertThat(
         Expressions.toString(
             Expressions.foldOr(list3)),
@@ -522,6 +664,9 @@ public class ExpressionTest {
   }
 
   @Test void testWrite() {
+    // 测试混合类型的加法表达式字符串化
+    // 1(int) + 2.0F(float) + 3L(long) + 4L(Long包装类)
+    // 注意:Long类型的包装类会使用Long.valueOf()包装
     assertThat(
         Expressions.toString(
             Expressions.add(
@@ -533,6 +678,9 @@ public class ExpressionTest {
                 Expressions.constant(4L, Long.class))),
         is("1 + 2.0F + 3L + Long.valueOf(4L)"));
 
+    // 测试BigDecimal常量的字符串化
+    // BigDecimal.valueOf(314159260, 8)表示3.14159260
+    // 输出时会优化为BigDecimal.valueOf(31415926L, 7),表示相同的值
     assertThat(
         Expressions.toString(
             Expressions.constant(
@@ -540,6 +688,8 @@ public class ExpressionTest {
         is("java.math.BigDecimal.valueOf(31415926L, 7)"));
 
     // Parentheses needed, to override the left-associativity of +.
+    // 测试括号的使用
+    // 加法运算是左结合的,1 + (2 + 3)需要括号来改变结合顺序
     assertThat(
         Expressions.toString(
             Expressions.add(
@@ -551,6 +701,8 @@ public class ExpressionTest {
 
     // No parentheses needed; higher precedence of * achieves the desired
     // effect.
+    // 测试运算符优先级
+    // 乘法优先级高于加法,所以1 + 2 * 3不需要括号
     assertThat(
         Expressions.toString(
             Expressions.add(
@@ -560,6 +712,8 @@ public class ExpressionTest {
                     Expressions.constant(3)))),
         is("1 + 2 * 3"));
 
+    // 测试乘法和加法的组合
+    // 1 * (2 + 3)需要括号,因为乘法优先级高于加法
     assertThat(
         Expressions.toString(
             Expressions.multiply(
@@ -570,6 +724,8 @@ public class ExpressionTest {
         is("1 * (2 + 3)"));
 
     // Parentheses needed, to overcome right-associativity of =.
+    // 测试赋值运算符的右结合性
+    // 赋值运算是右结合的,(1 = 2) = 3需要括号
     assertThat(
         Expressions.toString(
             Expressions.assign(
@@ -579,6 +735,9 @@ public class ExpressionTest {
         is("(1 = 2) = 3"));
 
     // Ternary operator.
+    // 测试嵌套的三元运算符
+    // 1 < 2 ? (3 < 4 ? 5 : 6) : 7 < 8 ? 9 : 10
+    // 内层的三元运算符需要括号
     assertThat(
         Expressions.toString(
             Expressions.condition(
@@ -599,6 +758,9 @@ public class ExpressionTest {
                     Expressions.constant(10)))),
         is("1 < 2 ? (3 < 4 ? 5 : 6) : 7 < 8 ? 9 : 10"));
 
+    // 测试类型转换表达式
+    // 0 + (double) (2 + 3)
+    // 类型转换需要括号
     assertThat(
         Expressions.toString(
             Expressions.add(
@@ -610,6 +772,8 @@ public class ExpressionTest {
         is("0 + (double) (2 + 3)"));
 
     // "--5" would be a syntax error
+    // 测试双重取反
+    // Java中--5是语法错误,所以需要括号: (- (- 5))
     assertThat(
         Expressions.toString(
             Expressions.negate(
@@ -617,6 +781,8 @@ public class ExpressionTest {
                     Expressions.constant(5)))),
         is("(- (- 5))"));
 
+    // 测试字段访问表达式
+    // 访问Employee对象的empno字段
     assertThat(
         Expressions.toString(
             Expressions.field(
@@ -624,6 +790,8 @@ public class ExpressionTest {
                 "empno")),
         is("a.empno"));
 
+    // 测试数组长度字段访问
+    // 访问数组的length字段
     assertThat(
         Expressions.toString(
             Expressions.field(
@@ -631,6 +799,8 @@ public class ExpressionTest {
                 "length")),
         is("a.length"));
 
+    // 测试静态字段访问
+    // 访问Collections类的EMPTY_LIST静态字段
     assertThat(
         Expressions.toString(
             Expressions.field(
@@ -754,6 +924,8 @@ public class ExpressionTest {
 
   @Test void testWriteConstant() {
     // array of primitives
+    // 测试基本类型数组的常量表达式
+    // int数组会直接使用new int[] {...}语法
     assertThat(
         Expressions.toString(
             Expressions.constant(new int[]{1, 2, -1})),
@@ -763,64 +935,80 @@ public class ExpressionTest {
             + "  -1}"));
 
     // primitive
+    // 测试基本类型常量
+    // int类型的负数直接输出
     assertThat(
         Expressions.toString(
             Expressions.constant(-12)),
         is("-12"));
 
+    // short类型的常量需要显式类型转换
     assertThat(
         Expressions.toString(
             Expressions.constant((short) -12)),
         is("(short)-12"));
 
+    // byte类型的常量需要显式类型转换
     assertThat(
         Expressions.toString(
             Expressions.constant((byte) -12)),
         is("(byte)-12"));
 
     // boxed primitives
+    // 测试包装类型常量
+    // Integer包装类使用Integer.valueOf()方法
     assertThat(
         Expressions.toString(
             Expressions.constant(1, Integer.class)),
         is("Integer.valueOf(1)"));
 
+    // Double包装类使用Double.valueOf()方法,带D后缀
     assertThat(
         Expressions.toString(
             Expressions.constant(-3.14, Double.class)),
         is("Double.valueOf(-3.14D)"));
 
+    // Boolean包装类使用Boolean.valueOf()方法
     assertThat(
         Expressions.toString(
             Expressions.constant(true, Boolean.class)),
         is("Boolean.valueOf(true)"));
 
     // primitive with explicit class
+    // 测试显式指定基本类型的常量
+    // int类型直接输出数字
     assertThat(
         Expressions.toString(
             Expressions.constant(1, int.class)),
         is("1"));
 
+    // short类型需要显式类型转换
     assertThat(
         Expressions.toString(
             Expressions.constant(1, short.class)),
         is("(short)1"));
 
+    // byte类型需要显式类型转换
     assertThat(
         Expressions.toString(
             Expressions.constant(1, byte.class)),
         is("(byte)1"));
 
+    // double类型直接输出数字,带D后缀
     assertThat(
         Expressions.toString(
             Expressions.constant(-3.14, double.class)),
         is("-3.14D"));
 
+    // boolean类型直接输出true或false
     assertThat(
         Expressions.toString(
             Expressions.constant(true, boolean.class)),
         is("true"));
 
     // objects and nulls
+    // 测试对象和null的常量表达式
+    // String数组使用new String[] {...}语法
     assertThat(
         Expressions.toString(
             Expressions.constant(new String[] {"foo", null})),
@@ -829,18 +1017,23 @@ public class ExpressionTest {
             + "  null}"));
 
     // string
+    // 测试字符串常量
+    // 字符串中的引号需要转义为\"
     assertThat(
         Expressions.toString(
             Expressions.constant("hello, \"world\"!")),
         is("\"hello, \\\"world\\\"!\""));
 
     // enum
+    // 测试枚举常量
+    // 枚举常量使用完全限定名
     assertThat(
         Expressions.toString(
             Expressions.constant(MyEnum.X)),
         is("org.apache.calcite.linq4j.test.ExpressionTest.MyEnum.X"));
 
     // array of enum
+    // 测试枚举数组常量
     assertThat(
         Expressions.toString(
             Expressions.constant(new MyEnum[]{MyEnum.X, MyEnum.Y})),
@@ -849,23 +1042,30 @@ public class ExpressionTest {
             + "  org.apache.calcite.linq4j.test.ExpressionTest.MyEnum.Y}"));
 
     // class
+    // 测试Class对象常量
+    // 使用.class语法
     assertThat(
         Expressions.toString(
             Expressions.constant(String.class)),
         is("java.lang.String.class"));
 
     // array class
+    // 测试数组Class对象常量
     assertThat(
         Expressions.toString(
             Expressions.constant(int[].class)),
         is("int[].class"));
 
+    // 二维数组Class对象
     assertThat(
         Expressions.toString(
             Expressions.constant(List[][].class)),
         is("java.util.List[][].class"));
 
     // automatically call constructor if it matches fields
+    // 测试对象数组常量
+    // 如果对象有匹配字段的构造函数,会自动调用构造函数
+    // Linq4jTest.emps是Employee对象的数组
     assertThat(
         Expressions.toString(
             Expressions.constant(Linq4jTest.emps)),
@@ -892,9 +1092,17 @@ public class ExpressionTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6244">[CALCITE-6244]
    * Allow passing record as constant expression</a>. */
   @Test void testWriteRecordConstant(@TempDir Path tempDir) {
+    // 创建一个record类,用于测试record类型的常量表达式
+    // record是Java 14引入的特性,用于定义不可变的数据类
+    // createRecordClass会在临时目录中生成RecordModel类
     Class<?> recordClass = createRecordClass(tempDir, "RecordModel");
 
     // Call constructor for record
+    // 测试包含record对象的ImmutableSet常量表达式
+    // 创建四个RecordModel实例,放入ImmutableSet中
+    // 每个RecordModel实例通过createInstance创建,传入字符串和整数
+    // 验证生成的表达式字符串是否正确
+    // 应该生成:ImmutableSet.of(new RecordModel("test1", 1), ...)
     assertThat(
         Expressions.toString(
             Expressions.constant(
@@ -1114,12 +1322,16 @@ public class ExpressionTest {
 
   @Test void testType() {
     // Type of ternary operator is the gcd of its arguments.
+    // 测试三元运算符的类型推断
+    // 三元运算符的类型是其两个分支类型的最大公约数(gcd)
+    // int和long的最大公约数是long
     assertThat(
         Expressions.condition(
             Expressions.constant(true),
             Expressions.constant(5),
             Expressions.constant(6L)).getType(),
         is(long.class));
+    // long和int的最大公约数也是long
     assertThat(
         Expressions.condition(
             Expressions.constant(true),
@@ -1128,12 +1340,16 @@ public class ExpressionTest {
         is(long.class));
 
     // If one of the arguments is null constant, it is implicitly coerced.
+    // 测试null常量的类型推断
+    // 如果三元运算符的一个分支是null,它的类型会被隐式转换为另一个分支的类型
+    // String和null的最大公约数是String
     assertThat(
         Expressions.condition(
             Expressions.constant(true),
             Expressions.constant("xxx"),
             Expressions.constant(null)).getType(),
         is(String.class));
+    // int和null的最大公约数是Integer(包装类),而不是int
     assertThat(
         Expressions.condition(
             Expressions.constant(true),
@@ -1142,26 +1358,39 @@ public class ExpressionTest {
         is(Integer.class));
 
     // In Java, "-" applied to short and byte yield int.
+    // 测试取反运算符的类型推断
+    // 在Java中,short和byte的取反运算会提升为int类型
+    // double的取反还是double
     assertThat(Expressions.negate(Expressions.constant((double) 1)).getType(),
         is(double.class));
+    // float的取反还是float
     assertThat(Expressions.negate(Expressions.constant((float) 1)).getType(),
         is(float.class));
+    // long的取反还是long
     assertThat(Expressions.negate(Expressions.constant((long) 1)).getType(),
         is(long.class));
+    // int的取反还是int
     assertThat(Expressions.negate(Expressions.constant(1)).getType(),
         is(int.class));
+    // short的取反会提升为int
     assertThat(Expressions.negate(Expressions.constant((short) 1)).getType(),
         is(int.class));
+    // byte的取反会提升为int
     assertThat(Expressions.negate(Expressions.constant((byte) 1)).getType(),
         is(int.class));
   }
 
   @Test void testCompile() {
     // Creating a parameter for the expression tree.
+    // 创建一个String类型的参数表达式
+    // 这个参数将用于lambda表达式中
     ParameterExpression param = Expressions.parameter(String.class);
 
     // Creating an expression for the method call and specifying its
     // parameter.
+    // 创建方法调用表达式
+    // 调用Integer类的静态方法valueOf(String s)
+    // param作为方法调用的参数
     MethodCallExpression methodCall =
         Expressions.call(
             Integer.class,
@@ -1170,16 +1399,24 @@ public class ExpressionTest {
 
     // The following statement first creates an expression tree,
     // then compiles it, and then runs it.
+    // 创建lambda表达式,将methodCall作为lambda体
+    // lambda接受一个String参数,返回Integer
+    // compile()方法将表达式树编译为可执行的Java代码
+    // dynamicInvoke()方法动态调用编译后的函数
+    // 传入字符串"1234",应该返回Integer对象1234
     int x =
         Expressions.<Function1<String, Integer>>lambda(
             methodCall,
             new ParameterExpression[] { param })
             .getFunction()
             .apply("1234");
+    // 验证结果正确
     assertThat(x, is(1234));
   }
 
   @Test void testBlockBuilder() {
+    // 测试BlockBuilder的非优化模式
+    // 在非优化模式下,所有中间变量都会被保留
     checkBlockBuilder(
         false,
         "{\n"
@@ -1189,6 +1426,8 @@ public class ExpressionTest {
             + "  final int eighteen = three + six + nine;\n"
             + "  return eighteen;\n"
             + "}\n");
+    // 测试BlockBuilder的优化模式
+    // 在优化模式下,只使用一次的中间变量会被内联,减少变量声明
     checkBlockBuilder(
         true,
         "{\n"
@@ -1198,33 +1437,47 @@ public class ExpressionTest {
   }
 
   public void checkBlockBuilder(boolean optimizing, String expected) {
+    // 创建BlockBuilder实例,optimizing参数控制是否启用优化
+    // BlockBuilder是Calcite用于构建代码块的辅助类
+    // 它可以管理变量声明、表达式优化等
     BlockBuilder statements = new BlockBuilder(optimizing);
+    // 使用append方法添加表达式,BlockBuilder会自动管理变量声明
+    // 第一个参数是变量名,第二个参数是表达式
+    // BlockBuilder会检测表达式是否相同,避免重复声明
     Expression one =
         statements.append(
             "one", Expressions.constant(1));
     Expression two =
         statements.append(
             "two", Expressions.constant(2));
+    // three = one + two = 1 + 2 = 3
     Expression three =
         statements.append(
             "three", Expressions.add(one, two));
+    // six = three * two = 3 * 2 = 6
     Expression six =
         statements.append(
             "six",
             Expressions.multiply(three, two));
+    // nine = three * three = 3 * 3 = 9
     Expression nine =
         statements.append(
             "nine",
             Expressions.multiply(three, three));
+    // eighteen = three + six + nine = 3 + 6 + 9 = 18
     Expression eighteen =
         statements.append(
             "eighteen",
             Expressions.add(
                 Expressions.add(three, six),
                 nine));
+    // 添加return语句
     statements.add(Expressions.return_(null, eighteen));
+    // 将BlockBuilder转换为BlockStatement
     BlockStatement expression = statements.toBlock();
+    // 验证生成的代码字符串是否符合预期
     assertThat(Expressions.toString(expression), is(expected));
+    // 使用Shuttle访问者模式遍历表达式树,用于测试
     expression.accept(new Shuttle());
   }
 
@@ -1455,44 +1708,65 @@ public class ExpressionTest {
             + "}\n"));
   }
 
-  /** Test for common sub-expression elimination. */
-  @Test void testSubExpressionElimination() {
+@Test void testSubExpressionElimination() {
+    // Test for common sub-expression elimination.
+    // 测试公共子表达式消除(CSE)优化
+    // BlockBuilder的优化模式会识别相同的表达式,避免重复计算
+    // 创建启用了优化的BlockBuilder
     final BlockBuilder builder = new BlockBuilder(true);
+    // 创建Object类型的参数p
     ParameterExpression x = Expressions.parameter(Object.class, "p");
+    // current4 = (Object[]) p,将参数转换为Object数组
     Expression current4 =
         builder.append("current4",
             Expressions.convert_(x, Object[].class));
+    // v = (Short) current4[4],获取数组第4个元素并转换为Short
     Expression v =
         builder.append("v",
             Expressions.convert_(
                 Expressions.arrayIndex(current4, Expressions.constant(4)),
                 Short.class));
+    // v0 = (Number) v,将v转换为Number
     Expression v0 =
         builder.append("v0",
             Expressions.convert_(v, Number.class));
+    // v1 = (Short) current4[4],这个表达式和v相同
+    // 由于启用了优化,BlockBuilder会识别这个表达式与v相同,会重用v
     Expression v1 =
         builder.append("v1",
             Expressions.convert_(
                 Expressions.arrayIndex(current4, Expressions.constant(4)),
                 Short.class));
+    // v2 = (Number) v,这个表达式和v0相同
+    // BlockBuilder会识别这个表达式与v0相同,会重用v0
     Expression v2 =
         builder.append("v2", Expressions.convert_(v, Number.class));
+    // v3 = (Short) current4[4],这个表达式也和v相同
     Expression v3 =
         builder.append("v3",
         Expressions.convert_(
             Expressions.arrayIndex(current4, Expressions.constant(4)),
             Short.class));
+    // v4 = (Number) v3,由于v3被优化为v,所以v4也会被优化
     Expression v4 =
         builder.append("v4",
             Expressions.convert_(v3, Number.class));
+    // v5 = v4.intValue(),调用Number的intValue方法
     Expression v5 = builder.append("v5", Expressions.call(v4, "intValue"));
+    // v6 = v2 == null ? null : v5 == 1997
+    // 这是一个三元表达式,检查v2是否为null
     Expression v6 =
         builder.append("v6",
             Expressions.condition(
                 Expressions.equal(v2, Expressions.constant(null)),
                 Expressions.constant(null),
                 Expressions.equal(v5, Expressions.constant(1997))));
+    // 添加return语句
     builder.add(Expressions.return_(null, v6));
+    // 验证生成的代码
+    // 由于公共子表达式消除,生成的代码非常简洁:
+    // 只有v被声明,其他重复的表达式都被优化掉了
+    // v0, v1, v2, v3, v4, v5都被内联或重用
     assertThat(Expressions.toString(builder.toBlock()),
         is("{\n"
             + "  final Short v = (Short) ((Object[]) p)[4];\n"
@@ -1718,28 +1992,44 @@ public class ExpressionTest {
   }
 
   /** An enum. */
+  // 定义一个枚举类型,用于测试枚举常量的表达式生成
+  // 包含两个枚举值:X和Y
+  // Y枚举值重写了toString()方法,返回"YYY"
   enum MyEnum {
-    X,
-    Y {
+    X,  // 普通枚举值,toString()返回"X"
+    Y {  // 带有匿名类实现的枚举值
       public String toString() {
-        return "YYY";
+        return "YYY";  // 重写toString方法,返回"YYY"
       }
     }
   }
 
+  // 静态辅助方法,用于测试
+  // 接受一个int参数,返回0
+  // 这个方法在testBlockBuilder3中被调用
   public static int foo(int x) {
     return 0;
   }
 
+  // 静态辅助方法,用于测试
+  // 接受五个int参数,返回0
+  // 这个方法在testBlockBuilder3中被调用
   public static int bar(int v, int w, int x, int y, int z) {
     return 0;
   }
 
   /** A class with a field for each type of interest. */
+  // 测试辅助类,包含各种类型的字段
+  // 用于测试对象常量的表达式生成
+  // 所有字段都是final的,表示不可变
   public static class AllType {
+    // boolean类型字段
     public final boolean b;
+    // byte类型字段
     public final byte y;
+    // char类型字段
     public final char c;
+    // short类型字段
     public final short s;
     public final int i;
     public final long l;
@@ -1750,20 +2040,25 @@ public class ExpressionTest {
     public final String str;
     public final @Nullable Object o;
 
+    // AllType类的构造函数
+    // 接受所有字段的初始化值
+    // 参数包括所有Java基本类型和常用对象类型
+    // @Nullable注解表示o参数可以为null
     public AllType(boolean b, byte y, char c, short s, int i, long l, float f,
         double d, BigDecimal bd, BigInteger bi, String str, @Nullable Object o) {
-      this.b = b;
-      this.y = y;
-      this.c = c;
-      this.s = s;
-      this.i = i;
-      this.l = l;
-      this.f = f;
-      this.d = d;
-      this.bd = bd;
-      this.bi = bi;
-      this.str = str;
-      this.o = o;
+      // 初始化所有字段
+      this.b = b;  // boolean字段
+      this.y = y;  // byte字段
+      this.c = c;  // char字段
+      this.s = s;  // short字段
+      this.i = i;  // int字段
+      this.l = l;  // long字段
+      this.f = f;  // float字段
+      this.d = d;  // double字段
+      this.bd = bd;  // BigDecimal字段
+      this.bi = bi;  // BigInteger字段
+      this.str = str;  // String字段
+      this.o = o;  // Object字段,可以为null
     }
   }
 }

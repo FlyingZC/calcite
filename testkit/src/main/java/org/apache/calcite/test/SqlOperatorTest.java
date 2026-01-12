@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.calcite.test;
+package org.apache.calcite.test; // 定义包名，指定当前类所属的包为 org.apache.calcite.test
 
 import org.apache.calcite.avatica.util.ByteString;
 import org.apache.calcite.avatica.util.DateTimeUtils;
@@ -209,27 +209,27 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SuppressWarnings("MethodCanBeStatic")
-public class SqlOperatorTest {
+public class SqlOperatorTest { // SqlOperatorTest类：包含所有SQL操作符的单元测试，每个方法以操作符命名，用于测试SQL操作符的解析、验证和执行
   //~ Static fields/initializers ---------------------------------------------
 
-  public static final TesterImpl TESTER = new TesterImpl();
+  public static final TesterImpl TESTER = new TesterImpl(); // 公共静态常量：测试器实现实例，用于执行SQL操作符测试
 
-  private static final Logger LOGGER =
+  private static final Logger LOGGER = // 私有静态常量：日志记录器，用于记录测试过程中的信息
       CalciteTrace.getTestTracer(SqlOperatorTest.class);
 
-  public static final boolean TODO = false;
+  public static final boolean TODO = false; // 公共静态常量：TODO标记，用于标记待完成的测试项
 
   /**
    * Regular expression for a SQL TIME(0/1) value.
    */
-  public static final Pattern TIME_PATTERN =
+  public static final Pattern TIME_PATTERN = // 公共静态常量：正则表达式模式，用于匹配SQL TIME(0/1)格式的值，格式为HH:MM:SS或HH:MM:SS.S
       Pattern.compile(
           "[0-9][0-9]:[0-9][0-9]:[0-9][0-9](.[0-9])?");
 
   /**
    * Regular expression for a SQL TIMESTAMP(0/1) value.
    */
-  public static final Pattern TIMESTAMP_PATTERN =
+  public static final Pattern TIMESTAMP_PATTERN = // 公共静态常量：正则表达式模式，用于匹配SQL TIMESTAMP(0/1)格式的值，格式为YYYY-MM-DD HH:MM:SS或YYYY-MM-DD HH:MM:SS.S
       Pattern.compile(
           "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] "
               + "[0-9][0-9]:[0-9][0-9]:[0-9][0-9](.[0-9])?");
@@ -237,51 +237,51 @@ public class SqlOperatorTest {
   /**
    * Regular expression for a SQL DATE value.
    */
-  public static final Pattern DATE_PATTERN =
+  public static final Pattern DATE_PATTERN = // 公共静态常量：正则表达式模式，用于匹配SQL DATE格式的值，格式为YYYY-MM-DD
       Pattern.compile(
           "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]");
 
-  public static final List<String> MICROSECOND_VARIANTS =
+  public static final List<String> MICROSECOND_VARIANTS = // 公共静态常量：微秒单位的变体名称列表，包含FRAC_SECOND、MICROSECOND、SQL_TSI_MICROSECOND三种表示方式
       Arrays.asList("FRAC_SECOND", "MICROSECOND", "SQL_TSI_MICROSECOND");
-  public static final List<String> NANOSECOND_VARIANTS =
+  public static final List<String> NANOSECOND_VARIANTS = // 公共静态常量：纳秒单位的变体名称列表，包含NANOSECOND、SQL_TSI_FRAC_SECOND两种表示方式
       Arrays.asList("NANOSECOND", "SQL_TSI_FRAC_SECOND");
-  public static final List<String> SECOND_VARIANTS =
+  public static final List<String> SECOND_VARIANTS = // 公共静态常量：秒单位的变体名称列表，包含SECOND、SQL_TSI_SECOND两种表示方式
       Arrays.asList("SECOND", "SQL_TSI_SECOND");
-  public static final List<String> MINUTE_VARIANTS =
+  public static final List<String> MINUTE_VARIANTS = // 公共静态常量：分钟单位的变体名称列表，包含MINUTE、SQL_TSI_MINUTE两种表示方式
       Arrays.asList("MINUTE", "SQL_TSI_MINUTE");
-  public static final List<String> HOUR_VARIANTS =
+  public static final List<String> HOUR_VARIANTS = // 公共静态常量：小时单位的变体名称列表，包含HOUR、SQL_TSI_HOUR两种表示方式
       Arrays.asList("HOUR", "SQL_TSI_HOUR");
-  public static final List<String> DAY_VARIANTS =
+  public static final List<String> DAY_VARIANTS = // 公共静态常量：天单位的变体名称列表，包含DAY、SQL_TSI_DAY两种表示方式
       Arrays.asList("DAY", "SQL_TSI_DAY");
-  public static final List<String> WEEK_VARIANTS =
+  public static final List<String> WEEK_VARIANTS = // 公共静态常量：周单位的变体名称列表，包含WEEK、SQL_TSI_WEEK两种表示方式
       Arrays.asList("WEEK", "SQL_TSI_WEEK");
-  public static final List<String> MONTH_VARIANTS =
+  public static final List<String> MONTH_VARIANTS = // 公共静态常量：月单位的变体名称列表，包含MONTH、SQL_TSI_MONTH两种表示方式
       Arrays.asList("MONTH", "SQL_TSI_MONTH");
-  public static final List<String> QUARTER_VARIANTS =
+  public static final List<String> QUARTER_VARIANTS = // 公共静态常量：季度单位的变体名称列表，包含QUARTER、SQL_TSI_QUARTER两种表示方式
       Arrays.asList("QUARTER", "SQL_TSI_QUARTER");
-  public static final List<String> YEAR_VARIANTS =
+  public static final List<String> YEAR_VARIANTS = // 公共静态常量：年单位的变体名称列表，包含YEAR、SQL_TSI_YEAR两种表示方式
       Arrays.asList("YEAR", "SQL_TSI_YEAR");
 
   /** Minimum and maximum values for each exact and approximate numeric
    * type. */
-  enum Numeric {
-    TINYINT("TINYINT", Long.toString(Byte.MIN_VALUE),
+  enum Numeric { // 内部枚举：定义每种精确和近似数值类型的最小值和最大值，用于测试数值类型的边界条件
+    TINYINT("TINYINT", Long.toString(Byte.MIN_VALUE), // TINYINT类型：TinyInt整数类型，最小值-128，最大值127，占用1字节
         Long.toString(Byte.MIN_VALUE - 1),
         Long.toString(Byte.MAX_VALUE),
         Long.toString(Byte.MAX_VALUE + 1)),
-    SMALLINT("SMALLINT", Long.toString(Short.MIN_VALUE),
+    SMALLINT("SMALLINT", Long.toString(Short.MIN_VALUE), // SMALLINT类型：SmallInt整数类型，最小值-32768，最大值32767，占用2字节
         Long.toString(Short.MIN_VALUE - 1),
         Long.toString(Short.MAX_VALUE),
         Long.toString(Short.MAX_VALUE + 1)),
-    INTEGER("INTEGER", Long.toString(Integer.MIN_VALUE),
+    INTEGER("INTEGER", Long.toString(Integer.MIN_VALUE), // INTEGER类型：整数类型，最小值-2147483648，最大值2147483647，占用4字节
         Long.toString((long) Integer.MIN_VALUE - 1),
         Long.toString(Integer.MAX_VALUE),
         Long.toString((long) Integer.MAX_VALUE + 1)),
-    BIGINT("BIGINT", Long.toString(Long.MIN_VALUE),
+    BIGINT("BIGINT", Long.toString(Long.MIN_VALUE), // BIGINT类型：大整数类型，最小值-9223372036854775808，最大值9223372036854775807，占用8字节
         new BigDecimal(Long.MIN_VALUE).subtract(BigDecimal.ONE).toString(),
         Long.toString(Long.MAX_VALUE),
         new BigDecimal(Long.MAX_VALUE).add(BigDecimal.ONE).toString()),
-    DECIMAL5_2("DECIMAL(5, 2)", "-999.99",
+    DECIMAL5_2("DECIMAL(5, 2)", "-999.99", // DECIMAL(5,2)类型：5位精度2位小数的十进制类型，范围-999.99到999.99
         "-1000.00", "999.99", "1000.00"),
     REAL("REAL", "1E-37", // or Float.toString(Float.MIN_VALUE)
         "1e-46", "3.4028234E38", // or Float.toString(Float.MAX_VALUE)
@@ -293,117 +293,117 @@ public class SqlOperatorTest {
         "1e-324", "1.79769313486231E308", // or Double.toString(Double.MAX_VALUE)
         "1e309");
 
-    private final String typeName;
+    private final String typeName; // 私有字段：类型名称，如TINYINT、SMALLINT、INTEGER等
 
     /** For Float and Double Java types, MIN_VALUE
      * is the smallest positive value, not the smallest negative value.
      * For REAL, FLOAT, DOUBLE, Win32 takes smaller values from
      * win32_values.h. */
-    private final String minNumericString;
-    private final String minOverflowNumericString;
+    private final String minNumericString; // 私有字段：最小数值的字符串表示，用于测试下边界
+    private final String minOverflowNumericString; // 私有字段：下溢出数值的字符串表示，用于测试溢出情况
 
     /** For REAL, FLOAT and DOUBLE SQL types (Flaot and Double Java types), we
      * use something slightly less than MAX_VALUE because round-tripping string
      * to approx to string doesn't preserve MAX_VALUE on win32. */
-    private final String maxNumericString;
-    private final String maxOverflowNumericString;
+    private final String maxNumericString; // 私有字段：最大数值的字符串表示，用于测试上边界
+    private final String maxOverflowNumericString; // 私有字段：上溢出数值的字符串表示，用于测试溢出情况
 
-    Numeric(String typeName, String minNumericString,
+    Numeric(String typeName, String minNumericString, // 构造方法：初始化Numeric枚举实例，设置类型名称和边界值
         String minOverflowNumericString, String maxNumericString,
         String maxOverflowNumericString) {
-      this.typeName = typeName;
-      this.minNumericString = minNumericString;
-      this.minOverflowNumericString = minOverflowNumericString;
-      this.maxNumericString = maxNumericString;
-      this.maxOverflowNumericString = maxOverflowNumericString;
+      this.typeName = typeName; // 设置类型名称字段
+      this.minNumericString = minNumericString; // 设置最小数值字符串字段
+      this.minOverflowNumericString = minOverflowNumericString; // 设置下溢出数值字符串字段
+      this.maxNumericString = maxNumericString; // 设置最大数值字符串字段
+      this.maxOverflowNumericString = maxOverflowNumericString; // 设置上溢出数值字符串字段
     }
 
     /** Calls a consumer for each value. Similar effect to a {@code for}
      * loop, but the calling line number will show up in the call stack. */
-    static void forEach(Consumer<Numeric> consumer) {
-      consumer.accept(TINYINT);
-      consumer.accept(SMALLINT);
-      consumer.accept(INTEGER);
-      consumer.accept(BIGINT);
-      consumer.accept(DECIMAL5_2);
-      consumer.accept(REAL);
-      consumer.accept(FLOAT);
-      consumer.accept(DOUBLE);
+    static void forEach(Consumer<Numeric> consumer) { // 静态方法：遍历所有Numeric枚举值，对每个值执行指定的消费者操作，类似于for循环但能保留调用行号
+      consumer.accept(TINYINT); // 处理TINYINT类型，调用消费者处理该类型
+      consumer.accept(SMALLINT); // 处理SMALLINT类型，调用消费者处理该类型
+      consumer.accept(INTEGER); // 处理INTEGER类型，调用消费者处理该类型
+      consumer.accept(BIGINT); // 处理BIGINT类型，调用消费者处理该类型
+      consumer.accept(DECIMAL5_2); // 处理DECIMAL(5,2)类型，调用消费者处理该类型
+      consumer.accept(REAL); // 处理REAL类型，调用消费者处理该类型
+      consumer.accept(FLOAT); // 处理FLOAT类型，调用消费者处理该类型
+      consumer.accept(DOUBLE); // 处理DOUBLE类型，调用消费者处理该类型
     }
 
-    double maxNumericAsDouble() {
-      return parseDouble(maxNumericString);
+    double maxNumericAsDouble() { // 实例方法：将最大数值字符串转换为double类型返回，用于数值比较
+      return parseDouble(maxNumericString); // 解析最大数值字符串为double并返回
     }
 
-    double minNumericAsDouble() {
-      return parseDouble(minNumericString);
+    double minNumericAsDouble() { // 实例方法：将最小数值字符串转换为double类型返回，用于数值比较
+      return parseDouble(minNumericString); // 解析最小数值字符串为double并返回
     }
   }
 
-  private static final boolean[] FALSE_TRUE = {false, true};
-  private static final VmName VM_JAVA = VmName.JAVA;
-  private static final VmName VM_EXPAND = VmName.EXPAND;
-  protected static final TimeZone UTC_TZ = TimeZone.getTimeZone("GMT");
+  private static final boolean[] FALSE_TRUE = {false, true}; // 私有静态常量：包含false和true两个布尔值的数组，用于测试布尔值的两种情况
+  private static final VmName VM_JAVA = VmName.JAVA; // 私有静态常量：Java虚拟机类型的枚举值，表示使用Java虚拟机执行
+  private static final VmName VM_EXPAND = VmName.EXPAND; // 私有静态常量：扩展虚拟机类型的枚举值，表示使用扩展虚拟机执行
+  protected static final TimeZone UTC_TZ = TimeZone.getTimeZone("GMT"); // 受保护静态常量：UTC时区对象，用于处理UTC时间，GMT时区
   // time zone for the LOCAL_{DATE,TIME,TIMESTAMP} functions
-  protected static final TimeZone LOCAL_TZ = TimeZone.getDefault();
+  protected static final TimeZone LOCAL_TZ = TimeZone.getDefault(); // 受保护静态常量：本地时区对象，用于LOCAL_{DATE,TIME,TIMESTAMP}函数
   // time zone for the CURRENT{DATE,TIME,TIMESTAMP} functions
-  protected static final TimeZone CURRENT_TZ = LOCAL_TZ;
+  protected static final TimeZone CURRENT_TZ = LOCAL_TZ; // 受保护静态常量：当前时区对象，用于CURRENT{DATE,TIME,TIMESTAMP}函数，默认为本地时区
 
-  private static final Pattern INVALID_ARG_FOR_POWER =
+  private static final Pattern INVALID_ARG_FOR_POWER = // 私有静态常量：正则表达式模式，用于匹配POWER函数的无效参数错误消息
       Pattern.compile("(?s).*Invalid argument\\(s\\) for 'POWER' function.*");
 
-  private static final Pattern CODE_2201F =
+  private static final Pattern CODE_2201F = // 私有静态常量：正则表达式模式，用于匹配2201F错误代码的消息（数据异常错误）
       Pattern.compile("(?s).*could not calculate results for the following "
           + "row.*PC=5 Code=2201F.*");
 
   /** Function object that returns a string with 2 copies of each character.
    * For example, {@code DOUBLER.apply("xy")} returns {@code "xxyy"}. */
-  private static final UnaryOperator<String> DOUBLER =
+  private static final UnaryOperator<String> DOUBLER = // 私有静态常量：一元操作符对象，用于将字符串中每个字符复制一次，例如"xy"变成"xxyy"
       new UnaryOperator<String>() {
-        final Pattern pattern = Pattern.compile("(.)");
+        final Pattern pattern = Pattern.compile("(.)"); // 创建匹配单个字符的正则表达式模式，(.)表示匹配任意单个字符
 
-        @Override public String apply(String s) {
-          return pattern.matcher(s).replaceAll("$1$1");
+        @Override public String apply(String s) { // 重写apply方法，实现字符复制逻辑，接收字符串参数返回复制后的字符串
+          return pattern.matcher(s).replaceAll("$1$1"); // 将每个字符替换为两个相同的字符，$1$1表示将匹配的字符重复两次
         }
       };
 
   /** Sub-classes should override to run tests in a different environment. */
-  protected SqlOperatorFixture fixture() {
-    return SqlOperatorFixtureImpl.DEFAULT;
+  protected SqlOperatorFixture fixture() { // 受保护方法：返回默认的SQL操作符测试夹具对象，子类可以重写以在不同环境中运行测试
+    return SqlOperatorFixtureImpl.DEFAULT; // 返回默认的测试夹具实现，用于执行SQL操作符测试
   }
 
   //--- Tests -----------------------------------------------------------
 
-  @Test void testSqlOperatorOverloading() {
-    final SqlStdOperatorTable operatorTable = SqlStdOperatorTable.instance();
-    for (SqlOperator sqlOperator : operatorTable.getOperatorList()) {
-      String operatorName = sqlOperator.getName();
-      List<SqlOperator> routines = new ArrayList<>();
+  @Test void testSqlOperatorOverloading() { // 测试方法：测试SQL操作符的重载功能，验证操作符表中每个操作符的重载情况
+    final SqlStdOperatorTable operatorTable = SqlStdOperatorTable.instance(); // 获取标准SQL操作符表的实例，包含所有标准SQL操作符
+    for (SqlOperator sqlOperator : operatorTable.getOperatorList()) { // 遍历操作符表中的所有操作符，逐个进行检查
+      String operatorName = sqlOperator.getName(); // 获取当前操作符的名称，用于后续查找重载操作符
+      List<SqlOperator> routines = new ArrayList<>(); // 创建空的操作符列表，用于存储查找到的重载操作符
       final SqlIdentifier id =
           new SqlIdentifier(operatorName, SqlParserPos.ZERO);
-      operatorTable.lookupOperatorOverloads(id, null, sqlOperator.getSyntax(),
+      operatorTable.lookupOperatorOverloads(id, null, sqlOperator.getSyntax(), // 查找操作符的重载版本并添加到列表中，使用相同的语法
           routines, SqlNameMatchers.withCaseSensitive(true));
 
       routines.removeIf(operator ->
           !sqlOperator.getClass().isInstance(operator));
-      if (routines.size() == 2) {
+      if (routines.size() == 2) { // 如果找到两个重载操作符
         // Some arithmetic operators looks like they are overloaded,
         // e.g. PLUS and CHECKED_PLUS
-        assertTrue(SqlKind.CHECKED_ARITHMETIC.contains(routines.get(0).kind)
+        assertTrue(SqlKind.CHECKED_ARITHMETIC.contains(routines.get(0).kind) // 验证这两个操作符中至少有一个是检查型算术操作符，如PLUS和CHECKED_PLUS
                 || SqlKind.CHECKED_ARITHMETIC.contains(routines.get(1).kind));
-      } else {
-        assertThat(routines, hasSize(1));
-        assertThat(sqlOperator, equalTo(routines.get(0)));
+      } else { // 如果不是两个重载操作符
+        assertThat(routines, hasSize(1)); // 断言只找到一个操作符，表示没有重载
+        assertThat(sqlOperator, equalTo(routines.get(0))); // 断言找到的操作符与当前操作符相同
       }
     }
   }
 
-  @Test void testBetween() {
-    final SqlOperatorFixture f = fixture();
-    f.setFor(SqlStdOperatorTable.BETWEEN, VmName.EXPAND);
-    f.checkBoolean("2 between 1 and 3", true);
-    f.checkBoolean("2 between 3 and 2", false);
-    f.checkBoolean("2 between symmetric 3 and 2", true);
+  @Test void testBetween() { // 测试方法：测试BETWEEN操作符的功能，验证值是否在指定范围内
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    f.setFor(SqlStdOperatorTable.BETWEEN, VmName.EXPAND); // 设置测试夹具为测试BETWEEN操作符，使用扩展虚拟机执行
+    f.checkBoolean("2 between 1 and 3", true); // 检查表达式"2 between 1 and 3"的结果是否为true，2在1和3之间
+    f.checkBoolean("2 between 3 and 2", false); // 检查表达式"2 between 3 and 2"的结果是否为false，2不在3和2之间（因为要求下限<=上限）
+    f.checkBoolean("2 between symmetric 3 and 2", true); // 检查表达式"2 between symmetric 3 and 2"的结果是否为true，symmetric表示忽略顺序
     f.checkBoolean("3 between 1 and 3", true);
     f.checkBoolean("4 between 1 and 3", false);
     f.checkBoolean("1 between 4 and -3", false);
@@ -420,7 +420,7 @@ public class SqlOperatorTest {
     f.checkBoolean("1.5e0 between 2e0 and 3e0", false);
     f.checkBoolean("1.5e1 between 1.6e1 and 1.7e1", false);
     f.checkBoolean("x'' between x'' and x''", true);
-    f.checkNull("cast(null as integer) between -1 and 2");
+    f.checkNull("cast(null as integer) between -1 and 2"); // 检查表达式结果是否为NULL，包含NULL的操作符结果为NULL
     f.checkNull("1 between -1 and cast(null as integer)");
     f.checkNull("1 between cast(null as integer) and cast(null as integer)");
     f.checkNull("1 between cast(null as integer) and 1");
@@ -432,11 +432,11 @@ public class SqlOperatorTest {
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-3522">
    * Sql validator limits decimal literals to 64 bits</a>. */
-  @Test void testLargeLiterals() {
+  @Test void testLargeLiterals() { // 测试方法：测试大数值字面量的处理，解决CALCITE-3522问题（SQL验证器限制decimal字面量为64位）
     // Some of these literals were too large to be accepted previously, but
     // now are legal as decimal literals.
-    SqlOperatorFixture f = fixture();
-    f.checkCastFails("9223372036854775808", "INTEGER",
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
+    f.checkCastFails("9223372036854775808", "INTEGER", // 检查将大数值转换为INTEGER是否失败，该值超出INTEGER范围
         OUT_OF_RANGE_MESSAGE, true, SqlOperatorFixture.CastType.CAST);
     f.checkCastFails("9223372036854775808.1", "INTEGER",
         "Numeric literal.*out of range", false, SqlOperatorFixture.CastType.CAST);
@@ -446,13 +446,13 @@ public class SqlOperatorTest {
         "Overflow", true, SqlOperatorFixture.CastType.CAST);
     f.checkCastFails("'" + Numeric.TINYINT.maxOverflowNumericString + "'",
         "TINYINT", OUT_OF_RANGE_MESSAGE, true, SqlOperatorFixture.CastType.CAST);
-    String largePrecision = "1234567891011.0";
-    String largeScale = "1.01234567891011";
-    f.checkScalarExact(largePrecision, "DECIMAL(14, 1) NOT NULL", largePrecision);
+    String largePrecision = "1234567891011.0"; // 定义大精度数值字面量，用于测试高精度DECIMAL类型
+    String largeScale = "1.01234567891011"; // 定义大标度数值字面量，用于测试高标度DECIMAL类型
+    f.checkScalarExact(largePrecision, "DECIMAL(14, 1) NOT NULL", largePrecision); // 检查大精度数值是否正确识别为DECIMAL(14,1)类型
     f.checkScalarExact(largeScale, "DECIMAL(15, 14) NOT NULL", largeScale);
 
     // Check that the type system can reject large decimal literals
-    SqlOperatorFixture f0 = f.withFactory(tf ->
+    SqlOperatorFixture f0 = f.withFactory(tf -> // 创建带有自定义类型系统的测试夹具，用于限制数值精度
             tf.withTypeSystem(typeSystem ->
                 new DelegatingTypeSystem(typeSystem) {
                   @Override public int getMaxNumericPrecision() {
@@ -463,7 +463,7 @@ public class SqlOperatorTest {
                     switch (typeName) {
                     case DECIMAL:
                       return 10;
-                    default:
+                    default: // 默认情况，继续处理精确数值类型
                       return super.getMaxPrecision(typeName);
                     }
                   }
@@ -476,18 +476,18 @@ public class SqlOperatorTest {
                     switch (typeName) {
                     case DECIMAL:
                       return 10;
-                    default:
+                    default: // 默认情况，继续处理精确数值类型
                       return super.getMaxScale(typeName);
                     }
                   }
                 }));
-    f0.checkFails("^" + largePrecision + "^", OUT_OF_RANGE_MESSAGE, false);
+    f0.checkFails("^" + largePrecision + "^", OUT_OF_RANGE_MESSAGE, false); // 检查在限制精度下大数值是否超出范围
     f0.checkFails("^" + largeScale + "^", OUT_OF_RANGE_MESSAGE, false);
   }
 
-  @Test void testNotBetween() {
-    final SqlOperatorFixture f = fixture();
-    f.setFor(SqlStdOperatorTable.NOT_BETWEEN, VM_EXPAND);
+  @Test void testNotBetween() { // 测试方法：测试NOT BETWEEN操作符的功能，验证值是否不在指定范围内
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    f.setFor(SqlStdOperatorTable.NOT_BETWEEN, VM_EXPAND); // 设置测试夹具为测试NOT BETWEEN操作符
     f.checkBoolean("2 not between 1 and 3", false);
     f.checkBoolean("3 not between 1 and 3", false);
     f.checkBoolean("4 not between 1 and 3", true);
@@ -506,14 +506,14 @@ public class SqlOperatorTest {
   }
 
   /** Generates parameters to test both regular and safe cast. */
-  @SuppressWarnings("unused")
-  private Stream<Arguments> safeParameters() {
-    SqlOperatorFixture f = fixture();
+  @SuppressWarnings("unused") // 抑制未使用参数的警告，用于参数提供方法
+  private Stream<Arguments> safeParameters() { // 私有方法：生成测试CAST、SAFE_CAST和TRY_CAST的参数流，用于参数化测试
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     SqlOperatorFixture f2 =
         SqlOperatorFixtures.safeCastWrapper(f.withLibrary(SqlLibrary.BIG_QUERY), "SAFE_CAST");
     SqlOperatorFixture f3 =
         SqlOperatorFixtures.safeCastWrapper(f.withLibrary(SqlLibrary.MSSQL), "TRY_CAST");
-    return Stream.of(
+    return Stream.of( // 返回包含不同CAST类型的参数流，用于参数化测试
         () -> new Object[] {CastType.CAST, f},
         () -> new Object[] {CastType.SAFE_CAST, f2},
         () -> new Object[] {CastType.TRY_CAST, f3});
@@ -521,26 +521,26 @@ public class SqlOperatorTest {
 
   /** Tests that CAST, SAFE_CAST and TRY_CAST are basically equivalent but SAFE_CAST is
    * only available in BigQuery library and TRY_CAST is only available in MSSQL library. */
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCast(CastType castType, SqlOperatorFixture f) {
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCast(CastType castType, SqlOperatorFixture f) { // 测试方法：测试CAST、SAFE_CAST和TRY_CAST的基本功能，验证类型转换是否正常工作
     // SAFE_CAST is available in BigQuery library but not by default.
     // TRY_CAST is available in MSSQL library but not by default.
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     if (castType != CastType.CAST) {
-      f0.checkFails("^" + castType.name() + "(12 + 3 as varchar(10))^",
+      f0.checkFails("^" + castType.name() + "(12 + 3 as varchar(10))^", // 检查在不支持的库中使用SAFE_CAST或TRY_CAST是否失败
           "No match found for function signature " + castType.name().toUpperCase(Locale.ROOT)
               + "\\(<NUMERIC>, <CHARACTER>\\)", false);
     }
 
-    f.checkScalar(castType.name() + "(12 + 3 as varchar(10))", "15", "VARCHAR(10) NOT NULL");
+    f.checkScalar(castType.name() + "(12 + 3 as varchar(10))", "15", "VARCHAR(10) NOT NULL"); // 检查类型转换的结果，将15转换为VARCHAR(10)类型
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastToString(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
-    f.checkCastToString("cast(cast('abc' as char(4)) as varchar(6))", null,
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastToString(CastType castType, SqlOperatorFixture f) { // 测试方法：测试各种类型转换为字符串的功能，验证类型转换的正确性
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
+    f.checkCastToString("cast(cast('abc' as char(4)) as varchar(6))", null, // 检查类型转换为字符串的结果，CHAR转VARCHAR
         "abc ", castType);
 
     // integer
@@ -554,7 +554,7 @@ public class SqlOperatorTest {
     f.checkCastToString("-0.0", "CHAR(2)", ".0", castType);
     f.checkCastToString("-123.4", "CHAR(6)", "-123.4", castType);
 
-    f.checkString("cast(1.29 as varchar(10))", "1.29", "VARCHAR(10) NOT NULL");
+    f.checkString("cast(1.29 as varchar(10))", "1.29", "VARCHAR(10) NOT NULL"); // 检查字符串表达式的结果
     f.checkString("cast(.48 as varchar(10))", ".48", "VARCHAR(10) NOT NULL");
     f.checkString("cast(2.523 as char(2))", "2.", "CHAR(2) NOT NULL");
 
@@ -589,7 +589,7 @@ public class SqlOperatorTest {
     f.checkCastToString("'abc'", "CHAR(3)", "abc", castType);
     f.checkCastToString("cast('abc' as varchar(6))", "CHAR(3)", "abc", castType);
     f.checkCastToString("cast(' abc  ' as varchar(10))", null, " abc  ", castType);
-    f.checkCastToString("cast(cast('abc' as char(4)) as varchar(6))", null,
+    f.checkCastToString("cast(cast('abc' as char(4)) as varchar(6))", null, // 检查类型转换为字符串的结果，CHAR转VARCHAR
         "abc ", castType);
     f.checkString("cast(cast('a' as char(2)) as varchar(3)) || 'x' ",
         "a x", "VARCHAR(4) NOT NULL");
@@ -598,7 +598,7 @@ public class SqlOperatorTest {
     f.checkString("cast('a' as char(3)) || 'x'", "a  x",
         "CHAR(4) NOT NULL");
 
-    f.checkScalar("char_length(cast(' x ' as char(4)))", 4,
+    f.checkScalar("char_length(cast(' x ' as char(4)))", 4, // 检查字符长度计算的结果，CHAR类型包含空格
         "INTEGER NOT NULL");
     f.checkScalar("char_length(cast(' x ' as varchar(3)))", 3,
         "INTEGER NOT NULL");
@@ -637,17 +637,17 @@ public class SqlOperatorTest {
     f.checkString("cast(false as varchar(4))", "FALS", "VARCHAR(4) NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastBooleanToNumeric(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
-    SqlOperatorFixture f0 = f.withConformance(SqlConformanceEnum.DEFAULT);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastBooleanToNumeric(CastType castType, SqlOperatorFixture f) { // 测试方法：测试布尔类型转换为数值类型的功能，验证布尔值与数值之间的转换
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
+    SqlOperatorFixture f0 = f.withConformance(SqlConformanceEnum.DEFAULT); // 创建默认一致性级别的测试夹具，默认不支持布尔转数值
     f0.checkFails("^" + castType.name() + "(true as integer)^",
         "Cast function cannot convert value of type BOOLEAN to type INTEGER", false);
     f0.checkFails("^" + castType.name() + "(true as decimal)^",
         "Cast function cannot convert value of type BOOLEAN to type DECIMAL\\(19, 0\\)", false);
 
-    SqlOperatorFixture f1 = f.withConformance(SqlConformanceEnum.BIG_QUERY);
+    SqlOperatorFixture f1 = f.withConformance(SqlConformanceEnum.BIG_QUERY); // 创建BigQuery一致性级别的测试夹具，BigQuery支持布尔转数值
     f1.checkString("cast(true as integer)", "1", "INTEGER NOT NULL");
     f1.checkString("cast(false as integer)", "0", "INTEGER NOT NULL");
     f1.checkString("cast(true as bigint)", "1", "BIGINT NOT NULL");
@@ -657,37 +657,37 @@ public class SqlOperatorTest {
         "Cast function cannot convert value of type BOOLEAN to type DECIMAL\\(19, 0\\)", false);
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastExactNumericLimits(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastExactNumericLimits(CastType castType, SqlOperatorFixture f) { // 测试方法：测试精确数值类型的边界值转换，验证数值边界处理
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     // Test casting for min,max, out of range for exact numeric types
     Numeric.forEach(numeric -> {
-      final String type = numeric.typeName;
-      switch (numeric) {
-      case DOUBLE:
-      case FLOAT:
-      case REAL:
+      final String type = numeric.typeName; // 获取数值类型的名称
+      switch (numeric) { // 根据数值类型进行分支处理，不同类型有不同处理逻辑
+      case DOUBLE: // 处理DOUBLE类型
+      case FLOAT: // 处理FLOAT类型
+      case REAL: // 处理REAL类型
         // Skip approx types
-        return;
-      default:
+        return; // 跳过近似类型，只测试精确数值类型
+      default: // 默认情况，继续处理精确数值类型
         // fall through
       }
 
       // Convert from literal to type
-      f.checkCastToScalarOkay(numeric.maxNumericString, type, castType);
-      f.checkCastToScalarOkay(numeric.minNumericString, type, castType);
+      f.checkCastToScalarOkay(numeric.maxNumericString, type, castType); // 检查类型转换为标量的结果，测试最大值
+      f.checkCastToScalarOkay(numeric.minNumericString, type, castType); // 检查类型转换为标量的结果，测试最小值
 
       // Overflow test
-      if (numeric == Numeric.BIGINT) {
+      if (numeric == Numeric.BIGINT) { // 如果是BIGINT类型
         // Overflow for casting decimals produces a different error
         f.checkCastFails(numeric.maxOverflowNumericString,
             type, "Overflow", true, castType);
         f.checkCastFails(numeric.minOverflowNumericString,
             type, "Overflow", true, castType);
-      } else {
-        if (numeric != Numeric.DECIMAL5_2) {
+      } else { // 如果不是两个重载操作符
+        if (numeric != Numeric.DECIMAL5_2) { // 如果不是DECIMAL(5,2)类型
           // This condition is for bug [CALCITE-6078], not yet fixed
           f.checkCastFails(numeric.maxOverflowNumericString,
               type, OUT_OF_RANGE_MESSAGE, true, castType);
@@ -702,7 +702,7 @@ public class SqlOperatorTest {
       f.checkCastToScalarOkay("'" + numeric.minNumericString + "'",
           type, numeric.minNumericString, castType);
 
-      if (numeric != Numeric.DECIMAL5_2) {
+      if (numeric != Numeric.DECIMAL5_2) { // 如果不是DECIMAL(5,2)类型
         // The above condition is for bug CALCITE-6078
         f.checkCastFails("'" + numeric.maxOverflowNumericString + "'",
             type, WRONG_FORMAT_MESSAGE, true, castType);
@@ -724,16 +724,16 @@ public class SqlOperatorTest {
 
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6395">
    * [CALCITE-6395] Significant precision loss when representing REAL literals</a>. */
-  @Test public void floatPrecisionTest() {
-    SqlOperatorFixture f = fixture();
-    f.checkScalar("CAST(CAST('36854775807.0' AS REAL) AS BIGINT)",
+  @Test public void floatPrecisionTest() { // 测试方法：测试REAL类型的精度问题，解决CALCITE-6395问题（REAL字面量的精度丢失）
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
+    f.checkScalar("CAST(CAST('36854775807.0' AS REAL) AS BIGINT)", // 检查REAL类型转换后的精度，验证数值是否保持准确
         "36854775808", "BIGINT NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastToExactNumeric(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastToExactNumeric(CastType castType, SqlOperatorFixture f) { // 测试方法：测试转换为精确数值类型的功能，验证各种类型转精确数值
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     f.checkCastToScalarOkay("1", "BIGINT", castType);
     f.checkCastToScalarOkay("1", "INTEGER", castType);
@@ -763,8 +763,8 @@ public class SqlOperatorTest {
 
   /** Test cases for <a href="https://issues.apache.org/jira/projects/CALCITE/issues/CALCITE-6322">
    * [CALCITE-6322] Casts to DECIMAL types are ignored</a>. */
-  @Test public void testIssue6322() {
-    SqlOperatorFixture f = fixture();
+  @Test public void testIssue6322() { // 测试方法：测试DECIMAL类型转换问题，解决CALCITE-6322问题（CAST到DECIMAL类型被忽略）
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     f.checkScalar("CAST(1.123 AS DECIMAL(4, 0))", "1", "DECIMAL(4, 0) NOT NULL");
     f.checkScalar("CAST(100 AS DECIMAL(3, 0))", "100", "DECIMAL(3, 0) NOT NULL");
     f.checkScalar("CAST(-100 AS DECIMAL(3, 0))", "-100", "DECIMAL(3, 0) NOT NULL");
@@ -787,8 +787,8 @@ public class SqlOperatorTest {
   /**
    * Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-5843">
    * Constant expression with nested casts causes a compiler crash</a>. */
-  @Test public void testConstantCast() {
-    SqlOperatorFixture f = fixture();
+  @Test public void testConstantCast() { // 测试方法：测试常量表达式的嵌套转换，解决CALCITE-5843问题（常量表达式嵌套转换导致编译器崩溃）
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     f.checkScalarExact("CAST(CAST('32767.4' AS FLOAT) AS SMALLINT)",
         "SMALLINT NOT NULL", "32767");
     f.checkScalarExact("CAST(CAST('32767.4' AS FLOAT) AS CHAR)",
@@ -798,8 +798,8 @@ public class SqlOperatorTest {
   /**
    * Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6210">
    * Cast to VARBINARY causes an assertion failure</a>. */
-  @Test public void testVarbinaryCast() {
-    SqlOperatorFixture f = fixture();
+  @Test public void testVarbinaryCast() { // 测试方法：测试转换为VARBINARY类型，解决CALCITE-6210问题（CAST到VARBINARY导致断言失败）
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     f.checkScalar("CAST('00' AS VARBINARY)", "3030", "VARBINARY NOT NULL");
     f.checkScalar("CAST('help' AS VARBINARY)", "68656c70", "VARBINARY NOT NULL");
     f.checkScalar("CAST('help' AS VARBINARY(2))", "6865", "VARBINARY(2) NOT NULL");
@@ -814,10 +814,10 @@ public class SqlOperatorTest {
     f.checkNull("CAST(CAST(NULL AS VARCHAR) AS VARBINARY)");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastStringToDecimal(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastStringToDecimal(CastType castType, SqlOperatorFixture f) { // 测试方法：测试字符串转换为DECIMAL类型，验证字符串解析和舍入
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     // string to decimal
     f.checkScalarExact("cast('1.29' as decimal(2,1))",
         "DECIMAL(2, 1) NOT NULL",
@@ -840,16 +840,16 @@ public class SqlOperatorTest {
     String shouldFail = "cast(' -1.21e' as decimal(2,1))";
     if (castType == CastType.CAST) {
       f.checkFails(shouldFail, INVALID_CHAR_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       // safe casts never fail
       f.checkNull(shouldFail);
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastIntervalToNumeric(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastIntervalToNumeric(CastType castType, SqlOperatorFixture f) { // 测试方法：测试INTERVAL类型转换为数值类型，验证时间间隔转数值
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     // Interval to Decimal
     f.checkScalarExact("cast(INTERVAL '1.29' second(1,2) as decimal(2,1))",
@@ -952,10 +952,10 @@ public class SqlOperatorTest {
         "-1");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastToInterval(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastToInterval(CastType castType, SqlOperatorFixture f) { // 测试方法：测试数值类型转换为INTERVAL类型，验证数值转时间间隔
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     f.checkScalar(
         "cast(5 as interval second)",
         "+5.000000",
@@ -1018,9 +1018,9 @@ public class SqlOperatorTest {
         "INTERVAL HOUR NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastIntervalToInterval(CastType castType, SqlOperatorFixture f) {
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastIntervalToInterval(CastType castType, SqlOperatorFixture f) { // 测试方法：测试INTERVAL类型之间的转换，验证不同时间间隔类型的转换
     f.checkScalar("cast(interval '2 5' day to hour as interval hour to minute)",
         "+53:00",
         "INTERVAL HOUR TO MINUTE NOT NULL");
@@ -1038,10 +1038,10 @@ public class SqlOperatorTest {
         "INTERVAL DAY TO HOUR NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastWithRoundingToScalar(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastWithRoundingToScalar(CastType castType, SqlOperatorFixture f) { // 测试方法：测试带舍入的类型转换为标量，验证舍入行为
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     f.checkScalar("cast(1.25 as int)", 1, "INTEGER NOT NULL");
     f.checkScalar("cast(1.25E0 as int)", 1, "INTEGER NOT NULL");
@@ -1075,10 +1075,10 @@ public class SqlOperatorTest {
     f.checkScalar("cast(9.99 as decimal(2,1))", 9.9, "DECIMAL(2, 1) NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastDecimalToDoubleToInteger(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastDecimalToDoubleToInteger(CastType castType, SqlOperatorFixture f) { // 测试方法：测试DECIMAL转DOUBLE再转INTEGER的链式转换，验证多步转换的正确性
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     f.checkScalar("cast( cast(1.25 as double) as integer)", 1, "INTEGER NOT NULL");
     f.checkScalar("cast( cast(-1.25 as double) as integer)", -1, "INTEGER NOT NULL");
@@ -1088,35 +1088,35 @@ public class SqlOperatorTest {
     f.checkScalar("cast( cast(-1.5 as double) as integer)", -1, "INTEGER NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastApproxNumericLimits(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastApproxNumericLimits(CastType castType, SqlOperatorFixture f) { // 测试方法：测试近似数值类型的边界值转换，验证浮点数边界处理
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     // Test casting for min, max, out of range for approx numeric types
     Numeric.forEach(numeric -> {
-      String type = numeric.typeName;
-      boolean isFloat;
+      String type = numeric.typeName; // 获取类型名称
+      boolean isFloat; // 布尔变量，标记是否为FLOAT类型
 
-      switch (numeric) {
-      case DOUBLE:
-      case FLOAT:
-        isFloat = false;
+      switch (numeric) { // 根据数值类型进行分支处理，不同类型有不同处理逻辑
+      case DOUBLE: // 处理DOUBLE类型
+      case FLOAT: // 处理FLOAT类型
+        isFloat = false; // 不是FLOAT类型
         break;
-      case REAL:
-        isFloat = true;
+      case REAL: // 处理REAL类型
+        isFloat = true; // 是FLOAT类型
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         // Skip non-approx types
-        return;
+        return; // 跳过近似类型，只测试精确数值类型
       }
 
-      if (!f.brokenTestsEnabled()) {
-        return;
+      if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+        return; // 跳过近似类型，只测试精确数值类型
       }
 
       // Convert from literal to type
-      f.checkCastToApproxOkay(numeric.maxNumericString, type,
+      f.checkCastToApproxOkay(numeric.maxNumericString, type, // 检查类型转换为近似数值的结果
           isFloat
               ? isWithin(numeric.maxNumericAsDouble(), 1E32)
               : isExactly(numeric.maxNumericAsDouble()), castType);
@@ -1126,7 +1126,7 @@ public class SqlOperatorTest {
       if (isFloat) {
         f.checkCastFails(numeric.maxOverflowNumericString, type,
             OUT_OF_RANGE_MESSAGE, true, castType);
-      } else {
+      } else { // 如果不是两个重载操作符
         // Double: Literal out of range
         f.checkCastFails(numeric.maxOverflowNumericString, type,
             LITERAL_OUT_OF_RANGE_MESSAGE, false, castType);
@@ -1184,10 +1184,10 @@ public class SqlOperatorTest {
     });
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastToApproxNumeric(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastToApproxNumeric(CastType castType, SqlOperatorFixture f) { // 测试方法：测试转换为近似数值类型，验证精确数值转浮点数
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     f.checkCastToApproxOkay("1", "DOUBLE", isExactly(1), castType);
     f.checkCastToApproxOkay("1.0", "DOUBLE", isExactly(1), castType);
@@ -1199,10 +1199,10 @@ public class SqlOperatorTest {
     f.checkCastToApproxOkay("0e0", "REAL", isExactly(0), castType);
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastNull(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastNull(CastType castType, SqlOperatorFixture f) { // 测试方法：测试NULL值的类型转换，验证NULL值的处理
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     // null
     f.checkNull("cast(null as integer)");
@@ -1232,9 +1232,9 @@ public class SqlOperatorTest {
   /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1439">[CALCITE-1439]
    * Handling errors during constant reduction</a>. */
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastInvalid(CastType castType, SqlOperatorFixture f) {
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastInvalid(CastType castType, SqlOperatorFixture f) { // 测试方法：测试无效值的类型转换，解决CALCITE-1439问题（常量规约期间的错误处理）
     // Before CALCITE-1439 was fixed, constant reduction would kick in and
     // generate Java constants that throw when the class is loaded, thus
     // ExceptionInInitializerError.
@@ -1248,7 +1248,7 @@ public class SqlOperatorTest {
       f.checkFails("cast('' as real)", WRONG_FORMAT_MESSAGE, true);
       f.checkFails("cast('' as double)", WRONG_FORMAT_MESSAGE, true);
       f.checkFails("cast('' as smallint)", WRONG_FORMAT_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('15.4' as integer)");
       f.checkNull("cast('15.6' as integer)");
       f.checkNull("cast('ue' as boolean)");
@@ -1261,10 +1261,10 @@ public class SqlOperatorTest {
   }
 
   /** Test cast for DATE, TIME, TIMESTAMP types. */
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastDateTime(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastDateTime(CastType castType, SqlOperatorFixture f) { // 测试方法：测试DATE、TIME、TIMESTAMP类型的转换，验证日期时间类型的转换规则
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     f.checkScalar("cast(TIMESTAMP '1945-02-24 12:42:25.34' as TIMESTAMP)",
         "1945-02-24 12:42:25", "TIMESTAMP(0) NOT NULL");
@@ -1323,9 +1323,9 @@ public class SqlOperatorTest {
         "1945-02-24 00:00:00", "TIMESTAMP(0) NOT NULL");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
-  void testCastStringToDateTime(CastType castType, SqlOperatorFixture f) {
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
+  void testCastStringToDateTime(CastType castType, SqlOperatorFixture f) { // 测试方法：测试字符串转换为DATE、TIME、TIMESTAMP类型，验证字符串解析
     f.checkScalar("cast('12:42:25' as TIME)",
         "12:42:25", "TIME(0) NOT NULL");
     f.checkScalar("cast('1:42:25' as TIME)",
@@ -1342,11 +1342,11 @@ public class SqlOperatorTest {
 
     if (castType == CastType.CAST) {
       f.checkFails("cast('nottime' as TIME)", BAD_DATETIME_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('nottime' as TIME)");
     }
 
-    if (Bug.CALCITE_6092_FIXED) {
+    if (Bug.CALCITE_6092_FIXED) { // 如果CALCITE-6092问题已修复（TIME值验证问题）
       f.checkFails("cast('1241241' as TIME)", "Invalid TIME value, '1241241'", true);
       f.checkFails("cast('12:54:78' as TIME)", "Invalid TIME value, '12:54:78'", true);
     }
@@ -1388,7 +1388,7 @@ public class SqlOperatorTest {
           "Value of HOUR field is out of range in '1945-01-24 25:42:25.34'", true);
       f.checkFails("cast('1945-1-24 12:23:34.454' as TIMESTAMP)",
           "Invalid DATE value, '1945-1-24 12:23:34.454'", true);
-    } else {
+    } else { // 如果不是两个重载操作符
       // test cases for 'SAFE_CAST' and 'TRY_CAST'
       f.checkNull("cast('1945-2-2 12:2:5' as TIMESTAMP)");
       f.checkNull("cast('1241241' as TIMESTAMP)");
@@ -1398,7 +1398,7 @@ public class SqlOperatorTest {
     }
     if (castType == CastType.CAST) {
       f.checkFails("cast('nottime' as TIMESTAMP)", BAD_DATETIME_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('nottime' as TIMESTAMP)");
     }
 
@@ -1412,14 +1412,14 @@ public class SqlOperatorTest {
         "1945-02-24", "DATE NOT NULL");
     if (castType == CastType.CAST) {
       f.checkFails("cast('notdate' as DATE)", BAD_DATETIME_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('notdate' as DATE)");
     }
 
     if (castType == CastType.CAST) {
       f.checkFails("cast('52534253' as DATE)", BAD_DATETIME_MESSAGE, true);
       f.checkFails("cast('1945-30-24' as DATE)", BAD_DATETIME_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('52534253' as DATE)");
       f.checkNull("cast('1945-30-24' as DATE)");
     }
@@ -1437,8 +1437,8 @@ public class SqlOperatorTest {
     f.checkNull("cast(cast(null as timestamp) as time)");
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastFormatClauseDateTimeToString(CastType castType, SqlOperatorFixture f) {
 
     // Cast DATE to String
@@ -1576,8 +1576,8 @@ public class SqlOperatorTest {
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastFormatClauseStringToDateTime(CastType castType, SqlOperatorFixture f) {
     f.checkScalar("cast('18-12-03' as date format 'YY-MM-DD')",
         "2018-12-03",
@@ -1609,8 +1609,8 @@ public class SqlOperatorTest {
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastFormatClauseByteToString(CastType castType, SqlOperatorFixture f) {
     if (Bug.CALCITE_6270_FIXED) {
       f.checkString("cast(b'\\x48\\x65\\x6c\\x6c\\x6f' as varchar format 'ASCII')",
@@ -1622,8 +1622,8 @@ public class SqlOperatorTest {
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastFormatClauseNumericToString(CastType castType, SqlOperatorFixture f) {
     if (Bug.CALCITE_6270_FIXED) {
       f.checkString("cast(-12.23 as varchar FORMAT '999.999')",
@@ -1639,7 +1639,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMssqlConvert() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.MSSQL_CONVERT, VmName.EXPAND);
     // happy-paths (no need to test all, proper functionality is tested by CAST already
     // just need to make sure it works at all
@@ -1651,7 +1651,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMssqlConvertWithStyle() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.MSSQL_CONVERT, VmName.EXPAND);
     // ensure 'style' argument is ignored
     f.checkScalar("convert(INTEGER, 45.4, 999)", "45", "INTEGER NOT NULL");
@@ -1705,7 +1705,7 @@ public class SqlOperatorTest {
           }
           return cal;
 
-        default:
+        default: // 默认情况，继续处理精确数值类型
           throw new AssertionError("unexpected time unit: " + timeUnit);
         }
       } catch (InterruptedException e) {
@@ -1714,10 +1714,10 @@ public class SqlOperatorTest {
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastToBoolean(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
 
     // string to boolean
     f.checkBoolean("cast('true' as boolean)", true);
@@ -1727,7 +1727,7 @@ public class SqlOperatorTest {
     f.checkBoolean("cast('  fALse' as boolean)", false);
     if (castType == CastType.CAST) {
       f.checkFails("cast('unknown' as boolean)", INVALID_CHAR_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast('unknown' as boolean)");
     }
 
@@ -1736,15 +1736,15 @@ public class SqlOperatorTest {
     if (castType == CastType.CAST) {
       f.checkFails("cast(cast('blah' as varchar(10)) as boolean)",
           INVALID_CHAR_MESSAGE, true);
-    } else {
+    } else { // 如果不是两个重载操作符
       f.checkNull("cast(cast('blah' as varchar(10)) as boolean)");
     }
   }
 
   @Test void testCastToDecimal() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // test the minimum scale is 0
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     // cast integer to decimal
     f.checkFails("cast(123 as decimal(3, -1))",
         "DECIMAL scale -1 must be between 0 and 19", false);
@@ -1783,7 +1783,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCastRowType() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("cast((1, 2) as row(f0 integer, f1 bigint))",
         "{1, 2}",
         "RecordType(INTEGER NOT NULL F0, BIGINT NOT NULL F1) NOT NULL");
@@ -1806,7 +1806,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4918">
    * [CALCITE-4918] Add a VARIANT data type</a>. */
   @Test public void testVariant() {
-    SqlOperatorFixture f = fixture();
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     f.checkScalar("cast(1 as VARIANT)", "1", "VARIANT NOT NULL");
     // String variants include quotes when output
     f.checkScalar("cast('abc' as VARIANT)", "\"abc\"", "VARIANT NOT NULL");
@@ -1870,7 +1870,7 @@ public class SqlOperatorTest {
    * [CALCITE-6095] Arithmetic expression with VARBINARY value causes AssertionFailure</a>.
    */
   @Test public void testVarbitArithmetic() {
-    SqlOperatorFixture f = fixture();
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     String error = "Cannot apply '\\+' to arguments of type .*\\."
         + " Supported form\\(s\\): '<NUMERIC> \\+ <NUMERIC>'\n"
         + "'<DATETIME_INTERVAL> \\+ <DATETIME_INTERVAL>'\n"
@@ -1889,13 +1889,13 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-4861">[CALCITE-4861]
    * Optimization of chained CAST calls leads to unexpected behavior</a>. */
   @Test void testChainedCast() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkFails("CAST(CAST(CAST(123456 AS TINYINT) AS INT) AS BIGINT)",
         ".*Value 123456 out of range", true);
   }
 
   @Test void testCase() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CASE, VmName.EXPAND);
     f.checkScalarExact("case when 'a'='a' then 1 end", 1);
 
@@ -2050,14 +2050,14 @@ public class SqlOperatorTest {
   }
 
   @Test void testCaseNull() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CASE, VmName.EXPAND);
     f.checkScalarExact("case when 1 = 1 then 10 else null end", 10);
     f.checkNull("case when 1 = 2 then 10 else null end");
   }
 
   @Test void testCaseType() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CASE, VmName.EXPAND);
     f.checkType("case 1 when 1 then current_timestamp else null end",
         "TIMESTAMP(0)");
@@ -2078,7 +2078,7 @@ public class SqlOperatorTest {
    * <p>See FRG-97 "Support for JDBC escape syntax is incomplete".
    */
   @Test void testJdbcFn() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(new SqlJdbcFunctionCall("dummy"), VmName.EXPAND);
 
     // There follows one test for each function in appendix C of the JDBC
@@ -2400,7 +2400,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSelect() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.check("select * from (values(1))", SqlTests.INTEGER_TYPE_CHECKER, 1);
 
     // Check return type on scalar sub-query in select list.  Note return
@@ -2440,7 +2440,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLiteralChain() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LITERAL_CHAIN, VM_EXPAND);
     f.checkString("'buttered'\n"
             + "' toast'",
@@ -2465,7 +2465,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testComplexLiteral() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.check("select 2 * 2 * x from (select 2 as x)",
         SqlTests.INTEGER_TYPE_CHECKER, 8);
     f.check("select 1 * 2 * 3 * x from (select 2 as x)",
@@ -2475,12 +2475,12 @@ public class SqlOperatorTest {
   }
 
   @Test void testRow() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ROW);
   }
 
   @Test void testAndOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.AND, VmName.EXPAND);
     f.checkBoolean("true and false", false);
     f.checkBoolean("true and true", true);
@@ -2491,7 +2491,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAndOperator2() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("case when false then unknown else true end and true",
         true);
     f.checkBoolean("case when false then cast(null as boolean) "
@@ -2502,7 +2502,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAndOperatorLazy() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.AND, VmName.EXPAND);
 
     // lazy eval returns FALSE;
@@ -2515,7 +2515,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testConcatOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CONCAT, VmName.EXPAND);
     f.checkString(" 'a'||'b' ", "ab", "CHAR(2) NOT NULL");
     f.checkNull(" 'a' || cast(null as char(2)) ");
@@ -2546,7 +2546,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testConcatFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkConcatFunc(f.withLibrary(SqlLibrary.MYSQL));
     checkConcatFunc(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkConcatFuncWithNull(f.withLibrary(SqlLibrary.POSTGRESQL));
@@ -2619,7 +2619,7 @@ public class SqlOperatorTest {
    * Add CONCAT_WS function (enabled in MSSQL, MySQL, Postgres
    * libraries)</a>. */
   @Test void testConcatWSFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkConcatWithSeparator(f.withLibrary(SqlLibrary.MYSQL));
     checkConcatWithSeparator(f.withLibrary(SqlLibrary.POSTGRESQL));
     checkConcatWithSeparatorInPostgres(f.withLibrary(SqlLibrary.POSTGRESQL));
@@ -2784,7 +2784,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testDivideOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DIVIDE, VmName.EXPAND);
     f.checkScalarExact("95.0 / 100", "DECIMAL(14, 6) NOT NULL", "0.95");
     f.checkScalarExact("95 / 100.0", "DECIMAL(17, 6) NOT NULL", "0.95");
@@ -2806,7 +2806,7 @@ public class SqlOperatorTest {
     f.checkNull("1e1 / cast(null as float)");
     f.checkScalarExact("100.1 / 0.00000000000000001", "DECIMAL(19, 6) NOT NULL",
         "1.001E+19");
-    SqlOperatorFixture f0 = f.withFactory(tf ->
+    SqlOperatorFixture f0 = f.withFactory(tf -> // 创建带有自定义类型系统的测试夹具，用于限制数值精度
         tf.withTypeSystem(typeSystem ->
             new DelegatingTypeSystem(typeSystem) {
               @Override public int getMaxNumericPrecision() {
@@ -2817,7 +2817,7 @@ public class SqlOperatorTest {
                 switch (typeName) {
                 case DECIMAL:
                   return 28;
-                default:
+                default: // 默认情况，继续处理精确数值类型
                   return super.getMaxPrecision(typeName);
                 }
               }
@@ -2830,7 +2830,7 @@ public class SqlOperatorTest {
                 switch (typeName) {
                 case DECIMAL:
                   return 10;
-                default:
+                default: // 默认情况，继续处理精确数值类型
                   return super.getMaxScale(typeName);
                 }
               }
@@ -2840,7 +2840,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testDivideOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("interval '-2:2' hour to minute / 3",
         "-0:41", "INTERVAL HOUR TO MINUTE NOT NULL");
     f.checkScalar("interval '2:5:12' hour to second / 2 / -3",
@@ -2854,7 +2854,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testEqualsOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EQUALS, VmName.EXPAND);
     f.checkBoolean("1=1", true);
     f.checkBoolean("1=1.0", true);
@@ -2884,7 +2884,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testEqualsOperatorInterval() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day = interval '1' day", false);
     f.checkBoolean("interval '2' day = interval '2' day", true);
     f.checkBoolean("interval '2:2:2' hour to second = interval '2' hour",
@@ -2893,7 +2893,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testGreaterThanOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.GREATER_THAN, VmName.EXPAND);
     f.checkBoolean("1>2", false);
     f.checkBoolean("cast(-1 as TINYINT)>cast(1 as TINYINT)", false);
@@ -2921,7 +2921,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testGreaterThanOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day > interval '1' day", true);
     f.checkBoolean("interval '2' day > interval '5' day", false);
     f.checkBoolean("interval '2 2:2:2' day to second > interval '2' day", true);
@@ -2936,7 +2936,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsDistinctFromOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_DISTINCT_FROM, VM_EXPAND);
     f.checkBoolean("1 is distinct from 1", false);
     f.checkBoolean("1 is distinct from 1.0", false);
@@ -2962,7 +2962,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsNotDistinctFromOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_DISTINCT_FROM, VM_EXPAND);
     f.checkBoolean("1 is not distinct from 1", true);
     f.checkBoolean("1 is not distinct from 1.0", true);
@@ -2989,7 +2989,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testGreaterThanOrEqualOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.GREATER_THAN_OR_EQUAL, VmName.EXPAND);
     f.checkBoolean("1>=2", false);
     f.checkBoolean("-1>=1", false);
@@ -3013,7 +3013,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testGreaterThanOrEqualOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day >= interval '1' day", true);
     f.checkBoolean("interval '2' day >= interval '5' day", false);
     f.checkBoolean("interval '2 2:2:2' day to second >= interval '2' day",
@@ -3029,7 +3029,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testInOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IN, VM_EXPAND);
     f.checkBoolean("1 in (0, 1, 2)", true);
     f.checkBoolean("3 in (0, 1, 2)", false);
@@ -3043,13 +3043,13 @@ public class SqlOperatorTest {
     f.checkBoolean("false and true in (false, false)", false);
 
     if (!Bug.TODO_FIXED) {
-      return;
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkFails("'foo' in (^)^", "(?s).*Encountered \"\\)\" at .*", false);
   }
 
   @Test void testNotInOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT_IN, VM_EXPAND);
     f.checkBoolean("1 not in (0, 1, 2)", false);
     f.checkBoolean("3 not in (0, 1, 2)", true);
@@ -3063,13 +3063,13 @@ public class SqlOperatorTest {
     f.checkBoolean("true and false not in (true, true)", true);
 
     if (!Bug.TODO_FIXED) {
-      return;
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkFails("'foo' not in (^)^", "(?s).*Encountered \"\\)\" at .*", false);
   }
 
   @Test void testOverlapsOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.OVERLAPS, VM_EXPAND);
     f.checkBoolean("(date '1-2-3', date '1-2-3') "
         + "overlaps (date '1-2-3', interval '1' year)", true);
@@ -3134,7 +3134,7 @@ public class SqlOperatorTest {
         "TIMESTAMP '1970-03-01 00:00:00'",
         "TIMESTAMP '1970-04-01 00:00:00'",
     };
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkOverlaps(new OverlapChecker(f, times));
     checkOverlaps(new OverlapChecker(f, dates));
     checkOverlaps(new OverlapChecker(f, timestamps));
@@ -3265,7 +3265,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLessThanOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LESS_THAN, VmName.EXPAND);
     f.checkBoolean("1<2", true);
     f.checkBoolean("-1<1", true);
@@ -3290,7 +3290,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLessThanOperatorInterval() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day < interval '1' day", false);
     f.checkBoolean("interval '2' day < interval '5' day", true);
     f.checkBoolean("interval '2 2:2:2' day to second < interval '2' day",
@@ -3306,7 +3306,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLessThanOrEqualOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LESS_THAN_OR_EQUAL,
         VmName.EXPAND);
     f.checkBoolean("1<=2", true);
@@ -3334,7 +3334,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLessThanOrEqualOperatorInterval() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day <= interval '1' day", false);
     f.checkBoolean("interval '2' day <= interval '5' day", true);
     f.checkBoolean("interval '2 2:2:2' day to second <= interval '2' day",
@@ -3393,7 +3393,7 @@ public class SqlOperatorTest {
         "Value 32768 out of range", true);
     f.checkFails("SELECT -CAST(32768 AS SMALLINT)",
         "Value 32768 out of range", true);
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     // This query does not fail if checked arithmetic is not used
     f0.checkScalar("SELECT -CAST(-32768 AS SMALLINT)",
         "-32768", "SMALLINT");
@@ -3406,7 +3406,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMinusIntervalOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MINUS, VmName.EXPAND);
     f.checkScalar("interval '2' day - interval '1' day",
         "+1", "INTERVAL DAY NOT NULL");
@@ -3480,7 +3480,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMinusDateOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MINUS_DATE, VmName.EXPAND);
     f.checkScalar("(time '12:03:34' - time '11:57:23') minute to second",
         "+6:11.000000", "INTERVAL MINUTE TO SECOND NOT NULL");
@@ -3581,7 +3581,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMultiplyIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("interval '2:2' hour to minute * 3",
         "+6:06", "INTERVAL HOUR TO MINUTE NOT NULL");
     f.checkScalar("3 * 2 * interval '2:5:12' hour to second",
@@ -3597,7 +3597,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testDatePlusInterval() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("date '2014-02-11' + interval '2' day",
         "2014-02-13", "DATE NOT NULL");
     // 60 days is more than 2^32 milliseconds
@@ -3609,7 +3609,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1864">[CALCITE-1864]
    * Allow NULL literal as argument</a>. */
   @Test void testNullOperand() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkNullOperand(f, "=");
     checkNullOperand(f, ">");
     checkNullOperand(f, "<");
@@ -3630,7 +3630,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNotEqualsOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT_EQUALS, VmName.EXPAND);
     f.checkBoolean("1<>1", false);
     f.checkBoolean("'a'<>'A'", true);
@@ -3657,7 +3657,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNotEqualsOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("interval '2' day <> interval '1' day", true);
     f.checkBoolean("interval '2' day <> interval '2' day", false);
     f.checkBoolean("interval '2:2:2' hour to second <> interval '2' hour",
@@ -3666,7 +3666,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testOrOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.OR, VmName.EXPAND);
     f.checkBoolean("true or false", true);
     f.checkBoolean("false or false", false);
@@ -3675,7 +3675,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testOrOperatorLazy() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.OR, VmName.EXPAND);
 
     // need to evaluate 2nd argument if first evaluates to null, therefore
@@ -3744,13 +3744,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testPlusOperatorAny() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PLUS, VmName.EXPAND);
     f.checkScalar("1+CAST(2 AS ANY)", "3", "ANY NOT NULL");
   }
 
   @Test void testPlusIntervalOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PLUS, VmName.EXPAND);
     f.checkScalar("interval '2' day + interval '1' day",
         "+3", "INTERVAL DAY NOT NULL");
@@ -3828,12 +3828,12 @@ public class SqlOperatorTest {
   }
 
   @Test void testDescendingOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DESC, VM_EXPAND);
   }
 
   @Test void testIsNotTrueOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_TRUE, VmName.EXPAND);
     f.checkBoolean("true is not true", false);
     f.checkBoolean("false is not true", true);
@@ -3846,7 +3846,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsTrueOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_TRUE, VmName.EXPAND);
     f.checkBoolean("true is true", true);
     f.checkBoolean("false is true", false);
@@ -3854,7 +3854,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsNotFalseOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_FALSE, VmName.EXPAND);
     f.checkBoolean("false is not false", false);
     f.checkBoolean("true is not false", true);
@@ -3862,7 +3862,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsFalseOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_FALSE, VmName.EXPAND);
     f.checkBoolean("false is false", true);
     f.checkBoolean("true is false", false);
@@ -3870,13 +3870,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsNotNullOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_NULL, VmName.EXPAND);
     checkIsNotNull(f, SqlStdOperatorTable.IS_NOT_NULL);
   }
 
   @Test void testIsNotUnknownOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_UNKNOWN, VM_EXPAND);
     f.checkFails("^'abc' IS NOT UNKNOWN^",
         "(?s).*Cannot apply 'IS NOT UNKNOWN'.*",
@@ -3894,13 +3894,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsNullOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NULL, VmName.EXPAND);
     checkIsNull(f, SqlStdOperatorTable.IS_NULL);
   }
 
   @Test void testIsUnknownOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_UNKNOWN, VmName.EXPAND);
     f.checkFails("0 = 1 AND ^2 IS UNKNOWN^ AND 3 > 4",
         "(?s).*Cannot apply 'IS UNKNOWN'.*",
@@ -3917,7 +3917,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsASetOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_A_SET, VM_EXPAND);
     f.checkBoolean("multiset[1] is a set", true);
     f.checkBoolean("multiset[1, 1] is a set", false);
@@ -3930,7 +3930,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsNotASetOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_A_SET, VM_EXPAND);
     f.checkBoolean("multiset[1] is not a set", false);
     f.checkBoolean("multiset[1, 1] is not a set", true);
@@ -3943,7 +3943,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIntersectOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MULTISET_INTERSECT, VM_EXPAND);
     f.checkScalar("multiset[1] multiset intersect multiset[1]",
         "[1]", "INTEGER NOT NULL MULTISET NOT NULL");
@@ -3969,7 +3969,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExceptOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MULTISET_EXCEPT, VM_EXPAND);
     f.checkScalar("multiset[1] multiset except multiset[1]",
         "[]", "INTEGER NOT NULL MULTISET NOT NULL");
@@ -3997,24 +3997,24 @@ public class SqlOperatorTest {
   }
 
   @Test void testIsEmptyOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_EMPTY, VM_EXPAND);
     f.checkBoolean("multiset[1] is empty", false);
   }
 
   @Test void testIsNotEmptyOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.IS_NOT_EMPTY, VM_EXPAND);
     f.checkBoolean("multiset[1] is not empty", true);
   }
 
   @Test void testExistsOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXISTS, VM_EXPAND);
   }
 
   @Test void testNotOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT, VmName.EXPAND);
     f.checkBoolean("not true", false);
     f.checkBoolean("not false", true);
@@ -4023,7 +4023,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPrefixMinusOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.UNARY_MINUS, VmName.EXPAND);
     f.enableTypeCoercion(false)
         .checkFails("'a' + ^- 'b'^ + 'c'",
@@ -4038,7 +4038,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPrefixMinusOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("-interval '-6:2:8' hour to second",
         "+6:02:08.000000", "INTERVAL HOUR TO SECOND NOT NULL");
     f.checkScalar("- -interval '-6:2:8' hour to second",
@@ -4049,7 +4049,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPrefixPlusOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.UNARY_PLUS, VM_EXPAND);
     f.checkScalarExact("+1", 1);
     f.checkScalarExact("+1.23", "DECIMAL(3, 2) NOT NULL", "1.23");
@@ -4059,7 +4059,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPrefixPlusOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("+interval '-6:2:8' hour to second",
         "-6:02:08.000000", "INTERVAL HOUR TO SECOND NOT NULL");
     f.checkScalar("++interval '-6:2:8' hour to second",
@@ -4074,19 +4074,19 @@ public class SqlOperatorTest {
   }
 
   @Test void testExplicitTableOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXPLICIT_TABLE, VM_EXPAND);
   }
 
   @Test void testValuesOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.VALUES, VM_EXPAND);
     f.check("select 'abc' from (values(true))",
         "CHAR(3) NOT NULL", "abc");
   }
 
   @Test void testNotLikeOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT_LIKE, VM_EXPAND);
     f.checkBoolean("'abc' not like '_b_'", false);
     f.checkBoolean("'ab\ncd' not like 'ab%'", false);
@@ -4176,7 +4176,7 @@ public class SqlOperatorTest {
   private String binaryExpression(SqlOperator operator, String left, String right) {
     if (SqlLibraryOperators.RLIKE == operator || SqlLibraryOperators.NOT_RLIKE == operator) {
       return left + " " + operator.getName() + " " + right;
-    } else {
+    } else { // 如果不是两个重载操作符
       return operator.getName() + "( " + left + ", " + right + ")";
     }
   }
@@ -4192,7 +4192,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLikeEscape() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LIKE, VmName.EXPAND);
     f.checkBoolean("'a_c' like 'a#_c' escape '#'", true);
     f.checkBoolean("'axc' like 'a#_c' escape '#'", false);
@@ -4219,13 +4219,13 @@ public class SqlOperatorTest {
 
   @Disabled("[CALCITE-525] Exception-handling in built-in functions")
   @Test void testLikeEscape2() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("'x' not like 'x' escape 'x'", true);
     f.checkBoolean("'xyz' not like 'xyz' escape 'xyz'", true);
   }
 
   @Test void testLikeOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LIKE, VmName.EXPAND);
     f.checkBoolean("''  like ''", true);
     f.checkBoolean("'a' like 'a'", true);
@@ -4250,7 +4250,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIlikeOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.ILIKE, VmName.EXPAND);
     final String noLike = "No match found for function signature ILIKE";
     f.checkFails("^'a' ilike 'b'^", noLike, false);
@@ -4296,7 +4296,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6309">[CALCITE-6309]
    * Add REGEXP_LIKE function (enabled in MySQL, Oracle, PostgreSQL and Spark libraries)</a>. */
   @Test void testRegexpLike3() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.REGEXP_LIKE, VmName.EXPAND);
 
     final Consumer<SqlOperatorFixture> consumer = f1 -> {
@@ -4325,7 +4325,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-1898">[CALCITE-1898]
    * LIKE must match '.' (period) literally</a>. */
   @Test void testLikeDot() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("'abc' like 'a.c'", false);
     f.checkBoolean("'abcde' like '%c.e'", false);
     f.checkBoolean("'abc.e' like '%c.e'", true);
@@ -4342,7 +4342,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNotSimilarToOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT_SIMILAR_TO, VM_EXPAND);
     f.checkBoolean("'ab' not similar to 'a_'", false);
     f.checkBoolean("'aabc' not similar to 'ab*c+d'", true);
@@ -4354,7 +4354,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSimilarToOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SIMILAR_TO, VmName.EXPAND);
 
     // like LIKE
@@ -4546,12 +4546,12 @@ public class SqlOperatorTest {
   }
 
   @Test void testEscapeOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ESCAPE, VM_EXPAND);
   }
 
   @Test void testConvertFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CONVERT, VM_JAVA);
     f.checkFails("convert('a', utf8, utf10)", "UTF10", false);
     f.checkFails("select ^convert(col, latin1, utf8)^\n"
@@ -4575,7 +4575,7 @@ public class SqlOperatorTest {
    * Target charset should be used when comparing two strings through
    * CONVERT/TRANSLATE function during validation</a>. */
   @Test void testStringComparisonWithConvertFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CONVERT, VM_JAVA);
     f.check("select 'a' as alia\n"
             + " from (values(true)) where convert('col', utf8, latin1)='col'",
@@ -4611,7 +4611,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testStringComparisonWithTranslateFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TRANSLATE, VM_JAVA);
     f.check("select 'a' as alia\n"
             + " from (values(true)) where translate('col' using latin1)='col'",
@@ -4694,7 +4694,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTranslateFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TRANSLATE, VM_JAVA);
     f.checkFails("translate('a' using utf10)", "UTF10", false);
     f.checkFails("convert('a' using utf10)", "UTF10", false);
@@ -4758,7 +4758,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testOverlayFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.OVERLAY, VmName.EXPAND);
     f.checkString("overlay('ABCdef' placing 'abc' from 1)",
         "abcdef", "VARCHAR(9) NOT NULL");
@@ -4796,7 +4796,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPositionFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.POSITION, VmName.EXPAND);
     f.checkScalarExact("position('b' in 'abc')", 2);
     f.checkScalarExact("position('' in 'abc')", 1);
@@ -4831,7 +4831,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6774">[CALCITE-6774]
    * REPLACE function returns wrong result when search pattern is an empty string</a>. */
   @Test void testReplaceFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkReplaceFunc(f);
     // case-sensitive
     f.checkString("REPLACE('ciAao', 'a', 'ciao')", "ciAciaoo",
@@ -4845,7 +4845,7 @@ public class SqlOperatorTest {
    * Search pattern during matching in REPLACE function should be case insensitive
    * in MSSQL</a>. */
   @Test void testReplaceMSSQLFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkReplaceFunc(f);
     // case-insensitive
     SqlOperatorFixture f1 = f.withConformance(SqlConformanceEnum.SQL_SERVER_2008);
@@ -4873,7 +4873,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCharLengthFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CHAR_LENGTH, VmName.EXPAND);
     f.checkScalarExact("char_length('abc')", 3);
     f.checkNull("char_length(cast(null as varchar(1)))");
@@ -4881,7 +4881,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCharacterLengthFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CHARACTER_LENGTH, VmName.EXPAND);
     f.checkScalarExact("CHARACTER_LENGTH('abc')", 3);
     f.checkNull("CHARACTER_LENGTH(cast(null as varchar(1)))");
@@ -4920,14 +4920,14 @@ public class SqlOperatorTest {
   }
 
   @Test void testOctetLengthFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.OCTET_LENGTH, VmName.EXPAND);
     f.checkScalarExact("OCTET_LENGTH(x'aabbcc')", 3);
     f.checkNull("OCTET_LENGTH(cast(null as varbinary(1)))");
   }
 
   @Test void testBitLengthFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.BIT_LENGTH, VmName.EXPAND);
     f0.checkFails("^bit_length('Apache Calcite')^",
         "No match found for function signature BIT_LENGTH\\(<CHARACTER>\\)", false);
@@ -4947,12 +4947,12 @@ public class SqlOperatorTest {
     f0.setFor(SqlLibraryOperators.BIT_GET, VmName.EXPAND);
     SqlOperatorFixture f1 = SqlOperatorFixtureImpl.DEFAULT.withTester(t -> TESTER);
     f1.setFor(SqlLibraryOperators.GETBIT, VmName.EXPAND);
-    return Stream.of(
+    return Stream.of( // 返回包含不同CAST类型的参数流，用于参数化测试
         () -> new Object[] {f0, "BIT_GET"},
         () -> new Object[] {f1, "GETBIT"});
   }
 
-  @ParameterizedTest
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
   @MethodSource("bitGetParameters")
   void testBitGetFunc(SqlOperatorFixture f, String functionName) {
     f.checkFails("^" + functionName + "(cast(11 as bigint), 1)^",
@@ -5019,7 +5019,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAsciiFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ASCII, VmName.EXPAND);
     f.checkScalarExact("ASCII('')", 0);
     f.checkScalarExact("ASCII('a')", 97);
@@ -6174,7 +6174,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIfFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkIf(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkIf(f.withLibrary(SqlLibrary.HIVE));
     checkIf(f.withLibrary(SqlLibrary.SPARK));
@@ -6196,7 +6196,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testUpperFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.UPPER, VmName.EXPAND);
     f.checkString("upper('a')", "A", "CHAR(1) NOT NULL");
     f.checkString("upper('A')", "A", "CHAR(1) NOT NULL");
@@ -6206,7 +6206,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLeftFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.LEFT);
       f.checkString("left('abcd', 3)", "abc", "VARCHAR(4) NOT NULL");
@@ -6235,7 +6235,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRightFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.RIGHT);
       f.checkString("right('abcd', 3)", "bcd", "VARCHAR(4) NOT NULL");
@@ -6337,7 +6337,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRegexpReplace2Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.REGEXP_REPLACE_2);
 
@@ -6359,7 +6359,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRegexpReplace3Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.REGEXP_REPLACE_3);
 
@@ -6403,7 +6403,7 @@ public class SqlOperatorTest {
 
 
   @Test void testRegexpReplace4Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.REGEXP_REPLACE_4);
 
@@ -6418,7 +6418,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRegexpReplace5Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.REGEXP_REPLACE_5);
 
@@ -6446,7 +6446,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRegexpReplace6Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.setFor(SqlLibraryOperators.REGEXP_REPLACE_6);
 
@@ -6526,13 +6526,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testRegexpExtractFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.REGEXP_EXTRACT, VmName.EXPAND);
     checkRegexpExtract(f, FunctionAlias.of(SqlLibraryOperators.REGEXP_EXTRACT));
   }
 
   @Test void testRegexpSubstrFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.REGEXP_SUBSTR, VmName.EXPAND);
     checkRegexpExtract(f, FunctionAlias.of(SqlLibraryOperators.REGEXP_SUBSTR));
   }
@@ -6571,7 +6571,7 @@ public class SqlOperatorTest {
 
   @Test void testJsonExists() {
     // default pathmode the default is: strict mode
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("json_exists('{\"foo\":\"bar\"}', "
         + "'$.foo')", true);
 
@@ -6676,7 +6676,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonValue() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     if (false) {
       f.checkFails("json_value('{\"foo\":100}', 'lax $.foo1' error on empty)",
           "(?s).*Empty result of JSON_VALUE function is not allowed.*",
@@ -6766,7 +6766,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonQuery() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // default pathmode the default is: strict mode
     f.checkString("json_query('{\"foo\":100}', '$' null on empty)",
         "{\"foo\":100}", "VARCHAR(2000)");
@@ -6865,7 +6865,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonPretty() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkString("json_pretty('{\"foo\":100}')",
         "{\n  \"foo\" : 100\n}", "VARCHAR(2000)");
     f.checkString("json_pretty('[1,2,3]')",
@@ -6881,7 +6881,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonStorageSize() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkString("json_storage_size('[100, \"sakila\", [1, 3, 5], 425.05]')",
         "29", "INTEGER");
     f.checkString("json_storage_size('{\"a\": 1000,\"b\": \"aa\", \"c\": \"[1, 3, 5]\"}')",
@@ -6905,7 +6905,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonType() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.JSON_TYPE, VmName.EXPAND);
     f.checkString("json_type('\"1\"')",
         "STRING", "VARCHAR(20)");
@@ -6935,7 +6935,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonDepth() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.JSON_DEPTH, VmName.EXPAND);
     f.checkString("json_depth('1')",
         "1", "INTEGER");
@@ -6970,7 +6970,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonLength() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // no path context
     f.checkString("json_length('{}')",
         "0", "INTEGER");
@@ -7031,7 +7031,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonKeys() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // no path context
     f.checkString("json_keys('{}')",
         "[]", "VARCHAR(2000)");
@@ -7088,7 +7088,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonRemove() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkString("json_remove('{\"foo\":100}', '$.foo')",
         "{}", "VARCHAR(2000)");
     f.checkString("json_remove('{\"foo\":100, \"foo1\":100}', '$.foo')",
@@ -7110,7 +7110,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonObject() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkString("json_object()", "{}", "VARCHAR(2000) NOT NULL");
     f.checkString("json_object('foo': 'bar')",
         "{\"foo\":\"bar\"}", "VARCHAR(2000) NOT NULL");
@@ -7131,7 +7131,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonObjectAgg() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkAggType("json_objectagg('foo': 'bar')", "VARCHAR(2000) NOT NULL");
     f.checkAggType("json_objectagg('foo': null)", "VARCHAR(2000) NOT NULL");
     f.checkAggType("json_objectagg(100: 'bar')", "VARCHAR(2000) NOT NULL");
@@ -7154,7 +7154,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonValueExpressionOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("'{}' format json", "{}", "ANY NOT NULL");
     f.checkScalar("'[1, 2, 3]' format json", "[1,2,3]", "ANY NOT NULL");
     f.checkNull("cast(null as varchar) format json");
@@ -7165,7 +7165,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonArray() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkString("json_array()", "[]", "VARCHAR(2000) NOT NULL");
     f.checkString("json_array('foo')",
         "[\"foo\"]", "VARCHAR(2000) NOT NULL");
@@ -7186,7 +7186,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonArrayAgg() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkAggType("json_arrayagg('foo')", "VARCHAR(2000) NOT NULL");
     f.checkAggType("json_arrayagg(null)", "VARCHAR(2000) NOT NULL");
     final String[] values = {
@@ -7202,7 +7202,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testJsonPredicate() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkBoolean("'{}' is json value", true);
     f.checkBoolean("'{]' is json value", false);
     f.checkBoolean("'{}' is json object", true);
@@ -7529,7 +7529,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLowerFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LOWER, VmName.EXPAND);
 
     // SQL:2003 6.29.8 The type of lower is the type of its argument
@@ -7544,7 +7544,7 @@ public class SqlOperatorTest {
     // Note: the initcap function is an Oracle defined function and is not
     // defined in the SQL:2003 standard
     // todo: implement in fennel
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.INITCAP);
 
     f.checkString("initcap('aA')", "Aa", "CHAR(2) NOT NULL");
@@ -7566,7 +7566,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPowerFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.POWER, VmName.EXPAND);
     f.checkScalarApprox("power(2,-2)", "DOUBLE NOT NULL", isExactly("0.25"));
     f.checkScalarApprox("power(cast(2 as decimal), cast(-2 as decimal))",
@@ -7607,7 +7607,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSqrtFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SQRT, VmName.EXPAND);
     f.checkType("sqrt(2)", "DOUBLE NOT NULL");
     f.checkType("sqrt(cast(2 as float))", "DOUBLE NOT NULL");
@@ -7640,7 +7640,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExpFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXP);
     f.checkScalarApprox("exp(2)", "DOUBLE NOT NULL",
         isWithin(7.389056, 0.000001));
@@ -7651,7 +7651,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testModFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MOD, VmName.EXPAND);
     f.checkScalarExact("mod(4,2)", 0);
     f.checkScalarExact("mod(8,5)", 3);
@@ -7671,7 +7671,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testModFuncNull() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkNull("mod(cast(null as integer),2)");
     f.checkNull("mod(4,cast(null as tinyint))");
     f.checkNull("mod(4,cast(null as decimal(12,0)))");
@@ -7684,13 +7684,13 @@ public class SqlOperatorTest {
     // unexpected exception occurred during "validation".  You cannot
     // submit as non-runtime because the janino exception does not have
     // error position information and the framework is unhappy with that.
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkFails("mod(3,case 'a' when 'a' then 0 end)",
         DIVISION_BY_ZERO_MESSAGE, true);
   }
 
   @Test void testLnFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LN, VmName.EXPAND);
     f.checkScalarApprox("ln(2.71828)", "DOUBLE NOT NULL",
         isWithin(1.0, 0.000001));
@@ -7700,7 +7700,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLog10Func() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LOG10, VmName.EXPAND);
     f.checkScalarApprox("log10(10)", "DOUBLE NOT NULL",
         isWithin(1.0, 0.000001));
@@ -7758,7 +7758,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6224">[CALCITE-6224]
    * Add LOG2 function (enabled in MYSQL, Spark library)</a>. */
   @Test void testLog2Func() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.checkFails("^log2(4)^",
         "No match found for function signature LOG2\\(<NUMERIC>\\)", false);
     f0.setFor(SqlLibraryOperators.LOG2);
@@ -7795,7 +7795,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6259">[CALCITE-6259]
    * Add LOG function (enabled in MYSQL, Spark library)</a>. */
   @Test void testLogMysqlSparkFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.checkFails("^log(100, 10)^",
         "No match found for function signature LOG\\(<NUMERIC>, <NUMERIC>\\)", false);
     f0.setFor(SqlLibraryOperators.LOG_MYSQL);
@@ -7890,7 +7890,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRandFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RAND, VmName.EXPAND);
     f.checkFails("^rand^", "Column 'RAND' not found in any table", false);
     for (int i = 0; i < 100; i++) {
@@ -7900,14 +7900,14 @@ public class SqlOperatorTest {
   }
 
   @Test void testRandSeedFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RAND, VmName.EXPAND);
     f.checkScalarApprox("rand(1)", "DOUBLE NOT NULL", isWithin(0.6016, 0.0001));
     f.checkScalarApprox("rand(2)", "DOUBLE NOT NULL", isWithin(0.4728, 0.0001));
   }
 
   @Test void testRandIntegerFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RAND_INTEGER, VmName.EXPAND);
     for (int i = 0; i < 100; i++) {
       // Result must always be between 0 and 10, inclusive.
@@ -7920,7 +7920,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6314">[CALCITE-6314]
    * Add RANDOM function (enabled in Postgres library)</a>. */
   @Test void testRandomFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.RANDOM, VmName.EXPAND);
     f.checkFails("^random^", "Column 'RANDOM' not found in any table", false);
     Consumer<SqlOperatorFixture> consumer = fixture -> {
@@ -7935,7 +7935,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRandIntegerSeedFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RAND_INTEGER, VmName.EXPAND);
     f.checkScalar("rand_integer(1, 11)", 4, "INTEGER NOT NULL");
     f.checkScalar("rand_integer(2, 11)", 1, "INTEGER NOT NULL");
@@ -7962,7 +7962,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_APPEND} function from Spark. */
   @Test void testArrayAppendFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_APPEND);
     f0.checkFails("^array_append(array[1], 2)^",
         "No match found for function signature ARRAY_APPEND\\("
@@ -8027,7 +8027,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_COMPACT} function from Spark. */
   @Test void testArrayCompactFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_COMPACT);
     f0.checkFails("^array_compact(array[null, 1, null, 2])^",
         "No match found for function signature ARRAY_COMPACT\\(<INTEGER ARRAY>\\)", false);
@@ -8270,7 +8270,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_POSITION} function from Spark. */
   @Test void testArrayPositionFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_POSITION);
     f0.checkFails("^array_position(array[1], 1)^",
         "No match found for function signature ARRAY_POSITION\\("
@@ -8299,7 +8299,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_PREPEND} function from Spark. */
   @Test void testArrayPrependFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_PREPEND);
     f0.checkFails("^array_prepend(array[1], 2)^",
         "No match found for function signature ARRAY_PREPEND\\("
@@ -8403,7 +8403,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_REPEAT} function from Spark. */
   @Test void testArrayRepeatFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_REPEAT);
     f0.checkFails("^array_repeat(1, 2)^",
         "No match found for function signature ARRAY_REPEAT\\(<NUMERIC>, <NUMERIC>\\)", false);
@@ -8434,7 +8434,7 @@ public class SqlOperatorTest {
   /** Tests {@code ARRAY_REVERSE} function from BigQuery. */
   @Test void testArrayReverseFunc() {
     final SqlFunction func = SqlLibraryOperators.ARRAY_REVERSE;
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(func);
     f0.checkFails("^array_reverse(array[1])^",
         "No match found for function signature ARRAY_REVERSE\\(<INTEGER ARRAY>\\)", false);
@@ -8446,7 +8446,7 @@ public class SqlOperatorTest {
    * Add REVERSE function (enabled in Spark library)</a>. */
   @Test void testReverseSparkFunc() {
     final SqlFunction func = SqlLibraryOperators.REVERSE_SPARK;
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(func);
     Iterable<SqlLibrary> libraries = list(SqlLibrary.SPARK);
     checkArrayReverseFunc(f0, func, libraries);
@@ -8488,7 +8488,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_SIZE} function from Spark. */
   @Test void testArraySizeFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_SIZE);
     f0.checkFails("^array_size(array[1])^",
         "No match found for function signature ARRAY_SIZE\\(<INTEGER ARRAY>\\)", false);
@@ -8510,7 +8510,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_LENGTH} function from BigQuery. */
   @Test void testArrayLengthFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_LENGTH);
     f0.checkFails("^array_length(array[1])^",
         "No match found for function signature ARRAY_LENGTH\\(<INTEGER ARRAY>\\)", false);
@@ -8530,7 +8530,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArrayToStringFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_TO_STRING);
     f0.checkFails("^array_to_string(array['aa', 'b', 'c'], '-')^", "No match found for function"
         + " signature ARRAY_TO_STRING\\(<CHAR\\(2\\) ARRAY>, <CHARACTER>\\)", false);
@@ -8606,7 +8606,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAY_INSERT} function from Spark. */
   @Test void testArrayInsertFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAY_INSERT);
     f0.checkFails("^array_insert(null, 3, 4)^",
         "No match found for function signature "
@@ -8755,7 +8755,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAYS_OVERLAP} function from Spark. */
   @Test void testArraysOverlapFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAYS_OVERLAP);
     f0.checkFails("^arrays_overlap(array[1, 2], array[2])^",
         "No match found for function signature ARRAYS_OVERLAP\\("
@@ -8795,7 +8795,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code ARRAYS_ZIP} function from Spark. */
   @Test void testArraysZipFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ARRAYS_ZIP);
     f0.checkFails("^arrays_zip(array[1, 2], array[2])^",
         "No match found for function signature ARRAYS_ZIP\\("
@@ -8842,7 +8842,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code SORT_ARRAY} function from Spark. */
   @Test void testSortArrayFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.SORT_ARRAY);
     f0.checkFails("^sort_array(array[null, 1, null, 2])^",
         "No match found for function signature SORT_ARRAY\\(<INTEGER ARRAY>\\)", false);
@@ -8958,7 +8958,7 @@ public class SqlOperatorTest {
   /** Tests {@code MAP_CONCAT} function from Spark. */
   @Test void testMapConcatFunc() {
     // 1. check with std map constructor, map[k, v ...]
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_CONCAT);
     f0.checkFails("^map_concat(map['foo', 1], map['bar', 2])^",
         "No match found for function signature MAP_CONCAT\\("
@@ -9038,7 +9038,7 @@ public class SqlOperatorTest {
   /** Tests {@code MAP_ENTRIES} function from Spark. */
   @Test void testMapEntriesFunc() {
     // 1. check with std map constructor, map[k, v ...]
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_ENTRIES);
     f0.checkFails("^map_entries(map['foo', 1, 'bar', 2])^",
         "No match found for function signature MAP_ENTRIES\\(<\\(CHAR\\(3\\), INTEGER\\) "
@@ -9084,7 +9084,7 @@ public class SqlOperatorTest {
   /** Tests {@code MAP_KEYS} function from Spark. */
   @Test void testMapKeysFunc() {
     // 1. check with std map constructor, map[k, v ...]
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_KEYS);
     f0.checkFails("^map_keys(map['foo', 1, 'bar', 2])^",
         "No match found for function signature MAP_KEYS\\(<\\(CHAR\\(3\\), INTEGER\\) "
@@ -9128,7 +9128,7 @@ public class SqlOperatorTest {
   /** Tests {@code MAP_VALUES} function from Spark. */
   @Test void testMapValuesFunc() {
     // 1. check with std map constructor, map[k, v ...]
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_VALUES);
     f0.checkFails("^map_values(map['foo', 1, 'bar', 2])^",
         "No match found for function signature MAP_VALUES\\(<\\(CHAR\\(3\\), INTEGER\\) "
@@ -9169,7 +9169,7 @@ public class SqlOperatorTest {
    * Add MAP_CONTAINS_KEY function (enabled in SPARK library)</a>.
    */
   @Test void testMapContainsKeyFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_CONTAINS_KEY);
     f0.checkFails("^map_contains_key(map[1, 'a'], 1)^",
         "No match found for function signature "
@@ -9203,7 +9203,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code MAP_FROM_ARRAYS} function from Spark. */
   @Test void testMapFromArraysFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_FROM_ARRAYS);
     f0.checkFails("^map_from_arrays(array[1, 2], array['foo', 'bar'])^",
         "No match found for function signature MAP_FROM_ARRAYS\\(<INTEGER ARRAY>, "
@@ -9248,7 +9248,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code MAP_FROM_ENTRIES} function from Spark. */
   @Test void testMapFromEntriesFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.MAP_FROM_ENTRIES);
     f0.checkFails("^map_from_entries(array[row(1, 'a'), row(2, 'b')])^",
         "No match found for function signature MAP_FROM_ENTRIES\\("
@@ -9290,7 +9290,7 @@ public class SqlOperatorTest {
 
   /** Tests {@code STR_TO_MAP} function from Spark. */
   @Test void testStrToMapFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.STR_TO_MAP);
     f0.checkFails("^str_to_map('a=1,b=2', ',', '=')^",
         "No match found for function signature STR_TO_MAP\\("
@@ -9330,7 +9330,7 @@ public class SqlOperatorTest {
    * Add SUBSTRING_INDEX function (enabled in Spark library).</a>.
    */
   @Test void testSubstringIndexFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.SUBSTRING_INDEX);
     f0.checkFails("^substring_index('a', ',')^",
         "No match found for function signature SUBSTRING_INDEX\\("
@@ -9431,7 +9431,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAbsFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ABS, VmName.EXPAND);
     f.checkScalarExact("abs(-1)", 1);
     f.checkScalarExact("abs(cast(10 as TINYINT))", "TINYINT NOT NULL", "10");
@@ -9452,7 +9452,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAbsFuncIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("abs(interval '-2' day)", "+2", "INTERVAL DAY NOT NULL");
     f.checkScalar("abs(interval '-5-03' year to month)",
         "+5-03", "INTERVAL YEAR TO MONTH NOT NULL");
@@ -9460,7 +9460,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAcosFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ACOS, VmName.EXPAND);
     f.checkType("acos(0)", "DOUBLE NOT NULL");
     f.checkType("acos(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9505,7 +9505,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAsinFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ASIN, VmName.EXPAND);
     f.checkType("asin(0)", "DOUBLE NOT NULL");
     f.checkType("asin(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9550,7 +9550,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAtanFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ATAN, VmName.EXPAND);
     f.checkType("atan(2)", "DOUBLE NOT NULL");
     f.checkType("atan(cast(2 as float))", "DOUBLE NOT NULL");
@@ -9571,7 +9571,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAtan2Func() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ATAN2, VmName.EXPAND);
     f.checkType("atan2(2, -2)", "DOUBLE NOT NULL");
     f.checkScalarApprox("atan2(cast(1 as float), -1)", "DOUBLE NOT NULL",
@@ -9694,7 +9694,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCbrtFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CBRT, VmName.EXPAND);
     f.checkType("cbrt(1)", "DOUBLE NOT NULL");
     f.checkType("cbrt(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9715,7 +9715,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCosFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COS, VmName.EXPAND);
     f.checkType("cos(1)", "DOUBLE NOT NULL");
     f.checkType("cos(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9784,7 +9784,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCotFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COT, VmName.EXPAND);
     f.checkType("cot(1)", "DOUBLE NOT NULL");
     f.checkType("cot(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9888,7 +9888,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testDegreesFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DEGREES, VmName.EXPAND);
     f.checkType("degrees(1)", "DOUBLE NOT NULL");
     f.checkType("degrees(cast(1 as float))", "DOUBLE NOT NULL");
@@ -9930,7 +9930,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPiFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PI, VmName.EXPAND);
     f.checkScalarApprox("PI", "DOUBLE NOT NULL", isWithin(3.1415d, 0.0001d));
     f.checkScalarApprox("PI()", "DOUBLE NOT NULL", isWithin(3.1415d, 0.0001d));
@@ -9941,7 +9941,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRadiansFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RADIANS, VmName.EXPAND);
     f.checkType("radians(42)", "DOUBLE NOT NULL");
     f.checkType("radians(cast(42 as float))", "DOUBLE NOT NULL");
@@ -9973,7 +9973,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testInfinity() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("cast('Infinity' as double)", "Infinity",
         "DOUBLE NOT NULL");
     f.checkScalar("cast('-Infinity' as double)", "-Infinity",
@@ -9985,7 +9985,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNaN() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("cast('NaN' as double)", "NaN",
         "DOUBLE NOT NULL");
     f.checkScalar("cast('NaN' as real)", "NaN",
@@ -10031,7 +10031,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRoundFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ROUND, VmName.EXPAND);
     f.checkType("round(42, -1)", "INTEGER NOT NULL");
     f.checkType("round(cast(42 as float), 1)", "FLOAT NOT NULL");
@@ -10066,7 +10066,7 @@ public class SqlOperatorTest {
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6238">
    * [CALCITE-6238] Exception while evaluating ROUND/TRUNCATE functions</a>. */
   @Test void testRoundFail() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ROUND, VmName.EXPAND);
     f.checkFails("^round(42, CAST(2 as BIGINT))^",
         "Cannot apply 'ROUND' to arguments of type 'ROUND\\(<INTEGER>, <BIGINT>\\)'\\. "
@@ -10077,7 +10077,7 @@ public class SqlOperatorTest {
   /** Test case for <a href="https://issues.apache.org/jira/browse/CALCITE-6238">
    * [CALCITE-6238] Exception while evaluating ROUND/TRUNCATE functions</a>. */
   @Test void testTruncFail() {
-    SqlOperatorFixture f = fixture();
+    SqlOperatorFixture f = fixture(); // 获取测试夹具对象
     f = f.setFor(SqlStdOperatorTable.TRUNCATE, VmName.EXPAND)
         .setFor(SqlLibraryOperators.TRUNC_BIG_QUERY)
         .withLibrary(SqlLibrary.BIG_QUERY);
@@ -10094,7 +10094,7 @@ public class SqlOperatorTest {
 
 
   @Test void testSignFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SIGN, VmName.EXPAND);
     f.checkType("sign(1)", "INTEGER NOT NULL");
     f.checkType("sign(cast(1 as float))", "FLOAT NOT NULL");
@@ -10135,7 +10135,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSinFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SIN, VmName.EXPAND);
     f.checkType("sin(1)", "DOUBLE NOT NULL");
     f.checkType("sin(cast(1 as float))", "DOUBLE NOT NULL");
@@ -10205,7 +10205,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTanFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TAN, VmName.EXPAND);
     f.checkType("tan(1)", "DOUBLE NOT NULL");
     f.checkType("tan(cast(1 as float))", "DOUBLE NOT NULL");
@@ -10309,7 +10309,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTruncateFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TRUNCATE, VmName.EXPAND);
     f.checkType("truncate(42, -1)", "INTEGER NOT NULL");
     f.checkType("truncate(cast(42 as float), 1)", "FLOAT NOT NULL");
@@ -10693,7 +10693,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNullifFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NULLIF, VM_EXPAND);
     f.checkNull("nullif(1,1)");
     f.checkScalarExact("nullif(1.5, 13.56)", "DECIMAL(2, 1)", "1.5");
@@ -10725,7 +10725,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNullIfOperatorIntervals() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("nullif(interval '2' month, interval '3' year)", "+2",
         "INTERVAL MONTH");
     f.checkScalar("nullif(interval '2 5' day to hour,"
@@ -10735,7 +10735,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCoalesceFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COALESCE, VM_EXPAND);
     f.checkString("coalesce('a','b')", "a", "CHAR(1) NOT NULL");
     f.checkScalarExact("coalesce(null,null,3)", 3);
@@ -10748,38 +10748,38 @@ public class SqlOperatorTest {
   }
 
   @Test void testUserFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.USER);
     f.checkString("USER", "sa", "VARCHAR(2000) NOT NULL");
   }
 
   @Test void testCurrentUserFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_USER);
     f.checkString("CURRENT_USER", "sa", "VARCHAR(2000) NOT NULL");
   }
 
   @Test void testSessionUserFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SESSION_USER);
     f.checkString("SESSION_USER", "sa", "VARCHAR(2000) NOT NULL");
   }
 
   @Test void testSystemUserFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SYSTEM_USER);
     String user = System.getProperty("user.name"); // e.g. "jhyde"
     f.checkString("SYSTEM_USER", user, "VARCHAR(2000) NOT NULL");
   }
 
   @Test void testCurrentPathFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_PATH);
     f.checkString("CURRENT_PATH", "", "VARCHAR(2000) NOT NULL");
   }
 
   @Test void testCurrentRoleFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_ROLE);
     // By default, the CURRENT_ROLE function returns
     // the empty string because a role has to be set explicitly.
@@ -10787,7 +10787,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCurrentCatalogFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_CATALOG);
     // By default, the CURRENT_CATALOG function returns
     // the empty string because a catalog has to be set explicitly.
@@ -10804,7 +10804,7 @@ public class SqlOperatorTest {
   }
 
   private void testLocalTimeFunc(Pair<String, Hook.Closeable> pair) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LOCALTIME, VmName.EXPAND);
     f.checkScalar("LOCALTIME", TIME_PATTERN, "TIME(0) NOT NULL");
     f.checkFails("^LOCALTIME()^",
@@ -10831,7 +10831,7 @@ public class SqlOperatorTest {
   }
 
   private void testLocalTimestampFunc(Pair<String, Hook.Closeable> pair) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LOCALTIMESTAMP, VmName.EXPAND);
     f.checkScalar("LOCALTIMESTAMP", TIMESTAMP_PATTERN,
         "TIMESTAMP(0) NOT NULL");
@@ -10866,7 +10866,7 @@ public class SqlOperatorTest {
   }
 
   private void testCurrentTimeFunc(Pair<String, Hook.Closeable> pair) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_TIME, VmName.EXPAND);
     f.checkScalar("CURRENT_TIME", TIME_PATTERN, "TIME(0) NOT NULL");
     f.checkFails("^CURRENT_TIME()^",
@@ -10893,7 +10893,7 @@ public class SqlOperatorTest {
   }
 
   private void testCurrentTimestampFunc(Pair<String, Hook.Closeable> pair) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_TIMESTAMP,
         VmName.EXPAND);
     f.checkScalar("CURRENT_TIMESTAMP", TIMESTAMP_PATTERN,
@@ -10980,7 +10980,7 @@ public class SqlOperatorTest {
   }
 
   private void testCurrentDateFunc(Pair<String, Hook.Closeable> pair) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CURRENT_DATE);
 
     // A tester with a lenient conformance that allows parentheses.
@@ -11059,7 +11059,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLastDayFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LAST_DAY, VmName.EXPAND);
     f.checkScalar("last_day(DATE '2019-02-10')",
         "2019-02-28", "DATE NOT NULL");
@@ -11137,7 +11137,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLpadFunction() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.LPAD);
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.check("select lpad('12345', 8, 'a')", "VARCHAR NOT NULL", "aaa12345");
@@ -11168,7 +11168,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testRpadFunction() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.RPAD);
     final Consumer<SqlOperatorFixture> consumer = f -> {
       f.check("select rpad('12345', 8, 'a')", "VARCHAR NOT NULL", "12345aaa");
@@ -11245,13 +11245,13 @@ public class SqlOperatorTest {
         true);
     f.checkBoolean("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'BAR')",
         true);
-    f.checkBoolean("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', json_scope=>'JSON_KEYS')",
+    f.checkBoolean("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', json_scope->'JSON_KEYS')",
         false);
     f.checkBoolean("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', "
-            + "json_scope=>'JSON_VALUES')", true);
+            + "json_scope->'JSON_VALUES')", true);
     f.checkBoolean("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', "
-            + "json_scope=>'JSON_KEYS_AND_VALUES')", true);
-    f.checkFails("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', json_scope=>'JSON_JSON')",
+            + "json_scope->'JSON_KEYS_AND_VALUES')", true);
+    f.checkFails("CONTAINS_SUBSTR('{\"foo\":\"bar\"}', 'bar', json_scope->'JSON_JSON')",
         "json_scope argument must be one of: \"JSON_KEYS\", \"JSON_VALUES\", "
             + "\"JSON_KEYS_AND_VALUES\".", true);
     // Null behavior
@@ -11322,13 +11322,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testSnowflakeStartsWithFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.STARTSWITH, VmName.EXPAND);
     checkStartsWith(f, FunctionAlias.of(SqlLibraryOperators.STARTSWITH));
   }
 
   @Test void testStartsWithFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.STARTS_WITH, VmName.EXPAND);
     checkStartsWith(f, FunctionAlias.of(SqlLibraryOperators.STARTS_WITH));
   }
@@ -11362,13 +11362,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testSnowflakeEndsWithFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.ENDSWITH, VmName.EXPAND);
     checkEndsWith(f, FunctionAlias.of(SqlLibraryOperators.ENDSWITH));
   }
 
   @Test void testEndsWithFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.ENDS_WITH, VmName.EXPAND);
     checkEndsWith(f, FunctionAlias.of(SqlLibraryOperators.ENDS_WITH));
   }
@@ -11473,7 +11473,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-5811">[CALCITE-5811]
    * Error messages produced for constant out-of-bounds arguments are confusing</a>. */
   @Test void testIndexOutOfBounds() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("substring('abc' from 2 for 2147483650)",
         "bc", "VARCHAR(3) NOT NULL");
     f.checkScalar("substring('abc' from 2147483650)",
@@ -11499,7 +11499,7 @@ public class SqlOperatorTest {
    * have been moved to {@link SubFunChecker#assertSubFunReturns}, and are
    * called for both {@code SUBSTRING} and {@code SUBSTR}. */
   @Test void testSubstringFunction() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkSubstringFunction(f);
     checkSubstringFunction(f.withConformance(SqlConformanceEnum.BIG_QUERY));
     checkSubstringFunctionOverflow(f);
@@ -11543,7 +11543,7 @@ public class SqlOperatorTest {
       f.checkString("substring(x'aabbcc' from 1 for -1)", "",
           "VARBINARY(3) NOT NULL");
       break;
-    default:
+    default: // 默认情况，继续处理精确数值类型
       f.checkFails(
           String.format(Locale.ROOT, "^substring('string', CAST(%d AS DOUBLE), "
               + "CAST(%d AS DOUBLE))^", Byte.MIN_VALUE, Byte.MAX_VALUE + 10),
@@ -11622,7 +11622,7 @@ public class SqlOperatorTest {
 
   SubFunChecker substringChecker(SqlConformanceEnum conformance,
       SqlLibrary library) {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     return new SubFunChecker(
         f.withConnectionFactory(cf ->
             cf.with(ConnectionFactories.add(CalciteAssert.SchemaSpec.HR))
@@ -11686,7 +11686,7 @@ public class SqlOperatorTest {
         assertReturns("abc", 0, 3, "");
         assertReturns("abc", 0, 2, "");
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         throw new AssertionError(library);
       }
       assertReturns("abc", 0, 0, "");
@@ -11703,7 +11703,7 @@ public class SqlOperatorTest {
         assertReturns("abc", 1, -1, null);
         assertReturns("abc", 4, -1, null);
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         assertReturns("abc", 1, -1, "");
         assertReturns("abc", 4, -1, "");
         break;
@@ -11717,7 +11717,7 @@ public class SqlOperatorTest {
         // BIG_QUERY has different implementation, check SubstrConvertlet
         if (library == SqlLibrary.BIG_QUERY) {
           assertReturns("abc", Integer.MIN_VALUE, "abc");
-        } else {
+        } else { // 如果不是两个重载操作符
           assertReturns("abc", Integer.MIN_VALUE, "");
         }
         assertReturns("abc", -2, "bc");
@@ -11750,7 +11750,7 @@ public class SqlOperatorTest {
         assertReturns("abc", -3, 8, "abc");
         assertReturns("abc", -1, 4, "ab");
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         throw new AssertionError(library);
       }
 
@@ -11767,7 +11767,7 @@ public class SqlOperatorTest {
       case POSTGRESQL:
         assertReturns("abc", -4, 6, "a");
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         throw new AssertionError(library);
       }
       // For very negative start, BigQuery differs from Oracle and PostgreSQL.
@@ -11786,7 +11786,7 @@ public class SqlOperatorTest {
         assertReturns("abc", -10, 2, "");
         assertReturns("abc", -500, 1, "");
         break;
-      default:
+      default: // 默认情况，继续处理精确数值类型
         throw new AssertionError(library);
       }
     }
@@ -11814,14 +11814,14 @@ public class SqlOperatorTest {
       if (function == SqlStdOperatorTable.SUBSTRING) {
         expression = "substring(" + value + " FROM " + start
             + (end == null ? "" : (" FOR " + end)) + ")";
-      } else {
+      } else { // 如果不是两个重载操作符
         expression = "substr(" + value + ", " + start
             + (end == null ? "" : (", " + end)) + ")";
       }
       if (expected == null) {
         f.checkFails(expression,
             "Substring error: negative substring length not allowed", true);
-      } else {
+      } else { // 如果不是两个重载操作符
         if (binary) {
           expected = DOUBLER.apply(expected);
         }
@@ -11930,7 +11930,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTrimFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TRIM, VmName.EXPAND);
 
     // SQL:2003 6.29.11 Trimming a CHAR yields a VARCHAR
@@ -12134,13 +12134,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testIfNullFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.IFNULL, VmName.EXPAND);
     checkNvl(f, FunctionAlias.of(SqlLibraryOperators.IFNULL));
   }
 
   @Test void testNvlFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.NVL, VmName.EXPAND);
     SqlOperatorFixture f12 = f
         .withLibrary(SqlLibrary.ORACLE)
@@ -12160,7 +12160,7 @@ public class SqlOperatorTest {
    * Add NVL2 function (enabled in Oracle, Spark library) </a>.
    */
   @Test void testNvl2Func() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.NVL2, VmName.EXPAND);
     f.checkFails("^nvl2(NULL, 2, 1)^",
         "No match found for function signature "
@@ -12247,7 +12247,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testWindow() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.check("select sum(1) over (order by x)\n"
             + "from (select 1 as x, 2 as y\n"
             + "  from (values (true)))",
@@ -12255,14 +12255,14 @@ public class SqlOperatorTest {
   }
 
   @Test void testElementFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ELEMENT, VM_JAVA);
     f.checkString("element(multiset['abc'])", "abc", "CHAR(3)");
     f.checkNull("element(multiset[cast(null as integer)])");
   }
 
   @Test void testCardinalityFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CARDINALITY, VM_JAVA);
     f.checkScalarExact("cardinality(multiset[cast(null as integer),2])", 2);
     // applied to array
@@ -12272,7 +12272,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMemberOfOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MEMBER_OF, VM_JAVA);
     f.checkBoolean("1 member of multiset[1]", true);
     f.checkBoolean("'2' member of multiset['1']", false);
@@ -12283,7 +12283,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMultisetUnionOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MULTISET_UNION_DISTINCT, VM_JAVA);
     f.checkBoolean("multiset[1,2] submultiset of "
         + "(multiset[2] multiset union multiset[1])", true);
@@ -12330,7 +12330,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMultisetUnionAllOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MULTISET_UNION, VM_JAVA);
     f.checkScalar("cardinality(multiset[1, 2, 3, 4, 2] "
             + "multiset union all multiset[1, 4, 5, 7, 8])",
@@ -12367,7 +12367,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSubMultisetOfOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SUBMULTISET_OF, VM_JAVA);
     f.checkBoolean("multiset[2] submultiset of multiset[1]", false);
     f.checkBoolean("multiset[1] submultiset of multiset[1]", true);
@@ -12383,7 +12383,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testNotSubMultisetOfOperator() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.NOT_SUBMULTISET_OF, VM_JAVA);
     f.checkBoolean("multiset[2] not submultiset of multiset[1]", true);
     f.checkBoolean("multiset[1] not submultiset of multiset[1]", false);
@@ -12399,7 +12399,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCollectFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COLLECT, VM_JAVA);
     f.checkFails("collect(^*^)", "Unknown identifier '\\*'", false);
     f.checkAggType("collect(1)", "INTEGER NOT NULL MULTISET NOT NULL");
@@ -12415,8 +12415,8 @@ public class SqlOperatorTest {
     f.checkAgg("collect(x)", values, isSet("[0, 2, 2]"));
     f.checkAgg("collect(x) within group(order by x desc)", values,
         isSet("[2, 2, 0]"));
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkAgg("collect(CASE x WHEN 0 THEN NULL ELSE -1 END)", values,
         isSingle(-3));
@@ -12426,7 +12426,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testListAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LISTAGG, VM_JAVA);
     f.checkFails("listagg(^*^)", "Unknown identifier '\\*'", false);
     f.checkAggType("listagg(12)", "VARCHAR NOT NULL");
@@ -12452,7 +12452,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testStringAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkStringAggFunc(f.withLibrary(SqlLibrary.POSTGRESQL));
     checkStringAggFunc(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkStringAggFuncFails(f.withLibrary(SqlLibrary.MYSQL));
@@ -12491,7 +12491,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6951">[CALCITE-6951]
    * Add STRING_TO_ARRAY function(enabled in PostgreSQL Library)</a>. */
   @Test void testStringToArrayFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.STRING_TO_ARRAY);
     final SqlOperatorFixture f = f0.withLibrary(SqlLibrary.POSTGRESQL);
     f.checkNull("string_to_array(NULL, ' ')");
@@ -12510,7 +12510,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testGroupConcatFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkGroupConcatFunc(f.withLibrary(SqlLibrary.MYSQL));
     checkGroupConcatFuncFails(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkGroupConcatFuncFails(f.withLibrary(SqlLibrary.POSTGRESQL));
@@ -12549,7 +12549,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArrayAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkArrayAggFunc(f.withLibrary(SqlLibrary.POSTGRESQL));
     checkArrayAggFunc(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkArrayAggFuncFails(f.withLibrary(SqlLibrary.MYSQL));
@@ -12585,7 +12585,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArrayConcatAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     checkArrayConcatAggFunc(f.withLibrary(SqlLibrary.POSTGRESQL));
     checkArrayConcatAggFunc(f.withLibrary(SqlLibrary.BIG_QUERY));
     checkArrayConcatAggFuncFails(f.withLibrary(SqlLibrary.MYSQL));
@@ -12629,7 +12629,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testFusionFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.FUSION, VM_JAVA);
     f.checkFails("fusion(^*^)", "Unknown identifier '\\*'", false);
     f.checkAggType("fusion(MULTISET[1,2,3])", "INTEGER NOT NULL MULTISET NOT NULL");
@@ -12642,7 +12642,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testIntersectionFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.INTERSECTION, VM_JAVA);
     f.checkFails("intersection(^*^)", "Unknown identifier '\\*'", false);
     f.checkAggType("intersection(MULTISET[1,2,3])",
@@ -12659,7 +12659,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testModeFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MODE, VM_EXPAND);
     f.checkFails("mode(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -12695,7 +12695,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testYear() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.YEAR, VM_JAVA);
 
     f.checkScalar("year(date '2008-1-23')", "2008", "BIGINT NOT NULL");
@@ -12703,7 +12703,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testQuarter() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.QUARTER, VM_JAVA);
 
     f.checkScalar("quarter(date '2008-1-23')", "1", "BIGINT NOT NULL");
@@ -12722,7 +12722,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMonth() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MONTH, VM_JAVA);
 
     f.checkScalar("month(date '2008-1-23')", "1", "BIGINT NOT NULL");
@@ -12730,35 +12730,35 @@ public class SqlOperatorTest {
   }
 
   @Test void testWeek() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.WEEK, VM_JAVA);
     f.checkScalar("week(date '2008-1-23')", "4", "BIGINT NOT NULL");
     f.checkNull("week(cast(null as date))");
   }
 
   @Test void testDayOfYear() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DAYOFYEAR, VM_JAVA);
     f.checkScalar("dayofyear(date '2008-01-23')", "23", "BIGINT NOT NULL");
     f.checkNull("dayofyear(cast(null as date))");
   }
 
   @Test void testDayOfMonth() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DAYOFMONTH, VM_JAVA);
     f.checkScalar("dayofmonth(date '2008-1-23')", "23", "BIGINT NOT NULL");
     f.checkNull("dayofmonth(cast(null as date))");
   }
 
   @Test void testDayOfWeek() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DAYOFWEEK, VM_JAVA);
     f.checkScalar("dayofweek(date '2008-1-23')", "4", "BIGINT NOT NULL");
     f.checkNull("dayofweek(cast(null as date))");
   }
 
   @Test void testHour() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.HOUR, VM_JAVA);
 
     f.checkScalar("hour(timestamp '2008-1-23 12:34:56')", "12",
@@ -12767,7 +12767,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMinute() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MINUTE, VM_JAVA);
 
     f.checkScalar("minute(timestamp '2008-1-23 12:34:56')", "34",
@@ -12776,7 +12776,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSecond() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SECOND, VM_JAVA);
 
     f.checkScalar("second(timestamp '2008-1-23 12:34:56')", "56",
@@ -12785,7 +12785,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractIntervalYearMonth() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     if (TODO) {
@@ -12833,7 +12833,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractIntervalDayTime() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     f.checkScalar("extract(epoch from interval '2 3:4:5.678' day to second)",
@@ -12893,7 +12893,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractDate() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     f.checkFails("extract(^a^ from date '2008-2-23')",
@@ -12976,7 +12976,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractTime() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     final String fail = "Cannot apply 'EXTRACT' to arguments of type 'EXTRACT\\(<.*> "
@@ -13014,7 +13014,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractTimestamp() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     f.checkFails("extract(^a^ from timestamp '2008-2-23 12:34:56')",
@@ -13067,7 +13067,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractInterval() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
 
     f.checkFails("extract(^a^ from interval '2 3:4:5.678' day to second)",
@@ -13102,7 +13102,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractFuncFromDateTime() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EXTRACT, VM_JAVA);
     f.checkScalar("extract(year from date '2008-2-23')",
         "2008", "BIGINT NOT NULL");
@@ -13125,7 +13125,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testExtractWithDatesBeforeUnixEpoch() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkScalar("extract(millisecond from"
             + " TIMESTAMP '1969-12-31 21:13:17.357')",
         "17357", "BIGINT NOT NULL");
@@ -13166,7 +13166,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArrayValueConstructor() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, VmName.EXPAND);
     f.checkScalar("Array['foo']",
         "[foo]", "CHAR(3) NOT NULL ARRAY NOT NULL");
@@ -13191,7 +13191,7 @@ public class SqlOperatorTest {
 
   /** Test case for {@link SqlLibraryOperators#ARRAY} (Spark, Hive). */
   @Test void testArrayFunction() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.ARRAY, VmName.EXPAND);
     final List<SqlLibrary> libraries =
         ImmutableList.of(SqlLibrary.HIVE, SqlLibrary.SPARK);
@@ -13254,7 +13254,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArrayQueryConstructor() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ARRAY_QUERY, SqlOperatorFixture.VmName.EXPAND);
 
     // Test case for [CALCITE-4999] ARRAY, MULTISET functions should
@@ -13291,7 +13291,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMultisetQueryConstructor() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
 
     // Test case for [CALCITE-4999] ARRAY, MULTISET functions should
     // return an collection of scalars if a sub-query returns 1 column
@@ -13319,7 +13319,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testItemOp() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ITEM, VmName.EXPAND);
     f.checkScalar("ARRAY ['foo', 'bar'][1]", "foo", "CHAR(3)");
     f.checkScalar("ARRAY ['foo', 'bar'][0]", isNullValue(), "CHAR(3)");
@@ -13366,7 +13366,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testOffsetOperator() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.OFFSET);
     f0.checkFails("^ARRAY[2,4,6][OFFSET(2)]^",
         "No match found for function signature OFFSET", false);
@@ -13386,7 +13386,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testOrdinalOperator() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.ORDINAL);
     f0.checkFails("^ARRAY[2,4,6][ORDINAL(2)]^",
         "No match found for function signature ORDINAL", false);
@@ -13406,7 +13406,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSafeOffsetOperator() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.SAFE_OFFSET);
     f0.checkFails("^ARRAY[2,4,6][SAFE_OFFSET(2)]^",
         "No match found for function signature SAFE_OFFSET", false);
@@ -13424,7 +13424,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSafeOrdinalOperator() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(SqlLibraryOperators.SAFE_ORDINAL);
     f0.checkFails("^ARRAY[2,4,6][SAFE_ORDINAL(2)]^",
         "No match found for function signature SAFE_ORDINAL", false);
@@ -13442,7 +13442,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMapValueConstructor() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MAP_VALUE_CONSTRUCTOR, VM_JAVA);
 
     f.checkFails("^Map[]^", "Map requires at least 2 arguments", false);
@@ -13505,7 +13505,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMapFunction() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.MAP, VmName.EXPAND);
 
     f.checkFails("^Map()^",
@@ -13554,7 +13554,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMapQueryConstructor() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MAP_QUERY, VmName.EXPAND);
     // must be 2 fields
     f.checkFails("map(select 1)", "MAP requires exactly two fields, got 1; "
@@ -13622,7 +13622,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCeilFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CEIL);
     f.checkScalarApprox("ceil(10.1e0)", "DOUBLE NOT NULL", isExactly(11));
     f.checkScalarApprox("ceil(cast(-11.2e0 as real))", "REAL NOT NULL",
@@ -13635,9 +13635,9 @@ public class SqlOperatorTest {
   }
 
   @Test void testCeilFuncInterval() {
-    final SqlOperatorFixture f = fixture();
-    if (!f.brokenTestsEnabled()) {
-      return;
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkScalar("ceil(interval '3:4:5' hour to second)",
         "+4:00:00.000000", "INTERVAL HOUR TO SECOND NOT NULL");
@@ -13651,7 +13651,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testFloorFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.FLOOR);
     f.checkScalarApprox("floor(2.5e0)", "DOUBLE NOT NULL", isExactly(2));
     f.checkScalarApprox("floor(cast(-1.2e0 as real))", "REAL NOT NULL",
@@ -13664,7 +13664,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBigQueryCeilFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.checkType("ceil(cast(3 as tinyint))", "TINYINT NOT NULL");
     final SqlOperatorFixture f = f0.setFor(SqlLibraryOperators.FLOOR_BIG_QUERY)
         .withLibrary(SqlLibrary.BIG_QUERY).withConformance(SqlConformanceEnum.BIG_QUERY);
@@ -13680,7 +13680,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBigQueryFloorFunc() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.checkType("floor(cast(3 as tinyint))", "TINYINT NOT NULL");
     final SqlOperatorFixture f = f0.setFor(SqlLibraryOperators.FLOOR_BIG_QUERY)
         .withLibrary(SqlLibrary.BIG_QUERY).withConformance(SqlConformanceEnum.BIG_QUERY);
@@ -13696,7 +13696,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testFloorFuncDateTime() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.enableTypeCoercion(false)
         .checkFails("^floor('12:34:56')^",
             "Cannot apply 'FLOOR' to arguments of type "
@@ -13739,7 +13739,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCeilFuncDateTime() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.enableTypeCoercion(false)
         .checkFails("^ceil('12:34:56')^",
             "Cannot apply 'CEIL' to arguments of type "
@@ -13868,9 +13868,9 @@ public class SqlOperatorTest {
   }
 
   @Test void testFloorFuncInterval() {
-    final SqlOperatorFixture f = fixture();
-    if (!f.brokenTestsEnabled()) {
-      return;
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkScalar("floor(interval '3:4:5' hour to second)",
         "+3:00:00.000000",
@@ -13901,7 +13901,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTimestampAdd() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TIMESTAMP_ADD, VmName.EXPAND);
     MICROSECOND_VARIANTS.forEach(s ->
         f.checkScalar("timestampadd(" + s
@@ -14039,7 +14039,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testTimestampAddFractionalSeconds() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.TIMESTAMP_ADD, VmName.EXPAND);
     f.checkType("timestampadd(SQL_TSI_FRAC_SECOND, 2, "
             + "timestamp '2016-02-24 12:42:25.000000')",
@@ -14391,7 +14391,7 @@ public class SqlOperatorTest {
   }
 
   @ValueSource(booleans = {true, false})
-  @ParameterizedTest(name = "CoercionEnabled: {0}")
+  @ParameterizedTest(name = "CoercionEnabled: {0}") // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
   void testTimestampDiff(boolean coercionEnabled) {
     final SqlOperatorFixture f = fixture()
         .withValidatorConfig(c -> c.withTypeCoercionEnabled(coercionEnabled));
@@ -15415,32 +15415,32 @@ public class SqlOperatorTest {
   }
 
   @Test void testDenseRankFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.DENSE_RANK, VM_JAVA);
   }
 
   @Test void testPercentRankFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PERCENT_RANK, VM_JAVA);
   }
 
   @Test void testRankFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.RANK, VM_JAVA);
   }
 
   @Test void testCumeDistFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.CUME_DIST, VM_JAVA);
   }
 
   @Test void testRowNumberFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ROW_NUMBER, VM_JAVA);
   }
 
   @Test void testPercentileContFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PERCENTILE_CONT, VM_JAVA);
     f.checkType("percentile_cont(0.25) within group (order by 1)",
         "INTEGER NOT NULL");
@@ -15457,7 +15457,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testPercentileDiscFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.PERCENTILE_DISC, VM_JAVA);
     f.checkType("percentile_disc(0.25) within group (order by 1)",
         "INTEGER NOT NULL");
@@ -15502,7 +15502,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCountFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COUNT, VM_EXPAND);
     f.checkType("count(*)", "BIGINT NOT NULL");
     f.checkType("count('name')", "BIGINT NOT NULL");
@@ -15559,7 +15559,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testApproxCountDistinctFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COUNT, VM_EXPAND);
     f.checkFails("approx_count_distinct(^*^)", "Unknown identifier '\\*'",
         false);
@@ -15592,7 +15592,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSumFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SUM, VM_EXPAND);
     f.checkFails("sum(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15628,7 +15628,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAvgFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.AVG, VM_EXPAND);
     f.checkFails("avg(^*^)",
         "Unknown identifier '\\*'",
@@ -15645,8 +15645,8 @@ public class SqlOperatorTest {
     f.checkAggType("avg(1)", "INTEGER NOT NULL");
     f.checkAggType("avg(1.2)", "DECIMAL(2, 1) NOT NULL");
     f.checkAggType("avg(DISTINCT 1.5)", "DECIMAL(2, 1) NOT NULL");
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     final String[] values = {"0", "CAST(null AS FLOAT)", "3", "3"};
     f.checkAgg("AVG(x)", values, isExactly(2d));
@@ -15656,7 +15656,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testCovarPopFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COVAR_POP, VM_EXPAND);
     f.checkFails("covar_pop(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15672,15 +15672,15 @@ public class SqlOperatorTest {
     f.checkType("covar_pop(CAST(NULL AS INTEGER),CAST(NULL AS INTEGER))",
         "INTEGER");
     f.checkAggType("covar_pop(1.5, 2.5)", "DECIMAL(2, 1) NOT NULL");
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     // with zero values
     f.checkAgg("covar_pop(x)", new String[]{}, isNullValue());
   }
 
   @Test void testCovarSampFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.COVAR_SAMP, VM_EXPAND);
     f.checkFails("covar_samp(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15696,15 +15696,15 @@ public class SqlOperatorTest {
     f.checkType("covar_samp(CAST(NULL AS INTEGER),CAST(NULL AS INTEGER))",
         "INTEGER");
     f.checkAggType("covar_samp(1.5, 2.5)", "DECIMAL(2, 1) NOT NULL");
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     // with zero values
     f.checkAgg("covar_samp(x)", new String[]{}, isNullValue());
   }
 
   @Test void testRegrSxxFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.REGR_SXX, VM_EXPAND);
     f.checkFails("regr_sxx(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15720,15 +15720,15 @@ public class SqlOperatorTest {
     f.checkType("regr_sxx(CAST(NULL AS INTEGER), CAST(NULL AS INTEGER))",
         "INTEGER");
     f.checkAggType("regr_sxx(1.5, 2.5)", "DECIMAL(2, 1) NOT NULL");
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     // with zero values
     f.checkAgg("regr_sxx(x)", new String[]{}, isNullValue());
   }
 
   @Test void testRegrSyyFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.REGR_SYY, VM_EXPAND);
     f.checkFails("regr_syy(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15744,15 +15744,15 @@ public class SqlOperatorTest {
     f.checkType("regr_syy(CAST(NULL AS INTEGER), CAST(NULL AS INTEGER))",
         "INTEGER");
     f.checkAggType("regr_syy(1.5, 2.5)", "DECIMAL(2, 1) NOT NULL");
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     // with zero values
     f.checkAgg("regr_syy(x)", new String[]{}, isNullValue());
   }
 
   @Test void testStddevPopFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.STDDEV_POP, VM_EXPAND);
     f.checkFails("stddev_pop(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15781,7 +15781,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testStddevSampFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.STDDEV_SAMP, VM_EXPAND);
     f.checkFails("stddev_samp(^*^)",
         "Unknown identifier '\\*'",
@@ -15813,7 +15813,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testStddevFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.STDDEV, VM_EXPAND);
     f.checkFails("stddev(^*^)",
         "Unknown identifier '\\*'",
@@ -15834,7 +15834,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testVarPopFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.VAR_POP, VM_EXPAND);
     f.checkFails("var_pop(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15847,8 +15847,8 @@ public class SqlOperatorTest {
     f.checkType("var_pop(CAST(NULL AS INTEGER))", "INTEGER");
     f.checkAggType("var_pop(DISTINCT 1.5)", "DECIMAL(2, 1) NOT NULL");
     final String[] values = {"0", "CAST(null AS FLOAT)", "3", "3"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkAgg("var_pop(x)", values, isExactly(2d)); // verified on Oracle 10g
     f.checkAgg("var_pop(DISTINCT x)", // Oracle does not allow distinct
@@ -15862,7 +15862,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testVarSampFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.VAR_SAMP, VM_EXPAND);
     f.checkFails("var_samp(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15875,8 +15875,8 @@ public class SqlOperatorTest {
     f.checkType("var_samp(CAST(NULL AS INTEGER))", "INTEGER");
     f.checkAggType("var_samp(DISTINCT 1.5)", "DECIMAL(2, 1) NOT NULL");
     final String[] values = {"0", "CAST(null AS FLOAT)", "3", "3"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkAgg("var_samp(x)", values, isExactly(3d)); // verified on Oracle 10g
     f.checkAgg("var_samp(DISTINCT x)", // Oracle does not allow distinct
@@ -15890,7 +15890,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testVarFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.VARIANCE, VM_EXPAND);
     f.checkFails("variance(^*^)", "Unknown identifier '\\*'", false);
     f.enableTypeCoercion(false)
@@ -15903,8 +15903,8 @@ public class SqlOperatorTest {
     f.checkType("variance(CAST(NULL AS INTEGER))", "INTEGER");
     f.checkAggType("variance(DISTINCT 1.5)", "DECIMAL(2, 1) NOT NULL");
     final String[] values = {"0", "CAST(null AS FLOAT)", "3", "3"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkAgg("variance(x)", values, isExactly(3d)); // verified on Oracle 10g
     f.checkAgg("variance(DISTINCT x)", // Oracle does not allow distinct
@@ -15918,7 +15918,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMinFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MIN, VM_EXPAND);
     f.checkFails("min(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("min(1)", "INTEGER");
@@ -15940,7 +15940,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testMaxFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.MAX, VM_EXPAND);
     f.checkFails("max(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("max(1)", "INTEGER");
@@ -15960,11 +15960,11 @@ public class SqlOperatorTest {
   }
 
   @Test void testLastValueFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.LAST_VALUE, VM_EXPAND);
     final String[] values = {"0", "CAST(null AS INTEGER)", "3", "3"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkWinAgg("last_value(x)", values, "ROWS 3 PRECEDING", "INTEGER",
         isSet("3", "0"));
@@ -15977,11 +15977,11 @@ public class SqlOperatorTest {
   }
 
   @Test void testFirstValueFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.FIRST_VALUE, VM_EXPAND);
     final String[] values = {"0", "CAST(null AS INTEGER)", "3", "3"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkWinAgg("first_value(x)", values, "ROWS 3 PRECEDING", "INTEGER",
         isSet("0"));
@@ -15994,7 +15994,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testEveryFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.EVERY, VM_EXPAND);
     f.checkFails("every(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("every(1 = 1)", "BOOLEAN");
@@ -16011,7 +16011,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testSomeAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.SOME, VM_EXPAND);
     f.checkFails("some(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("some(1 = 1)", "BOOLEAN");
@@ -16031,7 +16031,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-5160">[CALCITE-5160]
    * ANY/SOME, ALL operators should support collection expressions</a>. */
   @Test void testQuantifyCollectionOperators() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     QUANTIFY_OPERATORS.forEach(operator -> f.setFor(operator, SqlOperatorFixture.VmName.EXPAND));
 
     Function2<String, Boolean, Void> checkBoolean = (sql, result) -> {
@@ -16122,7 +16122,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testQuantifyOperatorsWithTypeException() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     QUANTIFY_OPERATORS.forEach(operator -> f.setFor(operator, SqlOperatorFixture.VmName.EXPAND));
     // some(List value)
     f.checkFails("SELECT ^cast(true as boolean) = some(1, 2, 3)^",
@@ -16146,7 +16146,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testAnyValueFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.ANY_VALUE, VM_EXPAND);
     f.checkFails("any_value(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("any_value(1)", "INTEGER");
@@ -16159,8 +16159,8 @@ public class SqlOperatorTest {
         "Invalid number of arguments to function 'ANY_VALUE'. Was expecting 1 arguments",
         false);
     final String[] values = {"0", "CAST(null AS INTEGER)", "2", "2"};
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkAgg("any_value(x)", values, isSingle("0"));
     f.checkAgg("any_value(CASE x WHEN 0 THEN NULL ELSE -1 END)", values, isSingle("-1"));
@@ -16169,7 +16169,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBoolAndFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // not in standard dialect
     final String[] values = {"true", "true", "null"};
     f.checkAggFails("^bool_and(x)^", values,
@@ -16239,7 +16239,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/projects/CALCITE/issues/CALCITE-6094">
    * Linq4j.ConstantExpression.write crashes on special FP values</a>. */
   @Test void testInfinityExpression() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.check("SELECT CAST(10e70 AS REAL)", "REAL NOT NULL", "Infinity");
     f.check("SELECT CAST(-10e70 AS REAL)", "REAL NOT NULL", "-Infinity");
     // I could not write a test that generates NaN and triggers this issue.
@@ -16247,7 +16247,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBoolOrFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // not in standard dialect
     final String[] values = {"true", "true", "null"};
     f.checkAggFails("^bool_or(x)^", values,
@@ -16314,7 +16314,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLogicalAndFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // not in standard dialect
     final String[] values = {"true", "true", "null"};
     f.checkAggFails("^logical_and(x)^", values,
@@ -16350,7 +16350,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testLogicalOrFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     // not in standard dialect
     final String[] values = {"true", "true", "null"};
     f.checkAggFails("^logical_or(x)^", values,
@@ -16386,7 +16386,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBitAndScalarFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BITAND, VmName.EXPAND);
     f.checkFails("bitand(^*^)", "Unknown identifier '\\*'", false);
     f.checkScalar("bitand(2, 3)", "2", "INTEGER NOT NULL");
@@ -16428,7 +16428,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBitOrScalarFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BITOR, VmName.EXPAND);
     f.checkFails("bitor(^*^)", "Unknown identifier '\\*'", false);
     f.checkScalar("bitor(2, 4)", "6", "INTEGER NOT NULL");
@@ -16470,7 +16470,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBitXorScalarFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BITXOR, VmName.EXPAND);
     f.checkFails("bitxor(^*^)", "Unknown identifier '\\*'", false);
     f.checkScalar("bitxor(2, 3)", "1", "INTEGER NOT NULL");
@@ -16516,7 +16516,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-3592">[CALCITE-3592]
    * Implement BITNOT scalar function</a>. */
   @Test void testBitNotScalarFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BITNOT, VmName.EXPAND);
     f.checkFails("bitnot(^*^)", "Unknown identifier '\\*'", false);
     f.checkScalar("bitnot(2)", Integer.toString(~2), "INTEGER NOT NULL");
@@ -16545,13 +16545,13 @@ public class SqlOperatorTest {
   }
 
   @Test void testBitAndAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.BITAND_AGG, VmName.EXPAND);
     checkBitAnd(f, FunctionAlias.of(SqlLibraryOperators.BITAND_AGG));
   }
 
   @Test void testBitAndFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BIT_AND, VmName.EXPAND);
     checkBitAnd(f, FunctionAlias.of(SqlStdOperatorTable.BIT_AND));
   }
@@ -16636,7 +16636,7 @@ public class SqlOperatorTest {
 
   void checkBitCount(SqlFunction function, @Nullable  List<SqlLibrary> libraries,
       boolean testDecimal) {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     f0.setFor(function, VmName.EXPAND);
     final String functionName = function.getName();
     final Consumer<SqlOperatorFixture> consumer = f -> {
@@ -16669,7 +16669,7 @@ public class SqlOperatorTest {
             "BIGINT NOT NULL");
         f.checkScalar(functionName + "(CAST('-9223372036854775809' AS DECIMAL(19, 0)))", "1",
             "BIGINT NOT NULL");
-      } else {
+      } else { // 如果不是两个重载操作符
         f.checkType(functionName + "(CAST(x'ad' AS BINARY(1)))", "BIGINT NOT NULL");
         f.checkFails("^" + functionName + "(1.2)^",
             "Cannot apply '" + functionName + "' to arguments of type '" + functionName
@@ -16681,19 +16681,19 @@ public class SqlOperatorTest {
     };
     if (libraries == null) {
       consumer.accept(f0);
-    } else {
+    } else { // 如果不是两个重载操作符
       f0.forEachLibrary(libraries, consumer);
     }
   }
 
   @Test void testBitOrAggFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlLibraryOperators.BITOR_AGG, VmName.EXPAND);
     checkBitOr(f, FunctionAlias.of(SqlLibraryOperators.BITOR_AGG));
   }
 
   @Test void testBitOrFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BIT_OR, VmName.EXPAND);
     checkBitOr(f, FunctionAlias.of(SqlStdOperatorTable.BIT_OR));
   }
@@ -16736,7 +16736,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testBitXorFunc() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.setFor(SqlStdOperatorTable.BIT_XOR, VM_JAVA);
     f.checkFails("bit_xor(^*^)", "Unknown identifier '\\*'", false);
     f.checkType("bit_xor(1)", "INTEGER");
@@ -16772,7 +16772,7 @@ public class SqlOperatorTest {
   }
 
   @Test void testArgMin() {
-    final SqlOperatorFixture f0 = fixture();
+    final SqlOperatorFixture f0 = fixture(); // 获取默认测试夹具用于验证操作符是否可用
     final String[] xValues = {"2", "3", "4", "4", "5", "7"};
 
     final Consumer<SqlOperatorFixture> consumer = f -> {
@@ -16801,8 +16801,8 @@ public class SqlOperatorTest {
    * </ul>
    */
   @Test void testLiteralAtLimit() {
-    final SqlOperatorFixture f = fixture();
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     final List<RelDataType> types =
         SqlTests.getTypes(f.getFactory().getTypeFactory());
     for (RelDataType type : types) {
@@ -16819,7 +16819,7 @@ public class SqlOperatorTest {
             // Casting a string/binary values may change the value.
             // For example, CAST(X'AB' AS BINARY(2)) yields
             // X'AB00'.
-          } else {
+          } else { // 如果不是两个重载操作符
             f.checkScalar(expr + " = " + literalString,
                 true, "BOOLEAN NOT NULL");
           }
@@ -16842,8 +16842,8 @@ public class SqlOperatorTest {
    * </ul>
    */
   @Test void testLiteralBeyondLimit() {
-    final SqlOperatorFixture f = fixture();
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     final List<RelDataType> types =
         SqlTests.getTypes(f.getFactory().getTypeFactory());
     for (RelDataType type : types) {
@@ -16868,13 +16868,13 @@ public class SqlOperatorTest {
             || (sqlTypeName == SqlTypeName.VARBINARY)) {
           // Casting overlarge string/binary values do not fail -
           // they are truncated. See testCastTruncates().
-        } else {
+        } else { // 如果不是两个重载操作符
           // Value outside legal bound should fail at runtime (not
           // validate time).
           String expected;
           if (type.getSqlTypeName() == SqlTypeName.DECIMAL) {
             expected = "Value .* cannot be represented as .*";
-          } else {
+          } else { // 如果不是两个重载操作符
             expected = "Value .* out of range";
           }
           f.checkFails("CAST(" + literalString + " AS " + type + ")", expected, true);
@@ -16888,7 +16888,7 @@ public class SqlOperatorTest {
    * <a href="https://issues.apache.org/jira/browse/CALCITE-6111">[CALCITE-6111]
    * Explicit cast from expression to numeric type doesn't check overflow</a>. */
   @Test public void testOverflow() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     f.checkFails(String.format(Locale.US, "SELECT cast(%d+30 as tinyint)", Byte.MAX_VALUE),
         OUT_OF_RANGE_MESSAGE, true);
     f.checkFails(String.format(Locale.US, "SELECT cast(%d+30 as smallint)", Short.MAX_VALUE),
@@ -16920,10 +16920,10 @@ public class SqlOperatorTest {
         OUT_OF_RANGE_MESSAGE, true);
   }
 
-  @ParameterizedTest
-  @MethodSource("safeParameters")
+  @ParameterizedTest // 参数化测试注解，标记该方法为参数化测试，会多次调用该方法，每次使用不同的参数
+  @MethodSource("safeParameters") // 方法源注解，指定参数来源方法为safeParameters()，从该方法获取测试参数
   void testCastTruncates(CastType castType, SqlOperatorFixture f) {
-    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND);
+    f.setFor(SqlStdOperatorTable.CAST, VmName.EXPAND); // 设置测试夹具为测试CAST操作符
     f.checkScalar("CAST('ABCD' AS CHAR(2))", "AB", "CHAR(2) NOT NULL");
     f.checkScalar("CAST('ABCD' AS VARCHAR(2))", "AB",
         "VARCHAR(2) NOT NULL");
@@ -16940,8 +16940,8 @@ public class SqlOperatorTest {
     f.checkScalar("CAST(CAST(x'ABCDEF12' AS VARBINARY) AS VARBINARY(3))",
         "abcdef", "VARBINARY(3) NOT NULL");
 
-    if (!f.brokenTestsEnabled()) {
-      return;
+    if (!f.brokenTestsEnabled()) { // 如果未启用损坏测试
+      return; // 跳过近似类型，只测试精确数值类型
     }
     f.checkBoolean("CAST(X'' AS BINARY(3)) = X'000000'", true);
     f.checkBoolean("CAST(X'' AS BINARY(3)) = X''", false);
@@ -16960,7 +16960,7 @@ public class SqlOperatorTest {
   @Disabled("Too slow and not really a unit test")
   @Tag("slow")
   @Test void testArgumentBounds() {
-    final SqlOperatorFixture f = fixture();
+    final SqlOperatorFixture f = fixture(); // 获取测试夹具对象，用于执行测试
     final SqlValidatorImpl validator =
         (SqlValidatorImpl) f.getFactory().createValidator();
     final SqlValidatorScope scope = validator.getEmptyScope();
@@ -17038,15 +17038,15 @@ public class SqlOperatorTest {
           try {
             if (nullCount > 0 && policy == Strong.Policy.ANY) {
               f.checkNull(s);
-            } else {
+            } else { // 如果不是两个重载操作符
               final String query;
               if (op instanceof SqlAggFunction) {
                 if (op.requiresOrder()) {
                   query = "SELECT " + s + " OVER () FROM (VALUES (1))";
-                } else {
+                } else { // 如果不是两个重载操作符
                   query = "SELECT " + s + " FROM (VALUES (1))";
                 }
-              } else {
+              } else { // 如果不是两个重载操作符
                 query = AbstractSqlTester.buildQuery(s);
               }
               f.check(query, SqlTests.ANY_TYPE_CHECKER,
@@ -17117,7 +17117,7 @@ public class SqlOperatorTest {
       try {
         if (!result.next()) {
           // empty result is OK
-          return;
+          return; // 跳过近似类型，只测试精确数值类型
         }
         final Object actual = result.getObject(1);
         assertThat("Query: " + sql, actual, is(expected));
@@ -17128,7 +17128,7 @@ public class SqlOperatorTest {
         final String stack = Throwables.getStackTraceAsString(thrown);
         for (Pattern pattern : patterns) {
           if (pattern.matcher(stack).matches()) {
-            return;
+            return; // 跳过近似类型，只测试精确数值类型
           }
         }
         fail("Stack did not match any pattern; " + stack);
@@ -17215,7 +17215,7 @@ public class SqlOperatorTest {
         TimestampString ts = TimestampString.fromMillisSinceEpoch((Long) value);
         return SqlLiteral.createTimestamp(type.getSqlTypeName(), ts,
             type.getPrecision(), SqlParserPos.ZERO);
-      default:
+      default: // 默认情况，继续处理精确数值类型
         throw new AssertionError(type);
       }
     }
@@ -17292,7 +17292,7 @@ public class SqlOperatorTest {
       LibraryOperator libraryOperator = field.getAnnotation(LibraryOperator.class);
       if (libraryOperator == null) {
         libraries.add(SqlLibrary.STANDARD);
-      } else {
+      } else { // 如果不是两个重载操作符
         libraries.addAll(Arrays.asList(libraryOperator.libraries()));
       }
       return new FunctionAlias(function, libraries);

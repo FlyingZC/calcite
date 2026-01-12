@@ -248,7 +248,7 @@ class DeterministicTest {
                                         Blocks.toFunctionBlock(
                                             Expressions.multiply(
                                                 Expressions.add(ONE, TWO),
-                                                THREE)))),
+                                                THREE))))),
                                 "call",
                                 Collections.emptyList())))))),
         equalTo("{\n"

@@ -42,217 +42,232 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Tests for {@code PigRelOpVisitor}.
+ * PigRelOpTest 类用于测试 Pig 关系操作访问器（PigRelOpVisitor）的功能
+ * 该类继承自 PigRelTestBase，提供了对 Pig 脚本到关系代数转换的全面测试
+ * 测试涵盖了 Pig 的各种操作，包括 LOAD、FILTER、GROUP、JOIN、UNION、FOREACH 等
+ * 每个测试方法都会验证 Pig 脚本生成的逻辑计划（RelNode）、SQL 转换结果以及执行结果
  */
 class PigRelOpTest extends PigRelTestBase {
   /**
    * SQL dialect for the tests.
+   * PigRelSqlDialect 是一个内部静态类，定义了测试中使用的 SQL 方言
+   * 它继承自 SqlDialect，用于将 Pig 脚本转换为 SQL 语句
+   * 使用 CalciteSqlDialect 作为基础，并指定数据库产品为 CALCITE
    */
   private static class PigRelSqlDialect extends SqlDialect {
-    static final SqlDialect DEFAULT =
-        new CalciteSqlDialect(SqlDialect.EMPTY_CONTEXT
-            .withDatabaseProduct(DatabaseProduct.CALCITE));
+    static final SqlDialect DEFAULT = // 默认的 SQL 方言实例，用于所有测试
+        new CalciteSqlDialect(SqlDialect.EMPTY_CONTEXT // 使用空的上下文
+            .withDatabaseProduct(DatabaseProduct.CALCITE)); // 设置数据库产品为 CALCITE
 
-    private PigRelSqlDialect(Context context) {
-      super(context);
+    private PigRelSqlDialect(Context context) { // 私有构造方法，接受上下文参数
+      super(context); // 调用父类 SqlDialect 的构造方法
     }
   }
 
   /** Contains a Pig script and has various methods to translate and
    * run that script and check the results. Each method returns
    * this, so that method calls for the same script can be
-   * chained. */
+   * chained.
+   * Fluent 是一个内部类，用于封装 Pig 脚本并提供流式 API
+   * 它包含了一个 Pig 脚本字符串，并提供了多种方法来转换和运行该脚本
+   * 每个方法都返回 this，使得可以对同一个脚本进行链式调用
+   * 主要方法包括：assertRel（验证逻辑计划）、assertSql（验证 SQL 转换）、assertResult（验证执行结果）
+   */
   class Fluent {
-    private final String script;
+    private final String script; // 存储要测试的 Pig 脚本字符串
 
-    Fluent(String script) {
-      this.script = script;
+    Fluent(String script) { // 构造方法，接受 Pig 脚本字符串
+      this.script = script; // 将脚本字符串保存到成员变量中
     }
 
-    private Fluent assertRel(String pigAlias, boolean optimized,
+    private Fluent assertRel(String pigAlias, boolean optimized, // 断言关系节点的方法，接受 Pig 别名、是否优化和关系节点匹配器
         Matcher<RelNode> relMatcher) {
       try {
-        final RelNode rel;
-        final List<RelNode> relNodes =
-            converter.pigQuery2Rel(script, optimized, true, optimized);
-        if (pigAlias == null) {
-          rel = relNodes.get(0);
-        } else {
-          rel = converter.getBuilder().getRel(pigAlias);
+        final RelNode rel; // 声明关系节点变量
+        final List<RelNode> relNodes = // 将 Pig 查询转换为关系节点列表
+            converter.pigQuery2Rel(script, optimized, true, optimized); // 使用转换器转换脚本，参数：脚本、是否优化、是否验证、是否优化
+        if (pigAlias == null) { // 如果没有指定 Pig 别名
+          rel = relNodes.get(0); // 获取第一个关系节点
+        } else { // 如果指定了 Pig 别名
+          rel = converter.getBuilder().getRel(pigAlias); // 从构建器中获取指定别名的关系节点
         }
-        assertThat(rel, relMatcher);
-      } catch (IOException e) {
-        throw TestUtil.rethrow(e);
+        assertThat(rel, relMatcher); // 使用断言验证关系节点是否匹配
+      } catch (IOException e) { // 捕获 IO 异常
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
-      return this;
+      return this; // 返回 this 以支持链式调用
     }
 
-    private Fluent assertRel(Matcher<RelNode> relMatcher) {
-      return assertRel(null, false, relMatcher);
+    private Fluent assertRel(Matcher<RelNode> relMatcher) { // 重载的 assertRel 方法，只接受匹配器
+      return assertRel(null, false, relMatcher); // 调用完整版本的 assertRel，使用 null 别名和 false 优化标志
     }
 
-    private Fluent assertOptimizedRel(Matcher<RelNode> relMatcher) {
-      return assertRel(null, true, relMatcher);
+    private Fluent assertOptimizedRel(Matcher<RelNode> relMatcher) { // 断言优化后的关系节点
+      return assertRel(null, true, relMatcher); // 调用完整版本的 assertRel，使用 null 别名和 true 优化标志
     }
 
-    private Fluent assertSql(Matcher<String> sqlMatcher) {
+    private Fluent assertSql(Matcher<String> sqlMatcher) { // 断言 SQL 转换结果
       try {
-        final String sql =
-            converter.pigToSql(script, PigRelSqlDialect.DEFAULT).get(0);
-        assertThat(sql, sqlMatcher);
-        return this;
-      } catch (IOException e) {
-        throw TestUtil.rethrow(e);
+        final String sql = // 将 Pig 脚本转换为 SQL 语句
+            converter.pigToSql(script, PigRelSqlDialect.DEFAULT).get(0); // 使用默认的 SQL 方言转换，获取第一个结果
+        assertThat(sql, sqlMatcher); // 使用断言验证 SQL 是否匹配
+        return this; // 返回 this 以支持链式调用
+      } catch (IOException e) { // 捕获 IO 异常
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     }
 
-    private Fluent assertSql(Matcher<String> sqlMatcher, int pos) {
+    private Fluent assertSql(Matcher<String> sqlMatcher, int pos) { // 重载的 assertSql 方法，接受位置参数
       try {
-        final String sql =
-            converter.pigToSql(script, PigRelSqlDialect.DEFAULT).get(pos);
-        assertThat(sql, sqlMatcher);
-        return this;
-      } catch (IOException e) {
-        throw TestUtil.rethrow(e);
+        final String sql = // 将 Pig 脚本转换为 SQL 语句
+            converter.pigToSql(script, PigRelSqlDialect.DEFAULT).get(pos); // 使用默认的 SQL 方言转换，获取指定位置的结果
+        assertThat(sql, sqlMatcher); // 使用断言验证 SQL 是否匹配
+        return this; // 返回 this 以支持链式调用
+      } catch (IOException e) { // 捕获 IO 异常
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     }
 
-    private Fluent assertResult(Matcher<String> resultMatcher) {
-      final RelNode rel;
+    private Fluent assertResult(Matcher<String> resultMatcher) { // 断言执行结果
+      final RelNode rel; // 声明关系节点变量
       try {
-        rel = converter.pigQuery2Rel(script, false, true, false).get(0);
-      } catch (IOException e) {
-        throw TestUtil.rethrow(e);
+        rel = converter.pigQuery2Rel(script, false, true, false).get(0); // 将 Pig 查询转换为关系节点，不优化，验证，不优化
+      } catch (IOException e) { // 捕获 IO 异常
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
-      final StringWriter sw = new StringWriter();
-      CalciteHandler.dump(rel, new PrintWriter(sw));
-      assertThat(Util.toLinux(sw.toString()), resultMatcher);
-      return this;
+      final StringWriter sw = new StringWriter(); // 创建字符串写入器
+      CalciteHandler.dump(rel, new PrintWriter(sw)); // 将关系节点的内容转储到字符串写入器
+      assertThat(Util.toLinux(sw.toString()), resultMatcher); // 使用断言验证结果是否匹配（转换为 Linux 格式）
+      return this; // 返回 this 以支持链式调用
     }
   }
 
-  private static void writeToFile(File f, String[] inputData) {
-    try (PrintWriter pw =
+  private static void writeToFile(File f, String[] inputData) { // 静态方法，将数据写入文件
+    try (PrintWriter pw = // 创建打印写入器，使用 UTF-8 编码
              new PrintWriter(
-                 new OutputStreamWriter(new FileOutputStream(f),
-                     StandardCharsets.UTF_8))) {
-      for (String input : inputData) {
-        pw.print(input);
-        pw.print("\n");
+                 new OutputStreamWriter(new FileOutputStream(f), // 创建文件输出流
+                     StandardCharsets.UTF_8))) { // 使用 UTF-8 字符集
+      for (String input : inputData) { // 遍历输入数据数组
+        pw.print(input); // 写入输入字符串
+        pw.print("\n"); // 写入换行符
       }
-    } catch (FileNotFoundException e) {
-      throw TestUtil.rethrow(e);
+    } catch (FileNotFoundException e) { // 捕获文件未找到异常
+      throw TestUtil.rethrow(e); // 重新抛出异常
     }
   }
 
   /** Creates a {@link Fluent} containing a script, that can then be used to
-   * translate and execute that script. */
-  private Fluent pig(String script) {
-    return new Fluent(script);
+   * translate and execute that script.
+   * 创建一个包含脚本的 Fluent 对象，用于转换和执行该脚本
+   * 这是一个工厂方法，用于创建 Fluent 对象的实例
+   */
+  private Fluent pig(String script) { // 私有方法，创建 Fluent 对象
+    return new Fluent(script); // 返回新的 Fluent 对象，传入 Pig 脚本
   }
 
-  @Test void testLoadFromFile() {
-    final String datadir = "/tmp/pigdata";
-    final String schema = "{\"fields\":["
-        + "{\"name\":\"x\",\"type\":55,\"schema\":null},"
-        + "{\"name\":\"y\",\"type\":10,\"schema\":null},"
-        + "{\"name\":\"z\",\"type\":25,\"schema\":null}],"
-        + "\"version\":0,\"sortKeys\":[],\"sortKeyOrders\":[]}";
-    final File inputDir = new File(datadir, "testTable");
-    inputDir.mkdirs();
-    final File inputSchemaFile = new File(inputDir, ".pig_schema");
-    writeToFile(inputSchemaFile, new String[]{schema});
+  @Test void testLoadFromFile() { // 测试从文件加载数据的功能
+    final String datadir = "/tmp/pigdata"; // 定义数据目录路径
+    final String schema = "{\"fields\":[" // 定义 Pig schema 的 JSON 格式字符串
+        + "{\"name\":\"x\",\"type\":55,\"schema\":null}," // 字段 x，类型 55（对应某种数据类型）
+        + "{\"name\":\"y\",\"type\":10,\"schema\":null}," // 字段 y，类型 10
+        + "{\"name\":\"z\",\"type\":25,\"schema\":null}]," // 字段 z，类型 25
+        + "\"version\":0,\"sortKeys\":[],\"sortKeyOrders\":[]}"; // schema 版本和排序键信息
+    final File inputDir = new File(datadir, "testTable"); // 创建输入目录对象
+    inputDir.mkdirs(); // 创建目录（包括所有不存在的父目录）
+    final File inputSchemaFile = new File(inputDir, ".pig_schema"); // 创建 schema 文件对象
+    writeToFile(inputSchemaFile, new String[]{schema}); // 将 schema 写入文件
 
-    final String script = ""
-        + "A = LOAD '" + inputDir.getAbsolutePath() + "' using PigStorage();\n"
-        + "B = FILTER A BY z > 5.5;\n"
-        + "C = GROUP B BY x;\n";
-    final String plan = ""
-        + "LogicalProject(group=[$0], B=[$1])\n"
-        + "  LogicalAggregate(group=[{0}], B=[COLLECT($1)])\n"
-        + "    LogicalProject(x=[$0], $f1=[ROW($0, $1, $2)])\n"
-        + "      LogicalFilter(condition=[>($2, 5.5E0)])\n"
-        + "        LogicalTableScan(table=[[/tmp/pigdata/testTable]])\n";
-    pig(script).assertRel(hasTree(plan));
+    final String script = "" // 定义 Pig 脚本
+        + "A = LOAD '" + inputDir.getAbsolutePath() + "' using PigStorage();\n" // 从目录加载数据，使用 PigStorage
+        + "B = FILTER A BY z > 5.5;\n" // 过滤数据，保留 z 字段大于 5.5 的记录
+        + "C = GROUP B BY x;\n"; // 按 x 字段分组
+    final String plan = "" // 定义预期的逻辑计划
+        + "LogicalProject(group=[$0], B=[$1])\n" // 逻辑投影节点，输出分组字段和分组后的数据
+        + "  LogicalAggregate(group=[{0}], B=[COLLECT($1)])\n" // 逻辑聚合节点，按第 0 列分组，收集第 1 列
+        + "    LogicalProject(x=[$0], $f1=[ROW($0, $1, $2)])\n" // 逻辑投影节点，选择 x 字段并创建行
+        + "      LogicalFilter(condition=[>($2, 5.5E0)])\n" // 逻辑过滤节点，条件是第 2 列大于 5.5
+        + "        LogicalTableScan(table=[[/tmp/pigdata/testTable]])\n"; // 逻辑表扫描节点，扫描指定表
+    pig(script).assertRel(hasTree(plan)); // 验证生成的逻辑计划是否匹配预期
   }
 
-  @Test void testLoadWithoutSchema() {
-    final String script = "A = LOAD 'scott.DEPT';";
-    final String plan = "LogicalTableScan(table=[[scott, DEPT]])\n";
-    final String result = ""
-        + "(10,ACCOUNTING,NEW YORK)\n"
-        + "(20,RESEARCH,DALLAS)\n"
-        + "(30,SALES,CHICAGO)\n"
-        + "(40,OPERATIONS,BOSTON)\n";
-    pig(script).assertRel(hasTree(plan))
-        .assertResult(is(result));
+  @Test void testLoadWithoutSchema() { // 测试不带 schema 的 LOAD 操作
+    final String script = "A = LOAD 'scott.DEPT';"; // 定义 Pig 脚本，加载 scott.DEPT 表，不指定 schema
+    final String plan = "LogicalTableScan(table=[[scott, DEPT]])\n"; // 预期的逻辑计划：简单的表扫描
+    final String result = "" // 预期的执行结果
+        + "(10,ACCOUNTING,NEW YORK)\n" // 第一条记录
+        + "(20,RESEARCH,DALLAS)\n" // 第二条记录
+        + "(30,SALES,CHICAGO)\n" // 第三条记录
+        + "(40,OPERATIONS,BOSTON)\n"; // 第四条记录
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertResult(is(result)); // 验证执行结果
   }
 
-  @Test void testLoadWithSchema() {
-    final String script = ""
-        + "A = LOAD 'testSchema.testTable' as (a:int, b:long, c:float, "
-        + "d:double, e:chararray, "
-        + "f:bytearray, g:boolean, "
-        + "h:datetime, i:biginteger, j:bigdecimal, k1:tuple(), k2:tuple"
-        + "(k21:int, k22:float), "
-        + "l1:bag{}, "
-        + "l2:bag{l21:(l22:int, l23:float)}, m1:map[], m2:map[int], m3:map["
-        + "(m3:float)])\n;";
-    final String plan = "LogicalTableScan(table=[[testSchema, testTable]])\n";
-    pig(script).assertRel(hasTree(plan));
+  @Test void testLoadWithSchema() { // 测试带 schema 的 LOAD 操作
+    final String script = "" // 定义 Pig 脚本，加载表并指定详细的 schema
+        + "A = LOAD 'testSchema.testTable' as (a:int, b:long, c:float, " // 指定各种数据类型
+        + "d:double, e:chararray, " // 字符数组类型
+        + "f:bytearray, g:boolean, " // 字节数组和布尔类型
+        + "h:datetime, i:biginteger, j:bigdecimal, k1:tuple(), k2:tuple" // 日期时间、大整数、大十进制、元组类型
+        + "(k21:int, k22:float), " // 嵌套元组
+        + "l1:bag{}, " // 空 bag
+        + "l2:bag{l21:(l22:int, l23:float)}, m1:map[], m2:map[int], m3:map[" // 嵌套 bag 和 map 类型
+        + "(m3:float)])\n;"; // map 的值类型
+    final String plan = "LogicalTableScan(table=[[testSchema, testTable]])\n"; // 预期的逻辑计划
+    pig(script).assertRel(hasTree(plan)); // 验证逻辑计划
 
-    final String script1 =
-        "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);";
-    pig(script1)
-        .assertRel(hasTree("LogicalTableScan(table=[[scott, DEPT]])\n"));
+    final String script1 = // 第二个测试脚本
+        "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);"; // 加载 scott.DEPT 并指定 schema
+    pig(script1) // 验证第二个脚本
+        .assertRel(hasTree("LogicalTableScan(table=[[scott, DEPT]])\n")); // 验证逻辑计划
   }
 
-  @Test void testFilter() {
-    final String script = ""
-        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n"
-        + "B = FILTER A BY DEPTNO == 10;\n";
-    final String plan = ""
-        + "LogicalFilter(condition=[=($0, 10)])\n"
-        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    final String result = "(10,ACCOUNTING,NEW YORK)\n";
-    final String sql = "SELECT *\n"
+  @Test void testFilter() { // 测试 FILTER 操作，用于过滤数据
+    final String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n" // 加载表并指定 schema
+        + "B = FILTER A BY DEPTNO == 10;\n"; // 过滤数据，只保留 DEPTNO 等于 10 的记录
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalFilter(condition=[=($0, 10)])\n" // 逻辑过滤节点，条件是第 0 列等于 10
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n"; // 逻辑表扫描节点
+    final String result = "(10,ACCOUNTING,NEW YORK)\n"; // 预期的执行结果
+    final String sql = "SELECT *\n" // 预期的 SQL 语句
         + "FROM scott.DEPT\n"
-        + "WHERE DEPTNO = 10";
-    pig(script).assertRel(hasTree(plan))
-        .assertResult(is(result))
-        .assertSql(is(sql));
+        + "WHERE DEPTNO = 10"; // WHERE 子句过滤条件
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertResult(is(result)) // 验证执行结果
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testSample() {
-    final String script = ""
-        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n"
-        + "B = SAMPLE A 0.5;\n";
-    final String plan = ""
-        + "LogicalFilter(condition=[<(RAND(), 0.5E0)])\n"
-        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    final String sql = ""
+  @Test void testSample() { // 测试 SAMPLE 操作，用于随机采样
+    final String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n" // 加载表
+        + "B = SAMPLE A 0.5;\n"; // 对数据进行采样，采样率为 50%
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalFilter(condition=[<(RAND(), 0.5E0)])\n" // 使用 RAND() 函数实现采样，条件是随机数小于 0.5
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n"; // 逻辑表扫描节点
+    final String sql = "" // 预期的 SQL 语句
         + "SELECT *\n"
         + "FROM scott.DEPT\n"
-        + "WHERE RAND() < 5E-1";
-    pig(script).assertRel(hasTree(plan))
-        .assertSql(is(sql));
+        + "WHERE RAND() < 5E-1"; // 使用 RAND() 函数实现采样
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testSplit() {
-    String script = ""
-        + "A = LOAD 'scott.EMP'as (EMPNO:int, ENAME:chararray,\n"
+  @Test void testSplit() { // 测试 SPLIT 操作，用于将数据按条件拆分到多个关系
+    String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.EMP'as (EMPNO:int, ENAME:chararray,\n" // 加载 scott.EMP 表
         + "    JOB:chararray, MGR:int, HIREDATE:datetime, SAL:bigdecimal,\n"
         + "    COMM:bigdecimal, DEPTNO:int);\n"
-        + "SPLIT A INTO B1 IF DEPTNO == 10, B2 IF  DEPTNO == 20;\n"
-        + "B = UNION B1, B2;\n";
-    final String scan = "  LogicalTableScan(table=[[scott, EMP]])\n";
-    final String plan = ""
-        + "LogicalUnion(all=[true])\n"
-        + "  LogicalFilter(condition=[=($7, 10)])\n"
+        + "SPLIT A INTO B1 IF DEPTNO == 10, B2 IF  DEPTNO == 20;\n" // 将数据拆分：DEPTNO=10 的到 B1，DEPTNO=20 的到 B2
+        + "B = UNION B1, B2;\n"; // 合并 B1 和 B2
+    final String scan = "  LogicalTableScan(table=[[scott, EMP]])\n"; // 表扫描节点的字符串
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalUnion(all=[true])\n" // 逻辑联合节点，包含所有行（不去重）
+        + "  LogicalFilter(condition=[=($7, 10)])\n" // 第一个分支：过滤 DEPTNO=10
         + "    LogicalTableScan(table=[[scott, EMP]])\n"
-        + "  LogicalFilter(condition=[=($7, 20)])\n"
+        + "  LogicalFilter(condition=[=($7, 20)])\n" // 第二个分支：过滤 DEPTNO=20
         + "    LogicalTableScan(table=[[scott, EMP]])\n";
 
-    final String result = ""
+    final String result = "" // 预期的执行结果
         + "(7782,CLARK,MANAGER,7839,1981-06-09,2450.00,null,10)\n"
         + "(7839,KING,PRESIDENT,null,1981-11-17,5000.00,null,10)\n"
         + "(7934,MILLER,CLERK,7782,1982-01-23,1300.00,null,10)\n"
@@ -262,77 +277,77 @@ class PigRelOpTest extends PigRelTestBase {
         + "(7876,ADAMS,CLERK,7788,1987-05-23,1100.00,null,20)\n"
         + "(7902,FORD,ANALYST,7566,1981-12-03,3000.00,null,20)\n";
 
-    final String sql = ""
+    final String sql = "" // 预期的 SQL 语句
         + "SELECT *\n"
         + "FROM scott.EMP\n"
         + "WHERE DEPTNO = 10\n"
-        + "UNION ALL\n"
+        + "UNION ALL\n" // 使用 UNION ALL 合并结果
         + "SELECT *\n"
         + "FROM scott.EMP\n"
         + "WHERE DEPTNO = 20";
-    pig(script)
-        .assertRel("B1", false,
+    pig(script) // 验证脚本
+        .assertRel("B1", false, // 验证 B1 的逻辑计划
             hasTree("LogicalFilter(condition=[=($7, 10)])\n"
               + scan))
-        .assertRel("B2", false,
+        .assertRel("B2", false, // 验证 B2 的逻辑计划
             hasTree("LogicalFilter(condition=[=($7, 20)])\n"
               + scan))
-        .assertRel(hasTree(plan))
-        .assertResult(is(result))
-        .assertSql(is(sql));
+        .assertRel(hasTree(plan)) // 验证最终逻辑计划
+        .assertResult(is(result)) // 验证执行结果
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testUdf() {
-    final String script = ""
-        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n"
-        + "B = FILTER A BY ENDSWITH(DNAME, 'LES');\n";
-    final String plan = ""
-        + "LogicalFilter(condition=[ENDSWITH(PIG_TUPLE($1, 'LES'))])\n"
-        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
-    final String result = "(30,SALES,CHICAGO)\n";
-    final String sql = ""
+  @Test void testUdf() { // 测试用户自定义函数（UDF）的使用
+    final String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n" // 加载表
+        + "B = FILTER A BY ENDSWITH(DNAME, 'LES');\n"; // 使用 ENDSWITH 函数过滤 DNAME 以 'LES' 结尾的记录
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalFilter(condition=[ENDSWITH(PIG_TUPLE($1, 'LES'))])\n" // 使用 ENDSWITH 函数作为过滤条件
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n"; // 逻辑表扫描节点
+    final String result = "(30,SALES,CHICAGO)\n"; // 预期的执行结果（只有 SALES 以 'LES' 结尾）
+    final String sql = "" // 预期的 SQL 语句
         + "SELECT *\n"
         + "FROM scott.DEPT\n"
-        + "WHERE ENDSWITH(PIG_TUPLE(DNAME, 'LES'))";
-    pig(script).assertRel(hasTree(plan))
-        .assertResult(is(result))
-        .assertSql(is(sql));
+        + "WHERE ENDSWITH(PIG_TUPLE(DNAME, 'LES'))"; // 使用 ENDSWITH 函数
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertResult(is(result)) // 验证执行结果
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testSimpleForEach1() {
-    String script = ""
-        + "A = LOAD 'testSchema.testTable' as (a:int, b:long, c:float, "
+  @Test void testSimpleForEach1() { // 测试简单的 FOREACH 操作，用于投影和生成新字段
+    String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'testSchema.testTable' as (a:int, b:long, c:float, " // 加载表，包含各种数据类型
         + "d:double, e:chararray, f:bytearray, g:boolean, "
         + "h:datetime, i:biginteger, j:bigdecimal, k1:tuple(), "
         + "k2:tuple(k21:int, k22:float), l1:bag{}, "
         + "l2:bag{l21:(l22:int, l23:float)}, "
         + "m1:map[], m2:map[int], m3:map[(m3:float)]);\n"
-        + "B = FOREACH A GENERATE a, a as a2, b, c, d, e, f, g, h, i, j, k2, "
-        + "l2, m2, null as n:chararray;\n";
-    final String plan = ""
-        + "LogicalProject(a=[$0], a2=[$0], b=[$1], c=[$2], d=[$3], e=[$4], "
+        + "B = FOREACH A GENERATE a, a as a2, b, c, d, e, f, g, h, i, j, k2, " // 使用 FOREACH 生成新字段
+        + "l2, m2, null as n:chararray;\n"; // 包含 null 值的字段
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalProject(a=[$0], a2=[$0], b=[$1], c=[$2], d=[$3], e=[$4], " // 逻辑投影节点，选择和重命名字段
         + "f=[$5], g=[$6], h=[$7], i=[$8], j=[$9], k2=[$11], l2=[$13], "
-        + "m2=[$15], n=[null:VARCHAR])\n"
-        + "  LogicalTableScan(table=[[testSchema, testTable]])\n";
-    final String sql = ""
+        + "m2=[$15], n=[null:VARCHAR])\n" // n 字段为 null 值
+        + "  LogicalTableScan(table=[[testSchema, testTable]])\n"; // 逻辑表扫描节点
+    final String sql = "" // 预期的 SQL 语句
         + "SELECT a, a AS a2, b, c, d, e, f, g, h, i, j, k2, l2, m2, "
-        + "CAST(NULL AS VARCHAR CHARACTER SET ISO-8859-1) AS n\n"
+        + "CAST(NULL AS VARCHAR CHARACTER SET ISO-8859-1) AS n\n" // 使用 CAST 将 null 转换为 VARCHAR
         + "FROM testSchema.testTable";
-    pig(script).assertRel(hasTree(plan))
-        .assertSql(is(sql));
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testSimpleForEach2() {
-    final String script = ""
-        + "A = LOAD 'scott.EMP' as (EMPNO:int, ENAME:chararray,\n"
+  @Test void testSimpleForEach2() { // 测试 FOREACH 操作，包含表达式计算
+    final String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.EMP' as (EMPNO:int, ENAME:chararray,\n" // 加载 scott.EMP 表
         + "    JOB:chararray, MGR:int, HIREDATE:datetime, SAL:bigdecimal,\n"
         + "    COMM:bigdecimal, DEPTNO:int);\n"
-        + "B = FOREACH A GENERATE DEPTNO + 10 as dept, MGR;\n";
-    final String plan = ""
-        + "LogicalProject(dept=[+($7, 10)], MGR=[$3])\n"
-        + "  LogicalTableScan(table=[[scott, EMP]])\n";
+        + "B = FOREACH A GENERATE DEPTNO + 10 as dept, MGR;\n"; // 使用 FOREACH 生成计算字段和选择字段
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalProject(dept=[+($7, 10)], MGR=[$3])\n" // 逻辑投影节点，dept 字段是 DEPTNO+10 的结果
+        + "  LogicalTableScan(table=[[scott, EMP]])\n"; // 逻辑表扫描节点
 
-    final String result = ""
+    final String result = "" // 预期的执行结果
         + "(30,7902)\n"
         + "(40,7698)\n"
         + "(40,7698)\n"
@@ -347,59 +362,59 @@ class PigRelOpTest extends PigRelTestBase {
         + "(40,7698)\n"
         + "(30,7566)\n"
         + "(20,7782)\n";
-    final String sql = ""
-        + "SELECT DEPTNO + 10 AS dept, MGR\n"
+    final String sql = "" // 预期的 SQL 语句
+        + "SELECT DEPTNO + 10 AS dept, MGR\n" // 使用表达式计算
         + "FROM scott.EMP";
-    pig(script).assertRel(hasTree(plan))
-        .assertResult(is(result))
-        .assertSql(is(sql));
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertResult(is(result)) // 验证执行结果
+        .assertSql(is(sql)); // 验证 SQL 转换
   }
 
-  @Test void testSimpleForEach3() {
-    String script = ""
-        + "A = LOAD 'scott.EMP' as (EMPNO:int, ENAME:chararray,\n"
+  @Test void testSimpleForEach3() { // 测试复杂的 FOREACH 操作，包含 FLATTEN 和嵌套操作
+    String script = "" // 定义 Pig 脚本
+        + "A = LOAD 'scott.EMP' as (EMPNO:int, ENAME:chararray,\n" // 加载 scott.EMP 表
         + "    JOB:chararray, MGR:int, HIREDATE:datetime, SAL:bigdecimal,\n"
         + "    COMM:bigdecimal, DEPTNO:int);\n"
-        + "B = FILTER A BY JOB != 'CLERK';\n"
-        + "C = GROUP B BY (DEPTNO, JOB);\n"
-        + "D = FOREACH C GENERATE flatten(group) as (dept, job), flatten(B);\n"
-        + "E = ORDER D BY dept, job;\n";
-    final String plan = ""
-        + "LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n"
-        + "  LogicalProject(dept=[$0], job=[$1], EMPNO=[$3], ENAME=[$4], "
+        + "B = FILTER A BY JOB != 'CLERK';\n" // 过滤掉职位为 CLERK 的员工
+        + "C = GROUP B BY (DEPTNO, JOB);\n" // 按 DEPTNO 和 JOB 分组
+        + "D = FOREACH C GENERATE flatten(group) as (dept, job), flatten(B);\n" // 使用 FLATTEN 展开分组字段和分组数据
+        + "E = ORDER D BY dept, job;\n"; // 按 dept 和 job 排序
+    final String plan = "" // 预期的逻辑计划
+        + "LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[ASC])\n" // 逻辑排序节点
+        + "  LogicalProject(dept=[$0], job=[$1], EMPNO=[$3], ENAME=[$4], " // 逻辑投影节点
         + "JOB=[$5], MGR=[$6], HIREDATE=[$7], SAL=[$8], COMM=[$9], "
         + "DEPTNO=[$10])\n"
-        + "    LogicalCorrelate(correlation=[$cor0], joinType=[inner], "
+        + "    LogicalCorrelate(correlation=[$cor0], joinType=[inner], " // 逻辑关联节点（相关子查询）
         + "requiredColumns=[{2}])\n"
-        + "      LogicalProject(dept=[$0.DEPTNO], job=[$0.JOB], B=[$1])\n"
-        + "        LogicalProject(group=[ROW($0, $1)], B=[$2])\n"
-        + "          LogicalAggregate(group=[{0, 1}], B=[COLLECT($2)])\n"
-        + "            LogicalProject(DEPTNO=[$7], JOB=[$2], $f2=[ROW($0, "
+        + "      LogicalProject(dept=[$0.DEPTNO], job=[$0.JOB], B=[$1])\n" // 投影关联字段
+        + "        LogicalProject(group=[ROW($0, $1)], B=[$2])\n" // 投影分组字段和分组数据
+        + "          LogicalAggregate(group=[{0, 1}], B=[COLLECT($2)])\n" // 逻辑聚合节点，收集数据
+        + "            LogicalProject(DEPTNO=[$7], JOB=[$2], $f2=[ROW($0, " // 投影字段并创建行
         + "$1, $2, $3, $4, $5, $6, $7)])\n"
-        + "              LogicalFilter(condition=[<>($2, 'CLERK')])\n"
-        + "                LogicalTableScan(table=[[scott, EMP]])\n"
-        + "      Uncollect\n"
-        + "        LogicalProject($f0=[$cor0.B])\n"
-        + "          LogicalValues(tuples=[[{ 0 }]])\n";
+        + "              LogicalFilter(condition=[<>($2, 'CLERK')])\n" // 过滤条件：JOB 不等于 'CLERK'
+        + "                LogicalTableScan(table=[[scott, EMP]])\n" // 逻辑表扫描节点
+        + "      Uncollect\n" // Uncollect 节点，用于展开数组
+        + "        LogicalProject($f0=[$cor0.B])\n" // 投影关联的分组数据
+        + "          LogicalValues(tuples=[[{ 0 }]])\n"; // 逻辑值节点，生成单行数据
 
-    final String sql = ""
-        + "SELECT $cor1.DEPTNO AS dept, $cor1.JOB AS job, t30.EMPNO,"
+    final String sql = "" // 预期的 SQL 语句
+        + "SELECT $cor1.DEPTNO AS dept, $cor1.JOB AS job, t30.EMPNO," // 使用相关子查询
         + " t30.ENAME, t30.JOB, t30.MGR, t30.HIREDATE,"
         + " t30.SAL, t30.COMM, t30.DEPTNO\n"
-        + "FROM (SELECT DEPTNO, JOB, COLLECT(ROW(EMPNO, ENAME, JOB, MGR, "
+        + "FROM (SELECT DEPTNO, JOB, COLLECT(ROW(EMPNO, ENAME, JOB, MGR, " // 使用 COLLECT 聚合函数
         + "HIREDATE, SAL, COMM, DEPTNO)) AS $f2\n"
         + "    FROM scott.EMP\n"
         + "    WHERE JOB <> 'CLERK'\n"
         + "    GROUP BY DEPTNO, JOB) AS $cor1,\n"
-        + "  LATERAL UNNEST((SELECT $cor1.$f2 AS $f0\n"
+        + "  LATERAL UNNEST((SELECT $cor1.$f2 AS $f0\n" // 使用 LATERAL UNNEST 展开数据
         + "      FROM (VALUES (0)) AS t (ZERO))) AS t30 (EMPNO, ENAME, JOB,"
         + " MGR, HIREDATE, SAL, COMM, DEPTNO)\n"
         + "ORDER BY $cor1.DEPTNO, $cor1.JOB";
-    pig(script).assertRel(hasTree(plan))
-        .assertSql(is(sql));
+    pig(script).assertRel(hasTree(plan)) // 验证逻辑计划
+        .assertSql(is(sql)); // 验证 SQL 转换
 
-    // TODO fix Calcite execution
-    final String result = ""
+    // TODO fix Calcite execution // 待修复：Calcite 执行问题
+    final String result = "" // 预期的执行结果（当前被禁用）
         + "(10,7782,CLARK,MANAGER,7839,1981-06-09,2450.00,null,10)\n"
         + "(10,7839,KING,PRESIDENT,null,1981-11-17,5000.00,null,10)\n"
         + "(20,7566,JONES,MANAGER,7839,1981-02-04,2975.00,null,20)\n"
@@ -410,7 +425,7 @@ class PigRelOpTest extends PigRelTestBase {
         + "(30,7654,MARTIN,SALESMAN,7698,1981-09-28,1250.00,1400.00,30)\n"
         + "(30,7698,BLAKE,MANAGER,7839,1981-01-05,2850.00,null,30)\n"
         + "(30,7844,TURNER,SALESMAN,7698,1981-09-08,1500.00,0.00,30)\n";
-    if (false) {
+    if (false) { // 条件为 false，不执行此验证
       pig(script).assertResult(is(result));
     }
   }

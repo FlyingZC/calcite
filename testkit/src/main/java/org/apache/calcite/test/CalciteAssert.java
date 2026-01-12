@@ -147,26 +147,31 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Fluid DSL for testing Calcite connections and queries.
+ * 用于测试 Calcite 连接和查询的流式 DSL（领域特定语言）
+ * 这个类提供了一个流畅的接口来配置和执行 Calcite 查询测试，支持多种断言方式
  */
 @SuppressWarnings("rawtypes")
 public class CalciteAssert {
-  private CalciteAssert() {}
+  private CalciteAssert() {} // 私有构造函数，防止实例化，这是一个工具类
 
   /**
    * Which database to use for tests that require a JDBC data source.
+   * 指定测试中需要 JDBC 数据源时使用的数据库实例
    *
    * @see CalciteSystemProperty#TEST_DB
    */
   public static final DatabaseInstance DB =
-      DatabaseInstance.valueOf(CalciteSystemProperty.TEST_DB.value());
+      DatabaseInstance.valueOf(CalciteSystemProperty.TEST_DB.value()); // 根据系统属性值确定数据库实例
 
-  private static String testMysqlUrl = "jdbc:mysql://localhost/foodmart";
+  private static String testMysqlUrl = "jdbc:mysql://localhost/foodmart"; // 测试用 MySQL 连接 URL
 
-  private static String testMysqlDriver = "com.mysql.jdbc.Driver";
+  private static String testMysqlDriver = "com.mysql.jdbc.Driver"; // 测试用 MySQL JDBC 驱动类名
 
-  /** Implementation of {@link AssertThat} that does nothing. */
+  /** Implementation of {@link AssertThat} that does nothing.
+ * 不执行任何操作的 AssertThat 实现，用于禁用测试
+ */
   private static final AssertThat DISABLED =
-      new AssertThat(ConnectionFactories.empty(), ImmutableList.of()) {
+      new AssertThat(ConnectionFactories.empty(), ImmutableList.of()) { // 使用空连接工厂和空钩子列表创建
         @Override public AssertThat with(Config config) {
           return this;
         }
@@ -228,53 +233,63 @@ public class CalciteAssert {
       };
 
   /** Creates an instance of {@code CalciteAssert} with the empty
-   * configuration. */
+   * configuration.
+   * 创建一个具有空配置的 CalciteAssert 实例
+   */
   public static AssertThat that() {
-    return AssertThat.EMPTY;
+    return AssertThat.EMPTY; // 返回空的 AssertThat 实例
   }
 
   /** Creates an instance of {@code CalciteAssert} with a given
-   * configuration. */
+   * configuration.
+   * 创建一个具有给定配置的 CalciteAssert 实例
+   */
   public static AssertThat that(Config config) {
-    return that().with(config);
+    return that().with(config); // 使用空实例并应用给定配置
   }
 
   /** Short-hand for
-   * {@code CalciteAssert.that().with(Config.EMPTY).withModel(model)}. */
+   * {@code CalciteAssert.that().with(Config.EMPTY).withModel(model)}.
+   * 简写形式，等同于 CalciteAssert.that().with(Config.EMPTY).withModel(model)
+   */
   public static AssertThat model(String model) {
-    return that().withModel(model);
+    return that().withModel(model); // 使用空实例并设置模型
   }
 
-  /** Short-hand for {@code CalciteAssert.that().with(Config.REGULAR)}. */
+  /** Short-hand for {@code CalciteAssert.that().with(Config.REGULAR)}.
+   * 简写形式，等同于 CalciteAssert.that().with(Config.REGULAR)
+   */
   public static AssertThat hr() {
-    return that(Config.REGULAR);
+    return that(Config.REGULAR); // 返回使用 REGULAR 配置的实例
   }
 
-  /** Adds a Pair to a List. */
+  /** Adds a Pair to a List.
+ * 向列表中添加一个键值对，返回新的不可变列表
+ */
   private static <K, V> ImmutableList<Pair<K, V>> addPair(List<Pair<K, V>> list,
       K k, V v) {
     return ImmutableList.<Pair<K, V>>builder()
-        .addAll(list)
-        .add(Pair.of(k, v))
-        .build();
+        .addAll(list) // 添加原有列表中的所有元素
+        .add(Pair.of(k, v)) // 添加新的键值对
+        .build(); // 构建不可变列表
   }
 
   static Consumer<RelNode> checkRel(final String expected,
       final @Nullable AtomicInteger counter) {
-    return relNode -> {
+    return relNode -> { // 创建一个 RelNode 消费者
       if (counter != null) {
-        counter.incrementAndGet();
+        counter.incrementAndGet(); // 如果提供了计数器，则递增
       }
-      String s = RelOptUtil.toString(relNode);
-      assertThat(s, containsStringLinux(expected));
+      String s = RelOptUtil.toString(relNode); // 将关系节点转换为字符串
+      assertThat(s, containsStringLinux(expected)); // 断言字符串包含期望内容
     };
   }
 
   static Consumer<Throwable> checkException(final String expected) {
-    return p0 -> {
-      assertNotNull(p0, "expected exception but none was thrown");
-      String stack = TestUtil.printStackTrace(p0);
-      assertThat(stack, containsString(expected));
+    return p0 -> { // 创建一个异常消费者
+      assertNotNull(p0, "expected exception but none was thrown"); // 断言异常不为空
+      String stack = TestUtil.printStackTrace(p0); // 获取异常堆栈跟踪
+      assertThat(stack, containsString(expected)); // 断言堆栈包含期望字符串
     };
   }
 
@@ -282,114 +297,117 @@ public class CalciteAssert {
       final @Nullable String expected) {
     return new Consumer<Throwable>() {
       @Override public void accept(@Nullable Throwable throwable) {
-        assertNotNull(throwable, "Nothing was thrown");
+        assertNotNull(throwable, "Nothing was thrown"); // 断言有异常抛出
 
-        Exception exception = containsCorrectException(throwable);
+        Exception exception = containsCorrectException(throwable); // 检查是否包含正确的异常类型
 
-        assertNotNull(exception, "Expected to fail at validation, but did not");
+        assertNotNull(exception, "Expected to fail at validation, but did not"); // 断言找到了验证异常
         if (expected != null) {
-          String stack = TestUtil.printStackTrace(exception);
-          assertThat(stack, containsString(expected));
+          String stack = TestUtil.printStackTrace(exception); // 获取异常堆栈
+          assertThat(stack, containsString(expected)); // 断言堆栈包含期望字符串
         }
       }
 
       private boolean isCorrectException(Throwable throwable) {
-        return throwable instanceof SqlValidatorException
-            || throwable instanceof CalciteException;
+        return throwable instanceof SqlValidatorException // 检查是否是 SQL 验证异常
+            || throwable instanceof CalciteException; // 或 Calcite 异常
       }
 
       private @Nullable Exception containsCorrectException(Throwable root) {
         Throwable currentCause = root;
-        while (currentCause != null) {
+        while (currentCause != null) { // 遍历异常链
           if (isCorrectException(currentCause)) {
-            return (Exception) currentCause;
+            return (Exception) currentCause; // 找到正确的异常类型
           }
-          currentCause = currentCause.getCause();
+          currentCause = currentCause.getCause(); // 继续检查原因
         }
-        return null;
+        return null; // 未找到
       }
     };
   }
 
   static Consumer<ResultSet> checkResult(final String expected) {
-    return checkResult(expected, new ResultSetFormatter());
+    return checkResult(expected, new ResultSetFormatter()); // 使用默认结果集格式化器
   }
 
   static Consumer<ResultSet> checkResult(final String expected,
       final ResultSetFormatter resultSetFormatter) {
-    return resultSet -> {
+    return resultSet -> { // 创建结果集消费者
       try {
-        resultSetFormatter.resultSet(resultSet);
-        assertThat(resultSetFormatter.string(), isLinux(expected));
+        resultSetFormatter.resultSet(resultSet); // 格式化结果集
+        assertThat(resultSetFormatter.string(), isLinux(expected)); // 断言字符串匹配
       } catch (SQLException e) {
-        TestUtil.rethrow(e);
+        TestUtil.rethrow(e); // 重新抛出 SQL 异常
       }
     };
   }
 
   static Consumer<ResultSet> checkResultValue(final String expected) {
-    return resultSet -> {
+    return resultSet -> { // 创建结果集消费者，检查单个值
       try {
         if (!resultSet.next()) {
-          throw new AssertionError("too few rows");
+          throw new AssertionError("too few rows"); // 没有行数据
         }
         if (resultSet.getMetaData().getColumnCount() != 1) {
-          throw new AssertionError("expected 1 column");
+          throw new AssertionError("expected 1 column"); // 期望只有一列
         }
-        final String resultString = resultSet.getString(1);
+        final String resultString = resultSet.getString(1); // 获取第一列的值
         assertThat(resultString,
-            expected == null ? nullValue(String.class) : isLinux(expected));
+            expected == null ? nullValue(String.class) : isLinux(expected)); // 断言值匹配
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<ResultSet> checkResultCount(
       final Matcher<Integer> expected) {
-    return resultSet -> {
+    return resultSet -> { // 创建结果集消费者，检查行数
       try {
-        final int count = CalciteAssert.countRows(resultSet);
-        assertThat(count, expected);
+        final int count = CalciteAssert.countRows(resultSet); // 计算结果集行数
+        assertThat(count, expected); // 断言行数匹配期望
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<Integer> checkUpdateCount(final int expected) {
-    return updateCount -> assertThat(updateCount, is(expected));
+    return updateCount -> assertThat(updateCount, is(expected)); // 断言更新计数匹配期望值
   }
 
   /** Checks that the result of the second and subsequent executions is the same
    * as the first.
+   * 检查第二次及后续执行的结果是否与第一次相同
    *
    * @param ordered Whether order should be the same both times
+   *        两次执行的顺序是否应该相同
    */
   static Consumer<ResultSet> consistentResult(final boolean ordered) {
     return new Consumer<ResultSet>() {
-      int executeCount = 0;
-      Collection expected;
+      int executeCount = 0; // 执行计数器
+      Collection expected; // 期望的结果集合
 
       @Override public void accept(ResultSet resultSet) {
-        ++executeCount;
+        ++executeCount; // 递增执行计数
         try {
           final Collection result =
               CalciteAssert.toStringList(resultSet,
-                  ordered ? new ArrayList<>() : new TreeSet<>());
+                  ordered ? new ArrayList<>() : new TreeSet<>()); // 根据是否有序选择集合类型
           if (executeCount == 1) {
-            expected = result;
+            expected = result; // 第一次执行保存期望结果
           } else {
             @SuppressWarnings("UndefinedEquals")
-            boolean matches = expected.equals(result);
+            boolean matches = expected.equals(result); // 比较结果
             if (!matches) {
               // compare strings to get better error message
+              // 比较字符串以获得更好的错误消息
               assertThat(newlineList(result), equalTo(newlineList(expected)));
               fail("oops");
             }
           }
         } catch (SQLException e) {
-          throw TestUtil.rethrow(e);
+          throw TestUtil.rethrow(e); // 重新抛出异常
         }
       }
     };
@@ -398,23 +416,26 @@ public class CalciteAssert {
   static String newlineList(Collection collection) {
     final StringBuilder buf = new StringBuilder();
     for (Object o : collection) {
-      buf.append(o).append('\n');
+      buf.append(o).append('\n'); // 将每个元素转换为字符串并添加换行符
     }
-    return buf.toString();
+    return buf.toString(); // 返回构建的字符串
   }
 
   /** Checks that the {@link ResultSet} returns the given set of lines, in no
    * particular order.
+   * 检查结果集返回给定的行集合，不关心顺序
    *
    * @see Matchers#returnsUnordered(String...) */
   static Consumer<ResultSet> checkResultUnordered(final String... lines) {
-    return checkResult(true, false, lines);
+    return checkResult(true, false, lines); // 调用通用方法，排序但不只检查头部
   }
 
   /** Checks that the {@link ResultSet} returns the given set of lines,
    * optionally sorting.
+   * 检查结果集返回给定的行集合，可选择排序
    *
    * <p>The lines must not contain line breaks. If you have written
+   * <p>行不能包含换行符。如果你写了
    *
    * <pre>{@code
    * checkUnordered("line1\n"
@@ -422,6 +443,7 @@ public class CalciteAssert {
    * }</pre>
    *
    * <p>you should instead write
+   * <p>你应该改为写
    *
    * <pre>{@code
    * checkUnordered("line1",
@@ -429,92 +451,94 @@ public class CalciteAssert {
    * }</pre>
    *
    * <p>so that result-checking is order-independent.
+   * <p>这样结果检查就是顺序无关的
    *
    * @see Matchers#returnsUnordered(String...) */
   static Consumer<ResultSet> checkResult(final boolean sort,
       final boolean head, final String... lines) {
     // Check that none of the lines contains a line break.
+    // 检查没有行包含换行符
     for (String line : lines) {
       if (line.contains("\n")) {
         throw new AssertionError("expected line has line breaks: " + line);
       }
     }
 
-    return resultSet -> {
+    return resultSet -> { // 创建结果集消费者
       try {
         final List<String> expectedList = Lists.newArrayList(lines);
         if (sort) {
-          Collections.sort(expectedList);
+          Collections.sort(expectedList); // 如果需要则排序期望列表
         }
         final List<String> actualList = new ArrayList<>();
-        CalciteAssert.toStringList(resultSet, actualList);
+        CalciteAssert.toStringList(resultSet, actualList); // 获取实际结果列表
         if (sort) {
-          Collections.sort(actualList);
+          Collections.sort(actualList); // 如果需要则排序实际列表
         }
         final List<String> trimmedActualList;
         if (head && actualList.size() > expectedList.size()) {
-          trimmedActualList = actualList.subList(0, expectedList.size());
+          trimmedActualList = actualList.subList(0, expectedList.size()); // 只取前N行
         } else {
           trimmedActualList = actualList;
         }
         if (!trimmedActualList.equals(expectedList)) {
           assertThat(Util.lines(trimmedActualList),
-              equalTo(Util.lines(expectedList)));
+              equalTo(Util.lines(expectedList))); // 断言列表相等
         }
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<ResultSet> checkResultContains(
       final String... expected) {
-    return s -> {
+    return s -> { // 创建结果集消费者，检查是否包含期望字符串
       try {
-        final String actual = toString(s);
+        final String actual = toString(s); // 转换结果集为字符串
         for (String st : expected) {
-          assertThat(actual, containsStringLinux(st));
+          assertThat(actual, containsStringLinux(st)); // 断言包含每个期望字符串
         }
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<ResultSet> checkResultContains(
       final String expected, final int count) {
-    return s -> {
+    return s -> { // 创建结果集消费者，检查字符串出现次数
       try {
-        final String actual = Util.toLinux(toString(s));
+        final String actual = Util.toLinux(toString(s)); // 转换为 Linux 格式字符串
         assertThat(actual + " should have " + count + " occurrence of "
                 + expected,
-            countMatches(actual, expected), is(count));
+            countMatches(actual, expected), is(count)); // 断言出现次数匹配
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<ResultSet> checkMaskedResultContains(
       final String expected) {
-    return s -> {
+    return s -> { // 创建结果集消费者，检查掩码后的结果是否包含期望字符串
       try {
-        final String actual = Util.toLinux(toString(s));
-        final String maskedActual = Matchers.trimNodeIds(actual);
-        assertThat(maskedActual, containsString(expected));
+        final String actual = Util.toLinux(toString(s)); // 转换为 Linux 格式字符串
+        final String maskedActual = Matchers.trimNodeIds(actual); // 移除节点ID
+        assertThat(maskedActual, containsString(expected)); // 断言包含期望字符串
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
 
   public static Consumer<ResultSet> checkResultType(final String expected) {
-    return s -> {
+    return s -> { // 创建结果集消费者，检查结果类型
       try {
-        final String actual = typeString(s.getMetaData());
-        assertThat(actual, is(expected));
+        final String actual = typeString(s.getMetaData()); // 获取类型字符串
+        assertThat(actual, is(expected)); // 断言类型匹配
       } catch (SQLException e) {
-        throw TestUtil.rethrow(e);
+        throw TestUtil.rethrow(e); // 重新抛出异常
       }
     };
   }
@@ -523,15 +547,15 @@ public class CalciteAssert {
       throws SQLException {
     final List<String> list = new ArrayList<>();
     for (int i = 0; i < metaData.getColumnCount(); i++) {
-      list.add(
-          metaData.getColumnName(i + 1)
+      list.add( // 构建列类型描述字符串
+          metaData.getColumnName(i + 1) // 列名
               + " "
-              + metaData.getColumnTypeName(i + 1)
+              + metaData.getColumnTypeName(i + 1) // 列类型名
               + (metaData.isNullable(i + 1) == ResultSetMetaData.columnNoNulls
-              ? RelDataTypeImpl.NON_NULLABLE_SUFFIX
+              ? RelDataTypeImpl.NON_NULLABLE_SUFFIX // 非空后缀
               : ""));
     }
-    return list.toString();
+    return list.toString(); // 返回类型列表字符串
   }
 
   static void assertQuery(
@@ -543,75 +567,78 @@ public class CalciteAssert {
       @Nullable Consumer<ResultSet> resultChecker,
       @Nullable Consumer<Integer> updateChecker,
       @Nullable Consumer<Throwable> exceptionChecker) {
-    try (Closer closer = new Closer()) {
-      if (connection.isWrapperFor(CalciteConnection.class)) {
+    try (Closer closer = new Closer()) { // 使用 Closer 管理资源
+      if (connection.isWrapperFor(CalciteConnection.class)) { // 检查是否是 Calcite 连接
         final CalciteConnection calciteConnection =
-            connection.unwrap(CalciteConnection.class);
+            connection.unwrap(CalciteConnection.class); // 解包连接
         final Properties properties = calciteConnection.getProperties();
-        properties.setProperty(
+        properties.setProperty( // 设置物化启用属性
             CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
             Boolean.toString(materializationsEnabled));
-        properties.setProperty(
+        properties.setProperty( // 设置创建物化属性
             CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
             Boolean.toString(materializationsEnabled));
         if (!properties
             .containsKey(CalciteConnectionProperty.TIME_ZONE.camelName())) {
           // Do not override id some test has already set this property.
+          // 如果测试已设置时区属性则不覆盖
           properties.setProperty(
               CalciteConnectionProperty.TIME_ZONE.camelName(),
               DateTimeUtils.UTC_ZONE.getID());
         }
       }
-      for (Pair<Hook, Consumer> hook : hooks) {
+      for (Pair<Hook, Consumer> hook : hooks) { // 注册所有钩子
         //noinspection unchecked
         closer.add(hook.left.addThread(hook.right));
       }
-      Statement statement = connection.createStatement();
-      statement.setMaxRows(Math.max(limit, 0));
+      Statement statement = connection.createStatement(); // 创建语句
+      statement.setMaxRows(Math.max(limit, 0)); // 设置最大行数
       ResultSet resultSet = null;
       Integer updateCount = null;
       try {
-        if (updateChecker == null) {
-          resultSet = statement.executeQuery(sql);
+        if (updateChecker == null) { // 如果不是更新操作
+          resultSet = statement.executeQuery(sql); // 执行查询
           if (resultChecker == null && exceptionChecker != null) {
             // Pull data from result set, otherwise exceptions that happen during evaluation
             // won't be triggered
+            // 拉取结果集数据，否则评估期间的异常不会被触发
             while (resultSet.next()) {
               // no need to do anything with the data
+              // 不需要对数据做任何操作
             }
           }
         } else {
-          updateCount = statement.executeUpdate(sql);
+          updateCount = statement.executeUpdate(sql); // 执行更新
         }
         if (exceptionChecker != null) {
-          exceptionChecker.accept(null);
+          exceptionChecker.accept(null); // 没有异常抛出
           return;
         }
       } catch (Exception | Error e) {
         if (exceptionChecker != null) {
-          exceptionChecker.accept(e);
+          exceptionChecker.accept(e); // 检查异常
           return;
         }
-        throw e;
+        throw e; // 重新抛出异常
       }
       if (resultChecker != null) {
-        resultChecker.accept(resultSet);
+        resultChecker.accept(resultSet); // 检查结果
       }
       if (updateChecker != null) {
-        updateChecker.accept(updateCount);
+        updateChecker.accept(updateCount); // 检查更新计数
       }
       if (resultSet != null) {
-        resultSet.close();
+        resultSet.close(); // 关闭结果集
       }
-      statement.close();
-      connection.close();
+      statement.close(); // 关闭语句
+      connection.close(); // 关闭连接
     } catch (Throwable e) {
       String message = "With materializationsEnabled=" + materializationsEnabled
           + ", limit=" + limit;
       if (!TestUtil.hasMessage(e, sql)) {
         message += ", sql=" + sql;
       }
-      throw TestUtil.rethrow(e, message);
+      throw TestUtil.rethrow(e, message); // 重新抛出异常并添加消息
     }
   }
 
@@ -625,69 +652,70 @@ public class CalciteAssert {
       @Nullable Consumer<Integer> updateChecker,
       @Nullable Consumer<Throwable> exceptionChecker,
       PreparedStatementConsumer consumer) {
-    try (Closer closer = new Closer()) {
-      if (connection.isWrapperFor(CalciteConnection.class)) {
+    try (Closer closer = new Closer()) { // 使用 Closer 管理资源
+      if (connection.isWrapperFor(CalciteConnection.class)) { // 检查是否是 Calcite 连接
         final CalciteConnection calciteConnection =
-            connection.unwrap(CalciteConnection.class);
+            connection.unwrap(CalciteConnection.class); // 解包连接
         final Properties properties = calciteConnection.getProperties();
-        properties.setProperty(
+        properties.setProperty( // 设置物化启用属性
             CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
             Boolean.toString(materializationsEnabled));
-        properties.setProperty(
+        properties.setProperty( // 设置创建物化属性
             CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
             Boolean.toString(materializationsEnabled));
         if (!properties
             .containsKey(CalciteConnectionProperty.TIME_ZONE.camelName())) {
           // Do not override id some test has already set this property.
+          // 如果测试已设置时区属性则不覆盖
           properties.setProperty(
               CalciteConnectionProperty.TIME_ZONE.camelName(),
               DateTimeUtils.UTC_ZONE.getID());
         }
       }
-      for (Pair<Hook, Consumer> hook : hooks) {
+      for (Pair<Hook, Consumer> hook : hooks) { // 注册所有钩子
         //noinspection unchecked
         closer.add(hook.left.addThread(hook.right));
       }
-      PreparedStatement statement = connection.prepareStatement(sql);
-      statement.setMaxRows(Math.max(limit, 0));
+      PreparedStatement statement = connection.prepareStatement(sql); // 创建预处理语句
+      statement.setMaxRows(Math.max(limit, 0)); // 设置最大行数
       ResultSet resultSet = null;
       Integer updateCount = null;
       try {
-        consumer.accept(statement);
-        if (updateChecker == null) {
-          resultSet = statement.executeQuery();
+        consumer.accept(statement); // 调用消费者设置参数
+        if (updateChecker == null) { // 如果不是更新操作
+          resultSet = statement.executeQuery(); // 执行查询
         } else {
-          updateCount = statement.executeUpdate(sql);
+          updateCount = statement.executeUpdate(sql); // 执行更新
         }
         if (exceptionChecker != null) {
-          exceptionChecker.accept(null);
+          exceptionChecker.accept(null); // 没有异常抛出
           return;
         }
       } catch (Exception | Error e) {
         if (exceptionChecker != null) {
-          exceptionChecker.accept(e);
+          exceptionChecker.accept(e); // 检查异常
           return;
         }
-        throw e;
+        throw e; // 重新抛出异常
       }
       if (resultChecker != null) {
-        resultChecker.accept(resultSet);
+        resultChecker.accept(resultSet); // 检查结果
       }
       if (updateChecker != null) {
-        updateChecker.accept(updateCount);
+        updateChecker.accept(updateCount); // 检查更新计数
       }
       if (resultSet != null) {
-        resultSet.close();
+        resultSet.close(); // 关闭结果集
       }
-      statement.close();
-      connection.close();
+      statement.close(); // 关闭语句
+      connection.close(); // 关闭连接
     } catch (Throwable e) {
       String message = "With materializationsEnabled=" + materializationsEnabled
           + ", limit=" + limit;
       if (!TestUtil.hasMessage(e, sql)) {
         message += ", sql=" + sql;
       }
-      throw TestUtil.rethrow(e, message);
+      throw TestUtil.rethrow(e, message); // 重新抛出异常并添加消息
     }
   }
 
@@ -698,7 +726,7 @@ public class CalciteAssert {
       final Consumer<RelNode> convertChecker,
       final Consumer<RelNode> substitutionChecker) {
     assertPrepare(connection, sql, materializationsEnabled, ImmutableList.of(),
-        convertChecker, substitutionChecker);
+        convertChecker, substitutionChecker); // 调用重载方法
   }
 
   static void assertPrepare(
@@ -708,152 +736,160 @@ public class CalciteAssert {
       List<Pair<Hook, Consumer>> hooks,
       final @Nullable Consumer<RelNode> convertChecker,
       final @Nullable Consumer<RelNode> substitutionChecker) {
-    try (Closer closer = new Closer()) {
+    try (Closer closer = new Closer()) { // 使用 Closer 管理资源
       if (convertChecker != null) {
-        closer.add(
+        closer.add( // 添加转换检查钩子
             Hook.TRIMMED.addThread(convertChecker));
       }
       if (substitutionChecker != null) {
-        closer.add(
+        closer.add( // 添加替换检查钩子
             Hook.SUB.addThread(substitutionChecker));
       }
-      for (Pair<Hook, Consumer> hook : hooks) {
+      for (Pair<Hook, Consumer> hook : hooks) { // 注册所有钩子
         closer.add(hook.left.addThread(hook.right));
       }
-      ((CalciteConnection) connection).getProperties().setProperty(
+      ((CalciteConnection) connection).getProperties().setProperty( // 设置物化启用属性
           CalciteConnectionProperty.MATERIALIZATIONS_ENABLED.camelName(),
           Boolean.toString(materializationsEnabled));
-      ((CalciteConnection) connection).getProperties().setProperty(
+      ((CalciteConnection) connection).getProperties().setProperty( // 设置创建物化属性
           CalciteConnectionProperty.CREATE_MATERIALIZATIONS.camelName(),
           Boolean.toString(materializationsEnabled));
-      PreparedStatement statement = connection.prepareStatement(sql);
-      statement.close();
-      connection.close();
+      PreparedStatement statement = connection.prepareStatement(sql); // 创建预处理语句
+      statement.close(); // 关闭语句
+      connection.close(); // 关闭连接
     } catch (Throwable e) {
       String message = "With materializationsEnabled=" + materializationsEnabled;
       if (!TestUtil.hasMessage(e, sql)) {
         message += ", sql=" + sql;
       }
-      throw TestUtil.rethrow(e, message);
+      throw TestUtil.rethrow(e, message); // 重新抛出异常并添加消息
     }
   }
 
-  /** Converts a {@link ResultSet} to a string. */
+  /** Converts a {@link ResultSet} to a string.
+ * 将结果集转换为字符串
+ */
   public static String toString(ResultSet resultSet) throws SQLException {
-    return new ResultSetFormatter().resultSet(resultSet).string();
+    return new ResultSetFormatter().resultSet(resultSet).string(); // 使用格式化器转换
   }
 
   static int countRows(ResultSet resultSet) throws SQLException {
     int n = 0;
-    while (resultSet.next()) {
-      ++n;
+    while (resultSet.next()) { // 遍历结果集
+      ++n; // 计数
     }
-    return n;
+    return n; // 返回行数
   }
 
   static Collection<String> toStringList(ResultSet resultSet,
       Collection<String> list) throws SQLException {
-    return new ResultSetFormatter().toStringList(resultSet, list);
+    return new ResultSetFormatter().toStringList(resultSet, list); // 使用格式化器转换为列表
   }
 
   static List<String> toList(ResultSet resultSet) throws SQLException {
-    return (List<String>) toStringList(resultSet, new ArrayList<String>());
+    return (List<String>) toStringList(resultSet, new ArrayList<String>()); // 转换为 ArrayList
   }
 
   static ImmutableMultiset<String> toSet(ResultSet resultSet)
       throws SQLException {
-    return ImmutableMultiset.copyOf(toList(resultSet));
+    return ImmutableMultiset.copyOf(toList(resultSet)); // 转换为不可变多重集
   }
 
   /** Calls a non-static method via reflection. Useful for testing methods that
-   * don't exist in certain versions of the JDK. */
+   * don't exist in certain versions of the JDK.
+   * 通过反射调用非静态方法。用于测试在特定 JDK 版本中不存在的方法
+ */
   static Object call(Object o, String methodName, Object... args)
       throws InvocationTargetException, IllegalAccessException {
-    return method(o, methodName, args).invoke(o, args);
+    return method(o, methodName, args).invoke(o, args); // 查找方法并调用
   }
 
   /** Finds a non-static method based on its target, name and arguments.
-   * Throws if not found. */
+   * Throws if not found.
+   * 根据目标、名称和参数查找非静态方法。如果未找到则抛出异常
+   */
   static Method method(Object o, String methodName, Object[] args) {
-    for (Class<?> aClass = o.getClass();;) {
+    for (Class<?> aClass = o.getClass();;) { // 遍历类层次结构
     loop:
-      for (Method method1 : aClass.getMethods()) {
-        if (method1.getName().equals(methodName)
-            && method1.getParameterCount() == args.length
-            && Modifier.isPublic(method1.getDeclaringClass().getModifiers())) {
+      for (Method method1 : aClass.getMethods()) { // 遍历所有公共方法
+        if (method1.getName().equals(methodName) // 方法名匹配
+            && method1.getParameterCount() == args.length // 参数数量匹配
+            && Modifier.isPublic(method1.getDeclaringClass().getModifiers())) { // 声明类是公共的
           for (Pair<Object, Class> pair
-              : Pair.zip(args, (Class[]) method1.getParameterTypes())) {
+              : Pair.zip(args, (Class[]) method1.getParameterTypes())) { // 检查参数类型
             if (!pair.right.isInstance(pair.left)) {
-              continue loop;
+              continue loop; // 类型不匹配，继续查找
             }
           }
-          return method1;
+          return method1; // 找到匹配的方法
         }
       }
-      if (aClass.getSuperclass() != null
+      if (aClass.getSuperclass() != null // 检查父类
           && aClass.getSuperclass() != Object.class) {
-        aClass = aClass.getSuperclass();
+        aClass = aClass.getSuperclass(); // 移动到父类
       } else {
-        final Class<?>[] interfaces = aClass.getInterfaces();
+        final Class<?>[] interfaces = aClass.getInterfaces(); // 检查接口
         if (interfaces.length > 0) {
-          aClass = interfaces[0];
+          aClass = interfaces[0]; // 移动到接口
         } else {
-          break;
+          break; // 没有更多类可检查
         }
       }
     }
-    throw new AssertionError("method " + methodName + " not found");
+    throw new AssertionError("method " + methodName + " not found"); // 未找到方法
   }
 
   /** Adds a schema specification (or specifications) to the root schema,
-   * returning the last one created. */
+   * returning the last one created.
+   * 将一个或多个模式规范添加到根模式，返回最后创建的模式
+   */
   public static SchemaPlus addSchema(SchemaPlus rootSchema,
       SchemaSpec... schemas) {
     SchemaPlus s = rootSchema;
     for (SchemaSpec schema : schemas) {
-      s = addSchema_(rootSchema, schema);
+      s = addSchema_(rootSchema, schema); // 逐个添加模式
     }
-    return s;
+    return s; // 返回最后添加的模式
   }
 
   static SchemaPlus addSchema_(SchemaPlus rootSchema, SchemaSpec schema) {
-    final SchemaPlus foodmart;
-    final SchemaPlus jdbcScott;
-    final SchemaPlus jdbcSteelwheels;
-    final SchemaPlus scott;
-    final ConnectionSpec cs;
-    final DataSource dataSource;
-    final ImmutableList<String> emptyPath = ImmutableList.of();
+    final SchemaPlus foodmart; // FoodMart 模式变量
+    final SchemaPlus jdbcScott; // Scott JDBC 模式变量
+    final SchemaPlus jdbcSteelwheels; // SteelWheels JDBC 模式变量
+    final SchemaPlus scott; // Scott 模式变量
+    final ConnectionSpec cs; // 连接规范变量
+    final DataSource dataSource; // 数据源变量
+    final ImmutableList<String> emptyPath = ImmutableList.of(); // 空路径列表
     switch (schema) {
     case REFLECTIVE_FOODMART:
-      return rootSchema.add(schema.schemaName,
+      return rootSchema.add(schema.schemaName, // 添加反射式 FoodMart 模式
           new ReflectiveSchema(new FoodmartSchema()));
     case JDBC_SCOTT:
-      cs = requireNonNull(DatabaseInstance.HSQLDB.scott);
+      cs = requireNonNull(DatabaseInstance.HSQLDB.scott); // 获取 Scott 连接规范
       dataSource =
-          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password);
-      return rootSchema.add(schema.schemaName,
+          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password); // 创建数据源
+      return rootSchema.add(schema.schemaName, // 添加 JDBC Scott 模式
           JdbcSchema.create(rootSchema, schema.schemaName, dataSource,
               cs.catalog, cs.schema));
     case JDBC_STEELWHEELS:
-      cs = requireNonNull(DatabaseInstance.HSQLDB.steelwheels);
+      cs = requireNonNull(DatabaseInstance.HSQLDB.steelwheels); // 获取 SteelWheels 连接规范
       dataSource =
-          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password);
-      return rootSchema.add(schema.schemaName,
+          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password); // 创建数据源
+      return rootSchema.add(schema.schemaName, // 添加 JDBC SteelWheels 模式
           JdbcSchema.create(rootSchema, schema.schemaName, dataSource,
               cs.catalog, cs.schema));
     case JDBC_FOODMART:
-      cs = DB.foodmart;
+      cs = DB.foodmart; // 获取 FoodMart 连接规范
       dataSource =
-          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password);
-      return rootSchema.add(schema.schemaName,
+          JdbcSchema.dataSource(cs.url, cs.driver, cs.username, cs.password); // 创建数据源
+      return rootSchema.add(schema.schemaName, // 添加 JDBC FoodMart 模式
           JdbcSchema.create(rootSchema, schema.schemaName, dataSource,
               cs.catalog, cs.schema));
     case JDBC_FOODMART_WITH_LATTICE:
-      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART);
+      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART); // 确保存在 FoodMart
       final CalciteSchema foodmartSchema =
-          requireNonNull(foodmart.unwrap(CalciteSchema.class));
-      foodmart.add(schema.schemaName,
+          requireNonNull(foodmart.unwrap(CalciteSchema.class)); // 解包为 CalciteSchema
+      foodmart.add(schema.schemaName, // 添加 lattice 模式用于物化视图
           Lattice.create(foodmartSchema,
               "select 1 from \"foodmart\".\"sales_fact_1997\" as s\n"
                   + "join \"foodmart\".\"time_by_day\" as t using (\"time_id\")\n"
@@ -864,90 +900,90 @@ public class CalciteAssert {
       return foodmart;
 
     case MY_DB:
-      return rootSchema.add(schema.schemaName, MY_DB_SCHEMA);
+      return rootSchema.add(schema.schemaName, MY_DB_SCHEMA); // 添加自定义数据库模式
 
     case SCOTT:
-      jdbcScott = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_SCOTT);
-      return rootSchema.add(schema.schemaName, new CloneSchema(jdbcScott));
+      jdbcScott = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_SCOTT); // 确保存在 Scott
+      return rootSchema.add(schema.schemaName, new CloneSchema(jdbcScott)); // 添加克隆的 Scott 模式
     case SCOTT_WITH_TEMPORAL:
-      scott = addSchemaIfNotExists(rootSchema, SchemaSpec.SCOTT);
-      scott.add("products_temporal", new ProductsTemporalTable());
-      scott.add("orders",
+      scott = addSchemaIfNotExists(rootSchema, SchemaSpec.SCOTT); // 确保存在 Scott
+      scott.add("products_temporal", new ProductsTemporalTable()); // 添加临时产品表
+      scott.add("orders", // 添加订单历史表
           new OrdersHistoryTable(
               OrdersStreamTableFactory.getRowList()));
-      return scott;
+      return scott; // 返回 Scott 模式
 
     case STEELWHEELS:
-      jdbcSteelwheels = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_STEELWHEELS);
-      return rootSchema.add(schema.schemaName, new CloneSchema(jdbcSteelwheels));
+      jdbcSteelwheels = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_STEELWHEELS); // 确保存在 SteelWheels
+      return rootSchema.add(schema.schemaName, new CloneSchema(jdbcSteelwheels)); // 添加克隆的 SteelWheels 模式
 
     case TPCH:
-      return rootSchema.add(schema.schemaName,
+      return rootSchema.add(schema.schemaName, // 添加 TPC-H 模式
           new ReflectiveSchema(new TpchSchema()));
 
     case CLONE_FOODMART:
-      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART);
-      return rootSchema.add("foodmart2", new CloneSchema(foodmart));
+      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART); // 确保存在 FoodMart
+      return rootSchema.add("foodmart2", new CloneSchema(foodmart)); // 添加克隆的 FoodMart 模式
     case GEO:
-      ModelHandler.addFunctions(rootSchema, null, emptyPath,
+      ModelHandler.addFunctions(rootSchema, null, emptyPath, // 添加空间类型函数
           SpatialTypeFunctions.class.getName(), "*", true);
-      ModelHandler.addFunctions(rootSchema, null, emptyPath,
+      ModelHandler.addFunctions(rootSchema, null, emptyPath, // 添加 SQL 空间类型函数
           SqlSpatialTypeFunctions.class.getName(), "*", true);
-      rootSchema.add("ST_UNION",
+      rootSchema.add("ST_UNION", // 添加 ST_UNION 聚合函数
           requireNonNull(AggregateFunctionImpl.create(UnionOperation.class)));
-      rootSchema.add("ST_ACCUM",
+      rootSchema.add("ST_ACCUM", // 添加 ST_ACCUM 聚合函数
           requireNonNull(AggregateFunctionImpl.create(AccumOperation.class)));
-      rootSchema.add("ST_COLLECT",
+      rootSchema.add("ST_COLLECT", // 添加 ST_COLLECT 聚合函数
           requireNonNull(AggregateFunctionImpl.create(CollectOperation.class)));
       final SchemaPlus s =
-          rootSchema.add(schema.schemaName, new AbstractSchema());
-      ModelHandler.addFunctions(s, "countries", emptyPath,
+          rootSchema.add(schema.schemaName, new AbstractSchema()); // 创建抽象模式
+      ModelHandler.addFunctions(s, "countries", emptyPath, // 添加国家表函数
           CountriesTableFunction.class.getName(), null, false);
-      final String sql = "select * from table(\"countries\"(true))";
+      final String sql = "select * from table(\"countries\"(true))"; // 国家视图 SQL
       final ViewTableMacro viewMacro =
           ViewTable.viewMacro(rootSchema, sql,
               ImmutableList.of("GEO"), emptyPath, false);
-      s.add("countries", viewMacro);
-      ModelHandler.addFunctions(s, "states", emptyPath,
+      s.add("countries", viewMacro); // 添加国家视图
+      ModelHandler.addFunctions(s, "states", emptyPath, // 添加州表函数
           StatesTableFunction.class.getName(), "states", false);
-      final String sql2 = "select \"name\",\n"
+      final String sql2 = "select \"name\",\n" // 州视图 SQL
           + " ST_PolyFromText(\"geom\") as \"geom\"\n"
           + "from table(\"states\"(true))";
       final ViewTableMacro viewMacro2 =
           ViewTable.viewMacro(rootSchema, sql2,
               ImmutableList.of("GEO"), emptyPath, false);
-      s.add("states", viewMacro2);
+      s.add("states", viewMacro2); // 添加州视图
 
-      ModelHandler.addFunctions(s, "parks", emptyPath,
+      ModelHandler.addFunctions(s, "parks", emptyPath, // 添加公园表函数
           StatesTableFunction.class.getName(), "parks", false);
-      final String sql3 = "select \"name\",\n"
+      final String sql3 = "select \"name\",\n" // 公园视图 SQL
           + " ST_PolyFromText(\"geom\") as \"geom\"\n"
           + "from table(\"parks\"(true))";
       final ViewTableMacro viewMacro3 =
           ViewTable.viewMacro(rootSchema, sql3,
               ImmutableList.of("GEO"), emptyPath, false);
-      s.add("parks", viewMacro3);
+      s.add("parks", viewMacro3); // 添加公园视图
 
-      return s;
+      return s; // 返回 GEO 模式
     case HR:
-      return rootSchema.add(schema.schemaName,
+      return rootSchema.add(schema.schemaName, // 添加 HR（人力资源）模式
           new ReflectiveSchemaWithoutRowCount(new HrSchema()));
     case LINGUAL:
-      return rootSchema.add(schema.schemaName,
+      return rootSchema.add(schema.schemaName, // 添加 Lingual 模式
           new ReflectiveSchema(new LingualSchema()));
     case BLANK:
-      return rootSchema.add(schema.schemaName, new AbstractSchema());
+      return rootSchema.add(schema.schemaName, new AbstractSchema()); // 添加空白模式
     case ORINOCO:
       final SchemaPlus orinoco =
-          rootSchema.add(schema.schemaName, new AbstractSchema());
-      orinoco.add("ORDERS",
+          rootSchema.add(schema.schemaName, new AbstractSchema()); // 创建 Orinoco 模式
+      orinoco.add("ORDERS", // 添加订单历史表
           new OrdersHistoryTable(
               OrdersStreamTableFactory.getRowList()));
-      return orinoco;
+      return orinoco; // 返回 Orinoco 模式
     case POST:
       final SchemaPlus post =
-          rootSchema.add(schema.schemaName, new AbstractSchema());
-      post.add("EMP",
+          rootSchema.add(schema.schemaName, new AbstractSchema()); // 创建 POST 模式
+      post.add("EMP", // 添加员工视图
           ViewTable.viewMacro(post,
               "select * from (values\n"
                   + "    ('Jane', 10, 'F'),\n"
@@ -962,7 +998,7 @@ public class CalciteAssert {
                   + "  as t(ename, deptno, gender)",
               emptyPath, ImmutableList.of("POST", "EMP"),
               null));
-      post.add("DEPT",
+      post.add("DEPT", // 添加部门视图
           ViewTable.viewMacro(post,
               "select * from (values\n"
                   + "    (10, 'Sales'),\n"
@@ -971,12 +1007,12 @@ public class CalciteAssert {
                   + "    (40, 'Empty')) as t(deptno, dname)",
               emptyPath, ImmutableList.of("POST", "DEPT"),
               null));
-      post.add("DEPT30",
+      post.add("DEPT30", // 添加部门30视图
           ViewTable.viewMacro(post,
               "select * from dept where deptno = 30",
               ImmutableList.of("POST"), ImmutableList.of("POST", "DEPT30"),
               null));
-      post.add("EMPS",
+      post.add("EMPS", // 添加员工详细视图
           ViewTable.viewMacro(post,
               "select * from (values\n"
                   + "    (100, 'Fred',  10, CAST(NULL AS CHAR(1)), CAST(NULL AS VARCHAR(20)), 40,               25, TRUE,    FALSE, DATE '1996-08-03'),\n"
@@ -987,7 +1023,7 @@ public class CalciteAssert {
                   + " as t(empno, name, deptno, gender, city, empid, age, slacker, manager, joinedat)",
               emptyPath, ImmutableList.of("POST", "EMPS"),
               null));
-      post.add("TICKER",
+      post.add("TICKER", // 添加股票行情视图
           ViewTable.viewMacro(post,
             "select * from (values\n"
                 + "    ('ACME', '2017-12-01', 12),\n"
@@ -1013,7 +1049,7 @@ public class CalciteAssert {
                 + " as t(SYMBOL, tstamp, price)",
             ImmutableList.of(), ImmutableList.of("POST", "TICKER"),
             null));
-      post.add("EMPS_DATE_TIME",
+      post.add("EMPS_DATE_TIME", // 添加带日期时间的员工视图
           ViewTable.viewMacro(post,
               "select * from (values\n"
                   + "    (100, 'Fred',  10, CAST(NULL AS CHAR(1)), CAST(NULL AS VARCHAR(20)), 40,               25, TRUE,    FALSE, DATE '1996-08-03', TIME '16:22:34', TIMESTAMP '1996-08-03 16:22:34'),\n"
@@ -1024,92 +1060,95 @@ public class CalciteAssert {
                   + " as t(empno, name, deptno, gender, city, empid, age, slacker, manager, joinedat, joinetime, joinetimestamp)",
               emptyPath, ImmutableList.of("POST", "EMPS_DATE_TIME"),
               null));
-      return post;
+      return post; // 返回 POST 模式
     case FAKE_FOODMART:
       // Similar to FOODMART, but not based on JdbcSchema.
+      // 与 FOODMART 类似，但不基于 JdbcSchema
       // Contains 2 tables that do not extend JdbcTable.
+      // 包含2个不继承 JdbcTable 的表
       // They redirect requests for SqlDialect and DataSource to the real JDBC
       // FOODMART, and this allows statistics queries to be executed.
-      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART);
+      // 它们将对 SqlDialect 和 DataSource 的请求重定向到真实的 JDBC FOODMART，这允许执行统计查询
+      foodmart = addSchemaIfNotExists(rootSchema, SchemaSpec.JDBC_FOODMART); // 确保存在 FoodMart
       final Wrapper salesTable =
-          requireNonNull((Wrapper) foodmart.tables().get("sales_fact_1997"));
+          requireNonNull((Wrapper) foodmart.tables().get("sales_fact_1997")); // 获取销售事实表
       SchemaPlus fake =
-          rootSchema.add(schema.schemaName, new AbstractSchema());
-      fake.add("time_by_day", new AbstractTable() {
+          rootSchema.add(schema.schemaName, new AbstractSchema()); // 创建伪造模式
+      fake.add("time_by_day", new AbstractTable() { // 添加时间表
         @Override public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-          return typeFactory.builder()
+          return typeFactory.builder() // 定义行类型
               .add("time_id", SqlTypeName.INTEGER)
               .add("the_year", SqlTypeName.INTEGER)
               .build();
         }
 
         @Override public <C> C unwrap(Class<C> aClass) {
-          if (aClass.isAssignableFrom(SqlDialect.class)
-              || aClass.isAssignableFrom(DataSource.class)) {
+          if (aClass.isAssignableFrom(SqlDialect.class) // 重定向 SqlDialect 请求
+              || aClass.isAssignableFrom(DataSource.class)) { // 重定向 DataSource 请求
             return salesTable.unwrap(aClass);
           }
           return super.unwrap(aClass);
         }
       });
-      fake.add("sales_fact_1997", new AbstractTable() {
+      fake.add("sales_fact_1997", new AbstractTable() { // 添加销售事实表
         @Override public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-          return typeFactory.builder()
+          return typeFactory.builder() // 定义行类型
               .add("time_id", SqlTypeName.INTEGER)
               .add("customer_id", SqlTypeName.INTEGER)
               .build();
         }
 
         @Override public <C> C unwrap(Class<C> aClass) {
-          if (aClass.isAssignableFrom(SqlDialect.class)
-              || aClass.isAssignableFrom(DataSource.class)) {
+          if (aClass.isAssignableFrom(SqlDialect.class) // 重定向 SqlDialect 请求
+              || aClass.isAssignableFrom(DataSource.class)) { // 重定向 DataSource 请求
             return salesTable.unwrap(aClass);
           }
           return super.unwrap(aClass);
         }
       });
-      return fake;
+      return fake; // 返回伪造模式
     case AUX:
       SchemaPlus aux =
-          rootSchema.add(schema.schemaName, new AbstractSchema());
-      aux.add("TBLFUN",
+          rootSchema.add(schema.schemaName, new AbstractSchema()); // 创建辅助模式
+      aux.add("TBLFUN", // 添加简单表函数
           requireNonNull(
               TableFunctionImpl.create(Smalls.SimpleTableFunction.class,
                   "eval")));
-      aux.add("TBLFUN_IDENTITY",
+      aux.add("TBLFUN_IDENTITY", // 添加恒等表函数
           requireNonNull(
               TableFunctionImpl.create(Smalls.IdentityTableFunction.class,
                   "eval")));
-      final String simpleSql = "select *\n"
+      final String simpleSql = "select *\n" // 简单表 SQL
           + "from (values\n"
           + "    ('ABC', 1),\n"
           + "    ('DEF', 2),\n"
           + "    ('GHI', 3))\n"
           + "  as t(strcol, intcol)";
-      aux.add("SIMPLETABLE",
+      aux.add("SIMPLETABLE", // 添加简单表视图
           ViewTable.viewMacro(aux, simpleSql, ImmutableList.of(),
               ImmutableList.of("AUX", "SIMPLETABLE"), null));
-      final String lateralSql = "SELECT *\n"
+      final String lateralSql = "SELECT *\n" // LATERAL 连接 SQL
           + "FROM AUX.SIMPLETABLE ST\n"
           + "CROSS JOIN LATERAL TABLE(AUX.TBLFUN(ST.INTCOL))";
-      aux.add("VIEWLATERAL",
+      aux.add("VIEWLATERAL", // 添加 LATERAL 视图
           ViewTable.viewMacro(aux, lateralSql, ImmutableList.of(),
               ImmutableList.of("AUX", "VIEWLATERAL"), null));
-      return aux;
+      return aux; // 返回辅助模式
     case BOOKSTORE:
-      return rootSchema.add(schema.schemaName,
+      return rootSchema.add(schema.schemaName, // 添加书店模式
           new ReflectiveSchema(new BookstoreSchema()));
     default:
-      throw new AssertionError("unknown schema " + schema);
+      throw new AssertionError("unknown schema " + schema); // 未知模式
     }
   }
 
   private static SchemaPlus addSchemaIfNotExists(SchemaPlus rootSchema,
         SchemaSpec schemaSpec) {
-    final SchemaPlus schema = rootSchema.subSchemas().get(schemaSpec.schemaName);
+    final SchemaPlus schema = rootSchema.subSchemas().get(schemaSpec.schemaName); // 检查模式是否已存在
     if (schema != null) {
-      return schema;
+      return schema; // 如果存在则返回
     }
-    return addSchema(rootSchema, schemaSpec);
+    return addSchema(rootSchema, schemaSpec); // 否则添加新模式
   }
 
   /**
@@ -1117,47 +1156,55 @@ public class CalciteAssert {
    * {@link AssertionError} is thrown with the given message. If
    * <code>expected</code> and <code>actual</code> are <code>null</code>,
    * they are considered equal.
+   * 断言两个对象相等。如果不相等，则抛出带有给定消息的 AssertionError。如果 expected 和 actual 都为 null，则认为相等
    *
    * <p>This method produces more user-friendly error messages than
    * {@link org.junit.jupiter.api.Assertions#assertArrayEquals(Object[], Object[], String)}
+   * <p>此方法产生的错误消息比 JUnit 的 assertArrayEquals 更友好
    *
    * @param message the identifying message for the {@link AssertionError} (<code>null</code>
    * okay)
+   *        AssertionError 的标识消息（可以为 null）
    * @param expected expected value
+   *        期望值
    * @param actual actual value
+   *        实际值
    */
   public static void assertArrayEqual(
       String message, Object[] expected, Object[] actual) {
-    assertThat(message, str(actual), is(str(expected)));
+    assertThat(message, str(actual), is(str(expected))); // 断言字符串表示相等
   }
 
   private static String str(Object[] objects) {
-    return objects == null
+    return objects == null // 如果对象为 null 则返回 null
           ? null
-          : Arrays.stream(objects).map(Object::toString)
-              .collect(Collectors.joining("\n"));
+          : Arrays.stream(objects).map(Object::toString) // 否则转换为字符串流
+              .collect(Collectors.joining("\n")); // 用换行符连接
   }
 
-  /** Returns a {@link PropBuilder}. */
+  /** Returns a {@link PropBuilder}.
+ * 返回一个属性构建器
+ */
   static PropBuilder propBuilder() {
-    return new PropBuilder();
+    return new PropBuilder(); // 创建新的属性构建器
   }
 
   /**
    * Result of calling {@link CalciteAssert#that}.
+   * 调用 CalciteAssert#that 的结果
    */
   public static class AssertThat {
-    private final ConnectionFactory connectionFactory;
-    private final ImmutableList<Pair<Hook, Consumer>> hooks;
+    private final ConnectionFactory connectionFactory; // 连接工厂
+    private final ImmutableList<Pair<Hook, Consumer>> hooks; // 钩子列表
 
-    private static final AssertThat EMPTY =
+    private static final AssertThat EMPTY = // 空的 AssertThat 实例
         new AssertThat(ConnectionFactories.empty(), ImmutableList.of());
 
     private AssertThat(ConnectionFactory connectionFactory,
         ImmutableList<Pair<Hook, Consumer>> hooks) {
       this.connectionFactory =
-          requireNonNull(connectionFactory, "connectionFactory");
-      this.hooks = requireNonNull(hooks, "hooks");
+          requireNonNull(connectionFactory, "connectionFactory"); // 验证连接工厂不为空
+      this.hooks = requireNonNull(hooks, "hooks"); // 验证钩子列表不为空
     }
 
     public AssertThat with(Config config) {
@@ -1194,53 +1241,63 @@ public class CalciteAssert {
       }
     }
 
-    /** Creates a copy of this AssertThat, adding more schemas. */
+    /** Creates a copy of this AssertThat, adding more schemas.
+ * 创建此 AssertThat 的副本，添加更多模式
+ */
     public AssertThat with(SchemaSpec... specs) {
       AssertThat next = this;
       for (SchemaSpec spec : specs) {
-        next = next.with(ConnectionFactories.add(spec));
+        next = next.with(ConnectionFactories.add(spec)); // 逐个添加模式
       }
       return next;
     }
 
-    /** Creates a copy of this AssertThat, overriding the connection factory. */
+    /** Creates a copy of this AssertThat, overriding the connection factory.
+ * 创建此 AssertThat 的副本，覆盖连接工厂
+ */
     public AssertThat with(ConnectionFactory connectionFactory) {
       return new AssertThat(connectionFactory, hooks);
     }
 
     /** Adds a hook and a handler for that hook. Calcite will create a thread
      * hook (by calling {@link Hook#addThread(Consumer)})
-     * just before running the query, and remove the hook afterwards. */
+     * just before running the query, and remove the hook afterwards.
+ * 添加钩子和该钩子的处理器。Calcite 将在运行查询之前创建线程钩子（通过调用 Hook#addThread(Consumer)），并在之后移除钩子
+ */
     public <T> AssertThat withHook(Hook hook, Consumer<T> handler) {
       return new AssertThat(connectionFactory,
-          addPair(this.hooks, hook, handler));
+          addPair(this.hooks, hook, handler)); // 添加钩子对
     }
 
     public final AssertThat with(final Map<String, String> map) {
       AssertThat x = this;
-      for (Map.Entry<String, String> entry : map.entrySet()) {
-        x = with(entry.getKey(), entry.getValue());
+      for (Map.Entry<String, String> entry : map.entrySet()) { // 遍历映射条目
+        x = with(entry.getKey(), entry.getValue()); // 逐个添加属性
       }
       return x;
     }
 
     public AssertThat with(String property, Object value) {
-      return with(connectionFactory.with(property, value));
+      return with(connectionFactory.with(property, value)); // 使用连接工厂设置属性
     }
 
     public AssertThat with(ConnectionProperty property, Object value) {
-      if (!property.type().valid(value, property.valueClass())) {
-        throw new IllegalArgumentException();
+      if (!property.type().valid(value, property.valueClass())) { // 验证值类型
+        throw new IllegalArgumentException(); // 类型不匹配则抛出异常
       }
-      return with(connectionFactory.with(property, value));
+      return with(connectionFactory.with(property, value)); // 使用连接工厂设置属性
     }
 
-    /** Sets the Lex property. */
+    /** Sets the Lex property.
+ * 设置词法分析属性
+ */
     public AssertThat with(Lex lex) {
       return with(CalciteConnectionProperty.LEX, lex);
     }
 
-    /** Sets the conformance property. */
+    /** Sets the conformance property.
+ * 设置 SQL 兼容性属性
+ */
     public AssertThat with(SqlConformanceEnum conformance) {
       return with(CalciteConnectionProperty.CONFORMANCE, conformance);
     }
